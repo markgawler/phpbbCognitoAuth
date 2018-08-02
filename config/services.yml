@@ -1,0 +1,18 @@
+services:
+    mrfg.cogauth.controller:
+        class: mrfg\cogauth\controller\main
+        arguments:
+            - '@config'
+            - '@controller.helper'
+            - '@template'
+            - '@user'
+
+    mrfg.cogauth.listener:
+        class: mrfg\cogauth\event\main_listener
+        arguments:
+            - '@controller.helper'
+            - '@template'
+            - '@user'
+            - '%core.php_ext%'
+        tags:
+            - { name: event.listener }

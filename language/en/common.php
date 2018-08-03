@@ -21,7 +21,7 @@ if (empty($lang) || !is_array($lang))
 $lang = array_merge($lang, array(
 
 	'ACP_COGAUTH'					=> 'Settings',
-	'ACP_COGAUTH_GOODBYE'			=> 'Should say goodbye?',
+	'ACP_COGAUTH_ENABLED'			=> 'AWS Cognito Authentication Enabled?',
 	'ACP_COGAUTH_SETTING_SAVED'	=> 'Settings have been saved successfully!',
 
 ));

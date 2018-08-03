@@ -5,14 +5,14 @@ services:
             - '@config'
             - '@controller.helper'
             - '@template'
-            - '@user'
+            - '@language'
 
     mrfg.cogauth.listener:
         class: mrfg\cogauth\event\main_listener
         arguments:
             - '@controller.helper'
             - '@template'
-            - '@language'
+            - '@user'
             - '%core.php_ext%'
         tags:
             - { name: event.listener }

@@ -21,11 +21,17 @@ class main_module
 
 	public function main(/** @noinspection PhpUnusedParameterInspection */ $id, $mode)
 	{
-		/** @var \phpbb\language\language $language Language object */
+		global $phpbb_container;
+
 		/** @var \phpbb\request\request $request Request object */
 		/** @var \phpbb\config\config $config Config object */
+		/** @var \phpbb\language\language $language Language object */
+		$language = $phpbb_container->get('language');
 
-		global $config, $request, $template, $language;
+		global $config, $request, $template;
+
+
+
 
 		$this->tpl_name = 'acp_cogauth_body';
 		$this->page_title = $language->lang('ACP_COGAUTH_TITLE');

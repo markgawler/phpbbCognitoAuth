@@ -24,8 +24,8 @@ class main
 	/* @var \phpbb\template\template */
 	protected $template;
 
-	/* @var \phpbb\user */
-	protected $user;
+	/* @var \phpbb\language\language */
+	protected $language;
 
 	/**
 	 * Constructor
@@ -33,14 +33,14 @@ class main
 	 * @param \phpbb\config\config		$config
 	 * @param \phpbb\controller\helper	$helper
 	 * @param \phpbb\template\template	$template
-	 * @param \phpbb\user				$user
+	 * @param \phpbb\language\language	$language
 	 */
-	public function __construct(\phpbb\config\config $config, \phpbb\controller\helper $helper, \phpbb\template\template $template, \phpbb\user $user)
+	public function __construct(\phpbb\config\config $config, \phpbb\controller\helper $helper, \phpbb\template\template $template, \phpbb\language\language $language)
 	{
 		$this->config = $config;
 		$this->helper = $helper;
 		$this->template = $template;
-		$this->user = $user;
+		$this->language = $language;
 	}
 
 	/**
@@ -53,7 +53,7 @@ class main
 	public function handle($name)
 	{
 		$l_message = !$this->config['cogauth_goodbye'] ? 'DEMO_HELLO' : 'DEMO_GOODBYE';
-		$this->template->assign_var('DEMO_MESSAGE', $this->user->lang($l_message, $name));
+		$this->template->assign_var('DEMO_MESSAGE', $this->language->lang($l_message, $name));
 
 		return $this->helper->render('demo_body.html', $name);
 	}

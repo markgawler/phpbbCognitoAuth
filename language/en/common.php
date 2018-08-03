@@ -19,15 +19,9 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
-	'DEMO_PAGE'			=> 'Demo',
-	'DEMO_HELLO'		=> 'Hello %s!',
-	'DEMO_GOODBYE'		=> 'Goodbye %s!',
 
 	'ACP_COGAUTH'					=> 'Settings',
 	'ACP_COGAUTH_GOODBYE'			=> 'Should say goodbye?',
 	'ACP_COGAUTH_SETTING_SAVED'	=> 'Settings have been saved successfully!',
 
-	'COGAUTH_NOTIFICATION'	=> 'Acme demo notification',
-
-	'VIEWING_COGAUTH'			=> 'Viewing Acme Demo',
 ));

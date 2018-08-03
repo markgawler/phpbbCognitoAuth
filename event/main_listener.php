@@ -24,8 +24,6 @@ class main_listener implements EventSubscriberInterface
 	{
 		return array(
 			'core.user_setup'				=> 'load_language_on_setup',
-			'core.page_header'				=> 'add_page_header_link',
-			'core.viewonline_overwrite_location'	=> 'viewonline_page',
 		);
 	}
 
@@ -72,27 +70,4 @@ class main_listener implements EventSubscriberInterface
 		$event['lang_set_ext'] = $lang_set_ext;
 	}
 
-	/**
-	 * Add a link to the controller in the forum navbar
-	 */
-	public function add_page_header_link()
-	{
-		$this->template->assign_vars(array(
-			'U_DEMO_PAGE'	=> $this->helper->route('mrfg_cogauth_controller', array('name' => 'world')),
-		));
-	}
-
-	/**
-	 * Show users viewing Acme Demo on the Who Is Online page
-	 *
-	 * @param \phpbb\event\data	$event	Event object
-	 */
-	public function viewonline_page($event)
-	{
-		if ($event['on_page'][1] === 'app' && strrpos($event['row']['session_page'], 'app.' . $this->php_ext . '/demo') === 0)
-		{
-			$event['location'] = $this->user->lang('VIEWING_COGAUTH');
-			$event['location_url'] = $this->helper->route('mrfg_cogauth_controller', array('name' => 'world'));
-		}
-	}
 }

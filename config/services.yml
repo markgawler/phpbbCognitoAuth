@@ -12,7 +12,7 @@ services:
         arguments:
             - '@controller.helper'
             - '@template'
-            - '@user'
+            - '@language'
             - '%core.php_ext%'
         tags:
             - { name: event.listener }

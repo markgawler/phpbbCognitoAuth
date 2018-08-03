@@ -19,13 +19,16 @@ class main_module
 	public $tpl_name;
 	public $u_action;
 
-	public function main($id, $mode)
+	public function main(/** @noinspection PhpUnusedParameterInspection */ $id, $mode)
 	{
-		global $config, $request, $template, $user;
+		/** @var \phpbb\language\language $language Language object */
+		/** @var \phpbb\request\request $request Request object */
+		/** @var \phpbb\config\config $config Config object */
 
-		$user->add_lang_ext('mrfg/cogauth', 'common');
-		$this->tpl_name = 'acp_demo_body';
-		$this->page_title = $user->lang('ACP_COGAUTH_TITLE');
+		global $config, $request, $template, $language;
+
+		$this->tpl_name = 'acp_cogauth_body';
+		$this->page_title = $language->lang('ACP_COGAUTH_TITLE');
 		add_form_key('cogauth/acp_form');
 
 		if ($request->is_set_post('submit'))
@@ -35,14 +38,14 @@ class main_module
 				trigger_error('FORM_INVALID', E_USER_WARNING);
 			}
 
-			$config->set('cogauth_goodbye', $request->variable('cogauth_goodbye', 0));
+			$config->set('cogauth_cogauth_enabled', $request->variable('cogauth_cogauth_enabled', 0));
 
-			trigger_error($user->lang('ACP_COGAUTH_SETTING_SAVED') . adm_back_link($this->u_action));
+			trigger_error($language->lang('ACP_COGAUTH_SETTING_SAVED') . adm_back_link($this->u_action));
 		}
 
 		$template->assign_vars(array(
 			'U_ACTION'				=> $this->u_action,
-			'COGAUTH_GOODBYE'		=> $config['cogauth_goodbye'],
+			'COGAUTH_ENABLED'		=> $config['cogauth_cogauth_enabled'],
 		));
 	}
 }

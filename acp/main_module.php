@@ -30,9 +30,6 @@ class main_module
 
 		global $config, $request, $template;
 
-
-
-
 		$this->tpl_name = 'acp_cogauth_body';
 		$this->page_title = $language->lang('ACP_COGAUTH_TITLE');
 		add_form_key('cogauth/acp_form');

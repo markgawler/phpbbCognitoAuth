@@ -16,3 +16,18 @@ services:
             - '%core.php_ext%'
         tags:
             - { name: event.listener }
+
+
+    auth.provider.cogauth:
+        class: mrfg\cogauth\auth\provider\cogauth
+        arguments:
+            - '@dbal.conn'
+            - '@config'
+            - '@passwords.manager'
+            - '@request'
+            - '@user'
+            - '@service_container'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+        tags:
+            - { name: auth.provider }

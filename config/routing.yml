@@ -1,3 +1,0 @@
-mrfg_cogauth_controller:
-    path: /demo/{name}
-    defaults: { _controller: mrfg.cogauth.controller:handle }

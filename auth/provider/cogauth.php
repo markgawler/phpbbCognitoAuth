@@ -86,18 +86,18 @@ class cogauth extends \phpbb\auth\provider\base
 		if (!$password)
 		{
 			return array(
-				'status'	=> LOGIN_ERROR_PASSWORD,
-				'error_msg'	=> 'NO_PASSWORD_SUPPLIED',
-				'user_row'	=> array('user_id' => ANONYMOUS),
+				'status'    => LOGIN_ERROR_PASSWORD,
+				'error_msg' => 'NO_PASSWORD_SUPPLIED',
+				'user_row'  => array('user_id' => ANONYMOUS),
 			);
 		}
 
 		if (!$username)
 		{
 			return array(
-				'status'	=> LOGIN_ERROR_USERNAME,
-				'error_msg'	=> 'LOGIN_ERROR_USERNAME',
-				'user_row'	=> array('user_id' => ANONYMOUS),
+				'status'    => LOGIN_ERROR_USERNAME,
+				'error_msg' => 'LOGIN_ERROR_USERNAME',
+				'user_row'  => array('user_id' => ANONYMOUS),
 			);
 		}
 
@@ -130,13 +130,13 @@ class cogauth extends \phpbb\auth\provider\base
 			$this->db->sql_freeresult($result);
 
 			$attempt_data = array(
-				'attempt_ip'			=> $this->user->ip,
-				'attempt_browser'		=> trim(substr($this->user->browser, 0, 149)),
-				'attempt_forwarded_for'	=> $this->user->forwarded_for,
-				'attempt_time'			=> time(),
-				'user_id'				=> ($row) ? (int) $row['user_id'] : 0,
-				'username'				=> $username,
-				'username_clean'		=> $username_clean,
+				'attempt_ip'            => $this->user->ip,
+				'attempt_browser'       => trim(substr($this->user->browser, 0, 149)),
+				'attempt_forwarded_for' => $this->user->forwarded_for,
+				'attempt_time'          => time(),
+				'user_id'               => ($row) ? (int) $row['user_id'] : 0,
+				'username'              => $username,
+				'username_clean'        => $username_clean,
 			);
 			$sql = 'INSERT INTO ' . LOGIN_ATTEMPT_TABLE . $this->db->sql_build_array('INSERT', $attempt_data);
 			$this->db->sql_query($sql);
@@ -151,16 +151,16 @@ class cogauth extends \phpbb\auth\provider\base
 			if ($this->config['ip_login_limit_max'] && $attempts >= $this->config['ip_login_limit_max'])
 			{
 				return array(
-					'status'		=> LOGIN_ERROR_ATTEMPTS,
-					'error_msg'		=> 'LOGIN_ERROR_ATTEMPTS',
-					'user_row'		=> array('user_id' => ANONYMOUS),
+					'status'    => LOGIN_ERROR_ATTEMPTS,
+					'error_msg' => 'LOGIN_ERROR_ATTEMPTS',
+					'user_row'  => array('user_id' => ANONYMOUS),
 				);
 			}
 
 			return array(
-				'status'	=> LOGIN_ERROR_USERNAME,
-				'error_msg'	=> 'LOGIN_ERROR_USERNAME',
-				'user_row'	=> array('user_id' => ANONYMOUS),
+				'status'    => LOGIN_ERROR_USERNAME,
+				'error_msg' => 'LOGIN_ERROR_USERNAME',
+				'user_row'  => array('user_id' => ANONYMOUS),
 			);
 		}
 
@@ -179,9 +179,9 @@ class cogauth extends \phpbb\auth\provider\base
 			if ($vc_response)
 			{
 				return array(
-					'status'		=> LOGIN_ERROR_ATTEMPTS,
-					'error_msg'		=> 'LOGIN_ERROR_ATTEMPTS',
-					'user_row'		=> $row,
+					'status'    => LOGIN_ERROR_ATTEMPTS,
+					'error_msg' => 'LOGIN_ERROR_ATTEMPTS',
+					'user_row'  => $row,
 				);
 			}
 			else
@@ -225,17 +225,17 @@ class cogauth extends \phpbb\auth\provider\base
 			if ($row['user_type'] == USER_INACTIVE || $row['user_type'] == USER_IGNORE)
 			{
 				return array(
-					'status'		=> LOGIN_ERROR_ACTIVE,
-					'error_msg'		=> 'ACTIVE_ERROR',
-					'user_row'		=> $row,
+					'status'    => LOGIN_ERROR_ACTIVE,
+					'error_msg' => 'ACTIVE_ERROR',
+					'user_row'  => $row,
 				);
 			}
 
 			// Successful login... set user_login_attempts to zero...
 			return array(
-				'status'		=> LOGIN_SUCCESS,
-				'error_msg'		=> false,
-				'user_row'		=> $row,
+				'status'    => LOGIN_SUCCESS,
+				'error_msg' => false,
+				'user_row'  => $row,
 			);
 		}
 
@@ -248,9 +248,26 @@ class cogauth extends \phpbb\auth\provider\base
 
 		// Give status about wrong password...
 		return array(
-			'status'		=> ($show_captcha) ? LOGIN_ERROR_ATTEMPTS : LOGIN_ERROR_PASSWORD,
-			'error_msg'		=> 'LOGIN_ERROR_PASSWORD',
-			'user_row'		=> $row,
+			'status'    => ($show_captcha) ? LOGIN_ERROR_ATTEMPTS : LOGIN_ERROR_PASSWORD,
+			'error_msg' => 'LOGIN_ERROR_PASSWORD',
+			'user_row'  => $row,
 		);
 	}
+
+	public function acp()
+	{
+		// These are fields required in the config table
+		return array(
+			'cogauth_pool_id',
+		);
+	}
+
+	public function get_acp_template($new_config)
+	{
+		return array(
+			'TEMPLATE_FILE'	=> '@mrfg_cogauth/auth_provider_cogauth.html',
+			'TEMPLATE_VARS'	=> array('COGAUTH_POOL_ID' => $new_config['cogauth_pool_id'] ),
+		);
+	}
+
 }

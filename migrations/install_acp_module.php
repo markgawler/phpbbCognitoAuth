@@ -14,7 +14,7 @@ class install_acp_module extends \phpbb\db\migration\migration
 {
 	public function effectively_installed()
 	{
-		return isset($this->config['cogauth_cogauth_enabled']);
+		return isset($this->config['cogauth_pool_id']);
 	}
 
 	static public function depends_on()
@@ -25,21 +25,9 @@ class install_acp_module extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
-			array('config.add', array('cogauth_cogauth_enabled', 0)),
+			array('config.add', array('cogauth_pool_id', 1234)),
 
-			array('module.add', array(
-				'acp',
-				'ACP_CAT_DOT_MODS',
-				'ACP_COGAUTH_TITLE'
-			)),
-			array('module.add', array(
-				'acp',
-				'ACP_COGAUTH_TITLE',
-				array(
-					'module_basename'	=> '\mrfg\cogauth\acp\main_module',
-					'modes'				=> array('settings'),
-				),
-			)),
+
 		);
 	}
 }

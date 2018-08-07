@@ -22,6 +22,7 @@ $lang = array_merge($lang, array(
 
 	'ACP_COGAUTH'					=> 'Settings',
 	'ACP_COGAUTH_ENABLED'			=> 'AWS Cognito Authentication Enabled?',
-	'ACP_COGAUTH_SETTING_SAVED'	=> 'Settings have been saved successfully!',
-
+	'ACP_COGAUTH_SETTING_SAVED'		=> 'Settings have been saved successfully!',
+	'COGAUTH_SETTINGS'				=> 'Settings',
+	'COGAUTH_POOL'					=> 'Pool ID'
 ));

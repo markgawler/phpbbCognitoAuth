@@ -25,9 +25,12 @@ class install_acp_module extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
-			array('config.add', array('cogauth_pool_id', 1234)),
-
-
+			array('config.add', array('cogauth_pool_id', '')),
+			array('config.add', array('cogauth_client_id', '')),
+			array('config.add', array('cogauth_aws_region', '')),
+			array('config.add', array('cogauth_aws_secret', '')),
+			array('config.add', array('cogauth_aws_key', '')),
+			array('config.add', array('cogauth_client_secret', '')),
 		);
 	}
 }

@@ -8,6 +8,10 @@
 
 namespace mrfg\cogauth\auth\provider;
 
+use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+use phpbb\debug\error_handler;
+
+
 class cogauth extends \phpbb\auth\provider\base
 {
 	/**
@@ -50,6 +54,39 @@ class cogauth extends \phpbb\auth\provider\base
 	protected $phpbb_root_path;
 
 	/**
+	 * @var \Aws\Sdk
+	 */
+	protected $aws;
+
+	/**
+	 * @var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient
+	 */
+	protected $client;
+
+	/**
+	 * @var $String
+	 */
+	protected $user_pool_id;
+
+	/**
+	 * @var $string
+	 */
+	protected $client_id;
+
+	/**
+	 * @var String
+	 */
+	protected $client_secret;
+
+	/**
+	 * @var \phpbb\db\driver\driver_interface
+	 */
+	protected $db;
+
+	const COOKIE_NAME = 'aws-cognito-app-access-token';
+
+
+	/**
 	 * Database Authentication Constructor
 	 *
 	 * @param	\phpbb\db\driver\driver_interface		$db
@@ -71,12 +108,29 @@ class cogauth extends \phpbb\auth\provider\base
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->phpbb_container = $phpbb_container;
+
+		$this->user_pool_id = $config['cogauth_pool_id'];
+		$this->client_id = $config['cogauth_client_id'];
+		$this->client_secret = $config['cogauth_client_secret'];
+
+		$this->aws = new \Aws\Sdk(
+			array(
+				'credentials' => array(
+				'key' => $config['cogauth_aws_key'],
+				'secret' => $config['cogauth_aws_secret'],
+			),
+			'version' => '2016-04-18',
+			'region' => $config['cogauth_aws_region'],
+			)
+		);
+		$this->client = $this->aws->createCognitoIdentityProvider();
+
 	}
 
 	/**
 	 * {@inheritdoc}
 	 */
-	public function login($username, $password)
+	public function login_old($username, $password)
 	{
 		// Auth plugins get the password untrimmed.
 		// For compatibility we trim() here.
@@ -254,11 +308,82 @@ class cogauth extends \phpbb\auth\provider\base
 		);
 	}
 
+
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function login($username, $password)
+	{
+		// Auth plugins get the password untrimmed.
+		// For compatibility we trim() here.
+		$password = trim($password);
+
+		// do not allow empty password
+		if (!$password)
+		{
+			return array(
+				'status'    => LOGIN_ERROR_PASSWORD,
+				'error_msg' => 'NO_PASSWORD_SUPPLIED',
+				'user_row'  => array('user_id' => ANONYMOUS),
+			);
+		}
+
+		if (!$username)
+		{
+			return array(
+				'status'    => LOGIN_ERROR_USERNAME,
+				'error_msg' => 'LOGIN_ERROR_USERNAME',
+				'user_row'  => array('user_id' => ANONYMOUS),
+			);
+		}
+
+		$username_clean = utf8_clean_string($username);
+
+		$sql = 'SELECT *
+			FROM ' . USERS_TABLE . "
+			WHERE username_clean = '" . $this->db->sql_escape($username_clean) . "'";
+		$result = $this->db->sql_query($sql);
+		$row = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		if (empty($row))
+		{
+			return array(
+				'status'    => LOGIN_ERROR_USERNAME,
+				'error_msg' => 'LOGIN_ERROR_USERNAME',
+				'user_row'  => array('user_id' => ANONYMOUS),
+			);
+		}
+
+		//error_log('Email: ' . $row['user_email']);
+		//, array('email' => $row['user_email'])
+
+		error_log('Authenticate');
+		$result = $this->authenticate($username, $password, $row['user_email']);
+
+		if ($result['status'] = LOGIN_SUCCESS)
+		{
+			$result['user_row'] = $row;
+		}
+		error_log($result['status']);
+		//var_dump($result);
+		//die();
+		return $result;
+
+	}
+
+
 	public function acp()
 	{
 		// These are fields required in the config table
 		return array(
+			'cogauth_aws_region',
+			'cogauth_aws_secret',
+			'cogauth_aws_key',
+			'cogauth_client_id',
 			'cogauth_pool_id',
+			'cogauth_client_secret'
 		);
 	}
 
@@ -266,8 +391,214 @@ class cogauth extends \phpbb\auth\provider\base
 	{
 		return array(
 			'TEMPLATE_FILE'	=> '@mrfg_cogauth/auth_provider_cogauth.html',
-			'TEMPLATE_VARS'	=> array('COGAUTH_POOL_ID' => $new_config['cogauth_pool_id'] ),
+			'TEMPLATE_VARS'	=> array(
+				'COGAUTH_AWS_REGION' => $new_config['cogauth_aws_region'],
+				'COGAUTH_AWS_KEY' => $new_config['cogauth_aws_key'],
+				'COGAUTH_AWS_SECRET' => $new_config['cogauth_aws_secret'],
+				'COGAUTH_POOL_ID' => $this->user_pool_id,
+				'COGAUTH_CLIENT_ID' => $this->client_id,
+				'COGAUTH_CLIENT_SECRET' => $this->client_secret,
+			)
 		);
 	}
+
+
+	/**
+	 * @param string $username
+	 * @param string $password
+	 * @param string $email
+	 *
+	 * @return array
+	 * @throws ChallengeException
+	 * @throws \Exception
+	 */
+	public function authenticate($username, $password, $email)
+	{
+
+		try {
+			$response = $this->client->adminInitiateAuth(array(
+				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
+				'AuthParameters' => array(
+					'USERNAME' => $username,
+					'PASSWORD' => $password,
+					'SECRET_HASH' => $this->cognitoSecretHash($username),
+				),
+				'ClientId' => $this->client_id,
+				'UserPoolId' => $this->user_pool_id,
+			));
+			return $this->handleAuthenticateResponse($response->toArray());
+
+
+		} catch (CognitoIdentityProviderException $e) {
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException':
+					error_log('Migrate user');
+					$response = $this->migrate_user($username, $password, array('email' => $email));
+
+				break;
+				case 'NotAuthorizedException':
+					error_log('Authentication AWS Message: ' . $e->getAwsErrorMessage());
+					return array(
+						'status'    => LOGIN_ERROR_PASSWORD,
+						'error_msg' => 'NO_PASSWORD_SUPPLIED',
+						'user_row'  => array('user_id' => ANONYMOUS),
+					);
+				break;
+
+				default;
+					//error_log('Unhandled Authentication Message    : ' . $e->getMessage());
+					error_log('Unhandled Authentication AWS Message: ' . $e->getAwsErrorMessage());
+					error_log('Unhandled Authentication: ErrorCode : ' . $e->getAwsErrorCode());
+					//error_log('Unhandled Authentication: ErrorCode : ' . $e->getAwsErrorType());
+					throw $e;
+			}
+			//throw CognitoResponseException::createFromCognitoException($e);
+		}
+
+		// Successful login... set user_login_attempts to zero...
+		error_log('Sucsess');
+		return array(
+			'status'    => LOGIN_SUCCESS,
+			'error_msg' => false,
+			'user_row'  => array(),
+		);
+	}
+
+	/**
+	 * @param string $username
+	 * @param string $password
+	 * @param array $attributes
+	 * @return string
+	 * @throws /Exception
+	 */
+	public function migrate_user($username, $password, array $attributes = array())
+	{
+		$user_attributes = $this->buildAttributesArray($attributes);
+		//$secret = gen_rand_string_friendly(24);
+
+		try {
+			$response = $this->client->AdminCreateUser(array(
+				'UserPoolId' => $this->user_pool_id,
+				'Username' => $username,
+				'TemporaryPassword' => $password,
+				'MessageAction' => 'SUPPRESS',
+				'SecretHash' => $this->cognitoSecretHash($username),
+				'UserAttributes' => $user_attributes,
+			));
+			}
+		catch (CognitoIdentityProviderException $e) {
+			error_log('Migration Message    : ' . $e->getMessage());
+			throw $e;
+		}
+
+		try {
+			$response = $this->client->adminInitiateAuth(array(
+				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
+				'AuthParameters' => array(
+					'USERNAME' => $username,
+					'PASSWORD' => $password,
+					'SECRET_HASH' => $this->cognitoSecretHash($username),
+				),
+				'ClientId' => $this->client_id,
+				'UserPoolId' => $this->user_pool_id,
+			));
+			//return $this->handleAuthenticateResponse($response->toArray());
+		} catch (CognitoIdentityProviderException $e) {
+			error_log('Authentication Message    : ' . $e->getMessage());
+			error_log('Authentication AWS Message: ' . $e->getAwsErrorMessage());
+			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
+			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorType());
+			throw $e;
+		}
+
+		error_log('Challenge Name: ' . $response['ChallengeName']);
+		switch ($response['ChallengeName'])
+		{
+			case 'NEW_PASSWORD_REQUIRED':
+				$params = array('ChallengeName'      => "NEW_PASSWORD_REQUIRED",
+								'ClientId'           => $this->client_id,
+								'UserPoolId'         => $this->user_pool_id,
+								'ChallengeResponses' => array(
+									'NEW_PASSWORD'	=> $password,
+									'USERNAME'   	=> $username,
+									'SECRET_HASH'	=> $this->cognitoSecretHash($username)),
+								'Session' => $response['Session']
+				);
+				$response = $this->client->adminRespondToAuthChallenge($params);
+			break;
+
+			default:
+
+		}
+	}
+
+
+	/**
+	 * @param array $response
+	 * @return array
+	 * @throws \Exception
+	 */
+	protected function handleAuthenticateResponse(array $response)
+	{
+		if (isset($response['AuthenticationResult'])) {
+			// login sucsess
+			return $response['AuthenticationResult'];
+		}
+
+		//if (isset($response['ChallengeName'])) {
+
+
+		//}
+
+		throw new Exception('Could not handle AdminInitiateAuth response');
+	}
+
+
+	/**
+	 * @param array $attributes
+	 * @return array
+	 */
+	private function buildAttributesArray(array $attributes)
+	{
+		$userAttributes = array();
+		foreach ($attributes as $key => $value) {
+			$userAttributes[] = array(
+				'Name' => (string)$key,
+				'Value' => (string)$value,
+			);
+		}
+		return $userAttributes;
+	}
+
+	/**
+	 * @param string $username
+	 *
+	 * @return string
+	 */
+	public function cognitoSecretHash($username)
+	{
+		return $this->hash($username . $this->client_id);
+	}
+
+	/**
+	 * @param string $message
+	 *
+	 * @return string
+	 */
+	protected function hash($message)
+	{
+		$hash = hash_hmac(
+			'sha256',
+			$message,
+			$this->client_secret,
+			true
+		);
+
+		return base64_encode($hash);
+	}
+
+
+
 
 }

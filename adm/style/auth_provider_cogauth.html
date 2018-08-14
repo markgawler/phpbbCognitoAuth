@@ -1,7 +1,30 @@
 <fieldset id="cogauth_user_pool_settings">
 	<legend>{L_COGAUTH_SETTINGS}</legend>
 	<dl>
-		<dt><label for="cogauth_user_pool">{L_COGAUTH_POOL}{L_COLON}</label><br /><span>{COGAUTH_POOL_EXPLAIN}</span></dt>
-		<dd><input type="text" id="cogauth_user_pool" size="40" name="config[cogauth_pool_id]" value="{COGAUTH_POOL_ID}" /></dd>
+		<dt><label for="cogauth_aws_region">{L_COGAUTH_AWS_REGION}{L_COLON}</label><br /><span>{COGAUTH_AWS_REGION_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_aws_region" size="40" name="config[cogauth_aws_region]" value="{COGAUTH_AWS_REGION}" /></dd>
 	</dl>
+
+	<dl>
+		<dt><label for="cogauth_aws_key">{L_COGAUTH_AWS_KEY}{L_COLON}</label><br /><span>{COGAUTH_AWS_KEY_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_aws_key" size="40" name="config[cogauth_aws_key]" value="{COGAUTH_AWS_KEY}" /></dd>
+	</dl>
+	<dl>
+		<dt><label for="cogauth_aws_secret">{L_COGAUTH_AWS_SECRET}{L_COLON}</label><br /><span>{COGAUTH_AWS_SECRET_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_aws_secret" size="40" name="config[cogauth_aws_secret]" value="{COGAUTH_AWS_SECRET}" /></dd>
+	</dl>
+
+	<dl>
+		<dt><label for="cogauth_pool_id">{L_COGAUTH_POOL_ID}{L_COLON}</label><br /><span>{COGAUTH_POOL_ID_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_pool_id" size="40" name="config[cogauth_pool_id]" value="{COGAUTH_POOL_ID}" /></dd>
+	</dl>
+	<dl>
+		<dt><label for="cogauth_client_id">{L_COGAUTH_CLIENT_ID}{L_COLON}</label><br /><span>{COGAUTH_CLIENT_ID_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_client_id" size="40" name="config[cogauth_client_id]" value="{COGAUTH_CLIENT_ID}" /></dd>
+	</dl>
+	<dl>
+		<dt><label for="cogauth_client_secret">{L_COGAUTH_CLIENT_SECRET}{L_COLON}</label><br /><span>{COGAUTH_CLIENT_SECRET_EXPLAIN}</span></dt>
+		<dd><input type="text" id="cogauth_client_secret" size="40" name="config[cogauth_client_secret]" value="{COGAUTH_CLIENT_SECRET}" /></dd>
+	</dl>
+
 </fieldset>

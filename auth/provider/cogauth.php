@@ -10,7 +10,16 @@ namespace mrfg\cogauth\auth\provider;
 
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
 use phpbb\debug\error_handler;
+use phpbb\install\module\install_database\task\add_default_data;
 
+//define('',);
+
+define('COG_LOGIN_SUCCESS', 1);
+define('COG_LOGIN_NO_AUTH', 2);
+define('COG_LOGIN_NO_USER', 3);
+define('COG_LOGIN_ERROR_PASSWORD',4);
+
+define('COG_MIGRATE_SUCCESS ',10);
 
 class cogauth extends \phpbb\auth\provider\base
 {
@@ -83,7 +92,8 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	protected $db;
 
-	const COOKIE_NAME = 'aws-cognito-app-access-token';
+
+
 
 
 	/**
@@ -356,13 +366,14 @@ class cogauth extends \phpbb\auth\provider\base
 			);
 		}
 
-		//error_log('Email: ' . $row['user_email']);
-		//, array('email' => $row['user_email'])
 
-		error_log('Authenticate');
-		$result = $this->authenticate($username, $password, $row['user_email']);
+		$result = $this->authenticate($username, $password);
+		if ($result['status'] == COG_LOGIN_NO_USER)
+		{
+			$response = $this->migrate_user($username, $password, array('email' => $row['user_email']));
+		}
 
-		if ($result['status'] = LOGIN_SUCCESS)
+		if ($result['status'] == LOGIN_SUCCESS)
 		{
 			$result['user_row'] = $row;
 		}
@@ -374,33 +385,7 @@ class cogauth extends \phpbb\auth\provider\base
 	}
 
 
-	public function acp()
-	{
-		// These are fields required in the config table
-		return array(
-			'cogauth_aws_region',
-			'cogauth_aws_secret',
-			'cogauth_aws_key',
-			'cogauth_client_id',
-			'cogauth_pool_id',
-			'cogauth_client_secret'
-		);
-	}
 
-	public function get_acp_template($new_config)
-	{
-		return array(
-			'TEMPLATE_FILE'	=> '@mrfg_cogauth/auth_provider_cogauth.html',
-			'TEMPLATE_VARS'	=> array(
-				'COGAUTH_AWS_REGION' => $new_config['cogauth_aws_region'],
-				'COGAUTH_AWS_KEY' => $new_config['cogauth_aws_key'],
-				'COGAUTH_AWS_SECRET' => $new_config['cogauth_aws_secret'],
-				'COGAUTH_POOL_ID' => $this->user_pool_id,
-				'COGAUTH_CLIENT_ID' => $this->client_id,
-				'COGAUTH_CLIENT_SECRET' => $this->client_secret,
-			)
-		);
-	}
 
 
 	/**
@@ -412,9 +397,10 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @throws ChallengeException
 	 * @throws \Exception
 	 */
-	public function authenticate($username, $password, $email)
+	public function authenticate($username, $password)
 	{
-
+		$error_message = '';
+		$response = null;
 		try {
 			$response = $this->client->adminInitiateAuth(array(
 				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
@@ -426,43 +412,45 @@ class cogauth extends \phpbb\auth\provider\base
 				'ClientId' => $this->client_id,
 				'UserPoolId' => $this->user_pool_id,
 			));
-			return $this->handleAuthenticateResponse($response->toArray());
 
+			$response = $this->handleAuthenticateResponse($response->toArray());
+			$status = COG_LOGIN_SUCCESS;
 
 		} catch (CognitoIdentityProviderException $e) {
 			switch ($e->getAwsErrorCode())
 			{
 				case 'UserNotFoundException':
-					error_log('Migrate user');
-					$response = $this->migrate_user($username, $password, array('email' => $email));
-
+					$status = COG_LOGIN_NO_USER;
 				break;
 				case 'NotAuthorizedException':
-					error_log('Authentication AWS Message: ' . $e->getAwsErrorMessage());
-					return array(
-						'status'    => LOGIN_ERROR_PASSWORD,
-						'error_msg' => 'NO_PASSWORD_SUPPLIED',
-						'user_row'  => array('user_id' => ANONYMOUS),
-					);
+					error_log('AWS ERROR: ' . $e->getAwsErrorMessage());
+					$status = COG_LOGIN_ERROR_PASSWORD;
+					switch ($e->getAwsErrorMessage())
+					{
+						case 'Password attempts exceeded':
+							$error_message = 'LOGIN_ERROR_ATTEMPTS';
+						break;
+
+						case 'User is disabled':
+							$error_message = 'ACCOUNT_DEACTIVATED';
+						break;
+
+						default:
+							$error_message = 'LOGIN_ERROR_PASSWORD';
+					}
 				break;
 
 				default;
-					//error_log('Unhandled Authentication Message    : ' . $e->getMessage());
+					$status = COG_LOGIN_NO_AUTH;
 					error_log('Unhandled Authentication AWS Message: ' . $e->getAwsErrorMessage());
-					error_log('Unhandled Authentication: ErrorCode : ' . $e->getAwsErrorCode());
-					//error_log('Unhandled Authentication: ErrorCode : ' . $e->getAwsErrorType());
-					throw $e;
+					//throw $e;
 			}
-			//throw CognitoResponseException::createFromCognitoException($e);
 		}
-
-		// Successful login... set user_login_attempts to zero...
-		error_log('Sucsess');
 		return array(
-			'status'    => LOGIN_SUCCESS,
-			'error_msg' => false,
-			'user_row'  => array(),
-		);
+			 'status'    => $status,
+			 'error_msg' => $error_message,
+			 'responce' => $response,
+		 );
 	}
 
 	/**
@@ -474,6 +462,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function migrate_user($username, $password, array $attributes = array())
 	{
+		error_log('--- User Migration --');
 		$user_attributes = $this->buildAttributesArray($attributes);
 		//$secret = gen_rand_string_friendly(24);
 
@@ -488,7 +477,7 @@ class cogauth extends \phpbb\auth\provider\base
 			));
 			}
 		catch (CognitoIdentityProviderException $e) {
-			error_log('Migration Message    : ' . $e->getMessage());
+			error_log('Error Migration Message    : ' . $e->getMessage());
 			throw $e;
 		}
 
@@ -505,10 +494,10 @@ class cogauth extends \phpbb\auth\provider\base
 			));
 			//return $this->handleAuthenticateResponse($response->toArray());
 		} catch (CognitoIdentityProviderException $e) {
-			error_log('Authentication Message    : ' . $e->getMessage());
-			error_log('Authentication AWS Message: ' . $e->getAwsErrorMessage());
-			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
-			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorType());
+			error_log('M Authentication Message    : ' . $e->getMessage());
+			error_log('M Authentication AWS Message: ' . $e->getAwsErrorMessage());
+			error_log('M Authentication: ErrorCode : ' . $e->getAwsErrorCode());
+			error_log('M Authentication: ErrorCode : ' . $e->getAwsErrorType());
 			throw $e;
 		}
 
@@ -529,8 +518,10 @@ class cogauth extends \phpbb\auth\provider\base
 			break;
 
 			default:
-
+				error_log('Unhandled responce');
+				$response = null;
 		}
+		return $response;
 	}
 
 
@@ -599,6 +590,32 @@ class cogauth extends \phpbb\auth\provider\base
 	}
 
 
+	public function acp()
+	{
+		// These are fields required in the config table
+		return array(
+			'cogauth_aws_region',
+			'cogauth_aws_secret',
+			'cogauth_aws_key',
+			'cogauth_client_id',
+			'cogauth_pool_id',
+			'cogauth_client_secret'
+		);
+	}
 
+	public function get_acp_template($new_config)
+	{
+		return array(
+			'TEMPLATE_FILE'	=> '@mrfg_cogauth/auth_provider_cogauth.html',
+			'TEMPLATE_VARS'	=> array(
+				'COGAUTH_AWS_REGION' => $new_config['cogauth_aws_region'],
+				'COGAUTH_AWS_KEY' => $new_config['cogauth_aws_key'],
+				'COGAUTH_AWS_SECRET' => $new_config['cogauth_aws_secret'],
+				'COGAUTH_POOL_ID' => $this->user_pool_id,
+				'COGAUTH_CLIENT_ID' => $this->client_id,
+				'COGAUTH_CLIENT_SECRET' => $this->client_secret,
+			)
+		);
+	}
 
 }

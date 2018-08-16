@@ -271,12 +271,11 @@ class cogauth extends \phpbb\auth\provider\base
 			switch ($status['status'])
 			{
 				case COG_LOGIN_SUCCESS:
-					error_log('Authenticated');
 					$authenticated = true;
+					error_log('Aws Cognito authenticated');
 				break;
 
 				case COG_LOGIN_DISABLED:
-					error_log('Disabled');
 					return array(
 						'status'    => LOGIN_ERROR_ACTIVE,
 						'error_msg' => 'ACTIVE_ERROR',
@@ -285,13 +284,16 @@ class cogauth extends \phpbb\auth\provider\base
 				break;
 
 				default:
+					// COG_LOGIN_NO_AUTH
+					// COG_USER_NOT_FOUND - can't happen here
+					// COG_LOGIN_ERROR_PASSWORD
 					error_log('Unauthenticated');
 			}
 
 		}
 
 		// Check password papBB rules...
-		if ($this->passwords_manager->check($password, $row['user_password'], $row))
+		if ($this->passwords_manager->check($password, $row['user_password'], $row) && !$authenticated)
 		{
 			// Check for old password hash...
 			if ($this->passwords_manager->convert_flag || strlen($row['user_password']) == 32)
@@ -307,7 +309,6 @@ class cogauth extends \phpbb\auth\provider\base
 				$row['user_password'] = $hash;
 			}
 			$authenticated = true;
-
 		}
 
 		if ($authenticated)
@@ -416,6 +417,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 * 		COG_LOGIN_NO_AUTH
 	 *  	COG_USER_NOT_FOUND
 	 *		COG_LOGIN_ERROR_PASSWORD
+	 *      COG_LOGIN_DISABLED
 	 *
 	 */
 	public function authenticate($username, $password)
@@ -503,7 +505,8 @@ class cogauth extends \phpbb\auth\provider\base
 		//$secret = gen_rand_string_friendly(24);
 
 		try {
-			$response = $this->client->AdminCreateUser(array(
+			//$response =
+			$this->client->AdminCreateUser(array(
 				'UserPoolId' => $this->user_pool_id,
 				'Username' => $username,
 				'TemporaryPassword' => $password,
@@ -564,7 +567,8 @@ class cogauth extends \phpbb\auth\provider\base
 				);
 				try
 				{
-					$response = $this->client->adminRespondToAuthChallenge($params);
+					//$response =
+					$this->client->adminRespondToAuthChallenge($params);
 				} catch (CognitoIdentityProviderException $e) {
 					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
 
@@ -582,23 +586,6 @@ class cogauth extends \phpbb\auth\provider\base
 			'status' => COG_MIGRATE_SUCCESS ,
 			'error' => '',
 			);
-	}
-
-
-	/**
-	 * @param array $response
-	 * @return array
-	 *
-	 */
-	protected function handleAuthenticateResponse(array $response)
-	{
-		if (isset($response['AuthenticationResult'])) {
-			// login success
-			return $response['AuthenticationResult'];
-		}
-		return array();
-
-		//throw new Exception('Could not handle AdminInitiateAuth response');
 	}
 
 

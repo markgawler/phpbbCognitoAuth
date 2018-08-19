@@ -8,10 +8,9 @@
 
 namespace mrfg\cogauth\auth\provider;
 
-use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
-use phpbb\debug\error_handler;
-use phpbb\install\module\install_database\task\add_default_data;
-use phpbb\passwords\driver\sha1_smf;
+//use phpbb\debug\error_handler;
+//use phpbb\install\module\install_database\task\add_default_data;
+//use phpbb\passwords\driver\sha1_smf;
 
 //define('',);
 
@@ -100,9 +99,9 @@ class cogauth extends \phpbb\auth\provider\base
 
 
 	/**
-	 * @var string
+	 * @var \mrfg\cogauth\cognito\cognito
 	 */
-	protected $cogauth_session;
+	protected $cognito_client;
 
 	/**
 	 * Database Authentication Constructor
@@ -113,16 +112,19 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @param	\phpbb\request\request		$request
 	 * @param	\phpbb\user			$user
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
+	 * @param 	\mrfg\cogauth\cognito\cognito $cognito_client
 	 * @param	string				$phpbb_root_path
 	 * @param	string				$php_ext
-	 * @param	string				$cogauth_session
 	 */
-	public function __construct(\phpbb\db\driver\driver_interface $db,
+	public function __construct(
+		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\passwords\manager $passwords_manager,
-		\phpbb\request\request $request, \phpbb\user $user,
+		\phpbb\request\request $request,
+		\phpbb\user $user,
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
-		$phpbb_root_path, $php_ext, $cogauth_session)
+		\mrfg\cogauth\cognito\cognito $cognito_client,
+		$phpbb_root_path, $php_ext)
 	{
 		$this->db = $db;
 		$this->config = $config;
@@ -132,11 +134,16 @@ class cogauth extends \phpbb\auth\provider\base
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->phpbb_container = $phpbb_container;
+
+		$this->cognito_client = $cognito_client;
+
+		/*
 		$this->cogauth_session =$cogauth_session;
 
 		$this->user_pool_id = $config['cogauth_pool_id'];
 		$this->client_id = $config['cogauth_client_id'];
 		$this->client_secret = $config['cogauth_client_secret'];
+
 
 		$this->aws = new \Aws\Sdk(
 			array(
@@ -149,7 +156,7 @@ class cogauth extends \phpbb\auth\provider\base
 			)
 		);
 		$this->client = $this->aws->createCognitoIdentityProvider();
-
+		*/
 	}
 
 	/**
@@ -273,10 +280,10 @@ class cogauth extends \phpbb\auth\provider\base
 
 		// Find the user in AWS Cognito, we only authenticate against cognito if user exists and confirmed
 		// otherwise we attempt to migrate the user if the user authenticated via phpBB rules.
-		$cognito_status = $this->get_user($row['user_id']);
+		$cognito_status = $this->cognito_client->get_user($row['user_id']);
 		if ($cognito_status['status'] == COG_USER_FOUND &&  $cognito_status['user_status'] == 'CONFIRMED')
 		{
-			$status = $this->authenticate($row['user_id'], $password);
+			$status = $this->cognito_client->authenticate($row['user_id'], $password);
 			switch ($status['status'])
 			{
 				case COG_LOGIN_SUCCESS:
@@ -356,7 +363,7 @@ class cogauth extends \phpbb\auth\provider\base
 			// Migrate user to AWS Cognito as phpBB login success
 			if ($cognito_status['status'] == COG_USER_NOT_FOUND)
 			{
-				$this->migrate_user($row['username'], $password, $row['user_id'], $row['user_email']);
+				$this->cognito_client->migrate_user($row['username'], $password, $row['user_id'], $row['user_email']);
 			}
 
 			// Successful login... set user_login_attempts to zero...
@@ -380,295 +387,6 @@ class cogauth extends \phpbb\auth\provider\base
 			'error_msg' => 'LOGIN_ERROR_PASSWORD',
 			'user_row'  => $row,
 		);
-	}
-
-
-	/**
-	 * @param string $user_id
-	 * @return array
-	 *
-	 * User Status UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
-	 */
-	public function get_user($user_id)
-	{
-		$username = $this->cognito_username($user_id);
-		try
-		{
-			$response = $this->client->AdminGetUser(array(
-				"Username"   => $username,
-				"UserPoolId" => $this->user_pool_id
-			));
-			return array(
-				'status' => COG_USER_FOUND,
-				'user_status' => $response['UserStatus']
-			);
-
-		} catch (CognitoIdentityProviderException $e) {
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					$status = COG_USER_NOT_FOUND;
-				break;
-				default:
-					$status = COG_ERROR;
-					error_log($e->getAwsErrorMessage());
-			}
-		}
-
-		return array(
-			'status' => $status,
-			'user_status' => ''
-		);
-
-	}
-
-
-	/**
-	 * @param string $user_id
-	 * @param string $password
-	 *
-	 * @return array
-	 *
-	 *  status:
-	 * 		COG_LOGIN_SUCCESS
-	 * 		COG_LOGIN_NO_AUTH
-	 *  	COG_USER_NOT_FOUND
-	 *		COG_LOGIN_ERROR_PASSWORD
-	 *      COG_LOGIN_DISABLED
-	 *      COG_LOGIN_ERROR_ATTEMPTS
-	 *
-	 */
-	public function authenticate($user_id, $password)
-	{
-		$username = $this->cognito_username($user_id);
-		try {
-			$response = $this->client->adminInitiateAuth(array(
-				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
-				'AuthParameters' => array(
-					'USERNAME' => $username,
-					'PASSWORD' => $password,
-					'SECRET_HASH' => $this->cognitoSecretHash($username),
-				),
-				'ClientId' => $this->client_id,
-				'UserPoolId' => $this->user_pool_id,
-			));
-
-			if (isset($response['AuthenticationResult']))
-			{
-				// login success
-				$auth_result = $response['AuthenticationResult'];
-				$data = array('sid'	=> $this->user->session_id,
-							  'access_token' => $auth_result['AccessToken'],
-							  'expires_in' => $auth_result['ExpiresIn'],
-							  'id_token' => $auth_result['IdToken'],
-							  'refresh_token' => $auth_result['RefreshToken'],
-							  'token_type'  => $auth_result['TokenType']);
-				$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
-				$this->db->sql_query($sql);
-
-				return array(
-					'status'    => COG_LOGIN_SUCCESS,
-					'response'  => $response['AuthenticationResult']
-				);
-			} else {
-				return array(
-					'status'    => COG_LOGIN_NO_AUTH,
-					'response'  => $response['ChallengeName']
-				);
-			}
-				//$this->handleAuthenticateResponse($response->toArray()));
-
-		} catch (CognitoIdentityProviderException $e) {
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					$status = COG_USER_NOT_FOUND;
-				break;
-				case 'NotAuthorizedException':
-					error_log('AWS ERROR (Auth): ' . $e->getAwsErrorMessage());
-					switch ($e->getAwsErrorMessage())
-					{
-						case 'Password attempts exceeded':
-							$status = COG_LOGIN_ERROR_ATTEMPTS;
-						break;
-
-						case 'User is disabled':
-							$status = COG_LOGIN_DISABLED;
-						break;
-
-						default:
-							$status = COG_LOGIN_ERROR_PASSWORD;
-					}
-				break;
-
-				default;
-					$status = COG_LOGIN_NO_AUTH;
-					error_log('Unhandled Authentication Error: ' . $e->getAwsErrorCode());
-					error_log('Unhandled Authentication Error: ' . $e->getAwsErrorMessage());
-			}
-		}
-		return array(
-			 'status'    => $status,
-			 'response' => null,
-		 );
-	}
-
-	/**
-	 * @param string $username
-	 * @param string $password
-	 * @param string $user_id
-	 * @param string $email
-	 * @return array
-	 * @throws /Exception
-	 */
-	public function migrate_user($username, $password, $user_id, $email)
-	{
-		error_log('User Migration --');
-		$cog_user = $this->cognito_username($user_id);
-
-		$user_attributes = $this->buildAttributesArray(array(
-			'preferred_username' => utf8_clean_string($username),
-			'email' => $email,
-			'nickname' => $username,
-			));
-
-		try {
-			//$response =
-			$this->client->AdminCreateUser(array(
-				'UserPoolId' => $this->user_pool_id,
-				'Username' => $cog_user,
-				'TemporaryPassword' => $password,
-				'MessageAction' => 'SUPPRESS',
-				'SecretHash' => $this->cognitoSecretHash($cog_user),
-				'UserAttributes' => $user_attributes,
-			));
-		}
-		catch (CognitoIdentityProviderException $e) {
-			error_log('Migration Fail: ' . $e->getAwsErrorCode());
-			error_log('AWS Message: ' . $e->getAwsErrorMessage());
-			switch ($e->getAwsErrorCode())
-			{
-				case 'InvalidPasswordException':
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-				break;
-
-				default:
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-			}
-		}
-
-		try {
-			$response = $this->client->adminInitiateAuth(array(
-				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
-				'AuthParameters' => array(
-					'USERNAME' => $cog_user,
-					'PASSWORD' => $password,
-					'SECRET_HASH' => $this->cognitoSecretHash($cog_user),
-				),
-				'ClientId' => $this->client_id,
-				'UserPoolId' => $this->user_pool_id,
-			));
-			//return $this->handleAuthenticateResponse($response->toArray());
-		} catch (CognitoIdentityProviderException $e) {
-			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
-			throw $e;
-
-		}
-
-		switch ($response['ChallengeName'])
-		{
-			case 'NEW_PASSWORD_REQUIRED':
-				$params = array('ChallengeName'      => "NEW_PASSWORD_REQUIRED",
-								'ClientId'           => $this->client_id,
-								'UserPoolId'         => $this->user_pool_id,
-								'ChallengeResponses' => array(
-									'NEW_PASSWORD'	=> $password,
-									'USERNAME'   	=> $cog_user,
-									'SECRET_HASH'	=> $this->cognitoSecretHash($cog_user)),
-								'Session' => $response['Session']
-				);
-				try
-				{
-					//$response =
-					$this->client->adminRespondToAuthChallenge($params);
-				} catch (CognitoIdentityProviderException $e) {
-					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
-
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-				}
-			break;
-
-			default:
-				error_log('Unhandled response');
-				$response = null;
-		}
-		return  array(
-			'status' => COG_MIGRATE_SUCCESS ,
-			'error' => '',
-			);
-	}
-
-
-	/**
-	 * @param array $attributes
-	 * @return array
-	 */
-	private function buildAttributesArray(array $attributes)
-	{
-		$userAttributes = array();
-		foreach ($attributes as $key => $value) {
-			$userAttributes[] = array(
-				'Name' => (string)$key,
-				'Value' => (string)$value,
-			);
-		}
-		return $userAttributes;
-	}
-
-	/**
-	 * @param $user_id
-	 * @return string
-	 */
-	private function cognito_username($user_id)
-	{
-		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
-	}
-
-
-	/**
-	 * @param string $username
-	 *
-	 * @return string
-	 */
-	public function cognitoSecretHash($username)
-	{
-		return $this->hash($username . $this->client_id);
-	}
-
-	/**
-	 * @param string $message
-	 *
-	 * @return string
-	 */
-	protected function hash($message)
-	{
-		$hash = hash_hmac(
-			'sha256',
-			$message,
-			$this->client_secret,
-			true
-		);
-
-		return base64_encode($hash);
 	}
 
 

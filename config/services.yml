@@ -9,6 +9,16 @@ services:
             - '%core.php_ext%'
         tags:
             - { name: event.listener }
+
+
+    mrfg.cogauth.cognito:
+        class: mrfg\cogauth\cognito\cognito
+        arguments:
+            - '@dbal.conn'
+            - '@config'
+            - '@user'
+            - '%mrfg.cogauth.tables.cogauth_session%'
+
 imports:
 - { resource: auth.yml }
 - { resource: tables.yml }

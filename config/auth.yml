@@ -8,6 +8,7 @@ services:
             - '@request'
             - '@user'
             - '@service_container'
+            - '@mrfg.cogauth.cognito'
             - '%core.root_path%'
             - '%core.php_ext%'
             - '%mrfg.cogauth.tables.cogauth_session%'

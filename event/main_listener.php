@@ -24,6 +24,8 @@ class main_listener implements EventSubscriberInterface
 	{
 		return array(
 			'core.user_setup'				=> 'load_language_on_setup',
+			'core.ucp_profile_reg_details_data' => 'ucp_profile_update',
+			'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
 
@@ -53,6 +55,8 @@ class main_listener implements EventSubscriberInterface
 		$this->template = $template;
 		$this->user     = $user;
 		$this->php_ext  = $php_ext;
+
+
 	}
 
 	/**
@@ -68,6 +72,30 @@ class main_listener implements EventSubscriberInterface
 			'lang_set' => 'common',
 		);
 		$event['lang_set_ext'] = $lang_set_ext;
+	}
+
+	public function session_gc_after($event)
+	{
+		error_log('session_gc_after - has run');
+	}
+	public function ucp_profile_update($event)
+	{
+		$data = $event['data'];
+
+		error_log('ucp_profile_update');
+		error_log($event['data']['username']);
+		error_log($event['data']['email']);
+		error_log($event['data']['new_password']);
+		error_log($event['data']['cur_password']);
+		error_log($event['data']['new_password']);
+		error_log('SID: ' . $this->user->session_id);
+
+		if ($data['new_password'] === $data['new_password'] && isset($data['new_password']))
+		{
+
+		}
+
+
 	}
 
 }

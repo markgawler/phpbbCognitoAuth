@@ -11,5 +11,6 @@ services:
             - { name: event.listener }
 imports:
 - { resource: auth.yml }
+- { resource: tables.yml }
 
 

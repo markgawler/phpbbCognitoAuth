@@ -10,5 +10,7 @@ services:
             - '@service_container'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '%mrfg.cogauth.tables.cogauth_session%'
+
         tags:
             - { name: auth.provider }

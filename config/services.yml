@@ -6,7 +6,8 @@ services:
             - '@controller.helper'
             - '@template'
             - '@user'
-            - '%core.php_ext%'
+            - '@mrfg.cogauth.cognito'
+            - '%mrfg.cogauth.tables.cogauth_session%'
         tags:
             - { name: event.listener }
 

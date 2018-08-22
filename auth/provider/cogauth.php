@@ -12,20 +12,6 @@ namespace mrfg\cogauth\auth\provider;
 //use phpbb\install\module\install_database\task\add_default_data;
 //use phpbb\passwords\driver\sha1_smf;
 
-//define('',);
-
-define('COG_LOGIN_SUCCESS', 1);
-define('COG_LOGIN_NO_AUTH', 2);
-define('COG_USER_NOT_FOUND', 3);
-define('COG_LOGIN_ERROR_PASSWORD',4);
-define('COG_USER_FOUND',7);
-define('COG_LOGIN_DISABLED', 8);
-define('COG_LOGIN_ERROR_ATTEMPTS', 9);
-define('COG_ERROR',99);
-
-define('COG_MIGRATE_SUCCESS',10);
-define('COG_MIGRATE_FAIL', 11);
-
 class cogauth extends \phpbb\auth\provider\base
 {
 	/**
@@ -68,35 +54,9 @@ class cogauth extends \phpbb\auth\provider\base
 	protected $phpbb_root_path;
 
 	/**
-	 * @var \Aws\Sdk
-	 */
-	protected $aws;
-
-	/**
-	 * @var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient
-	 */
-	protected $client;
-
-	/**
-	 * @var $String
-	 */
-	protected $user_pool_id;
-
-	/**
-	 * @var $string
-	 */
-	protected $client_id;
-
-	/**
-	 * @var String
-	 */
-	protected $client_secret;
-
-	/**
 	 * @var \phpbb\db\driver\driver_interface
 	 */
 	protected $db;
-
 
 	/**
 	 * @var \mrfg\cogauth\cognito\cognito
@@ -134,29 +94,7 @@ class cogauth extends \phpbb\auth\provider\base
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->phpbb_container = $phpbb_container;
-
 		$this->cognito_client = $cognito_client;
-
-		/*
-		$this->cogauth_session =$cogauth_session;
-
-		$this->user_pool_id = $config['cogauth_pool_id'];
-		$this->client_id = $config['cogauth_client_id'];
-		$this->client_secret = $config['cogauth_client_secret'];
-
-
-		$this->aws = new \Aws\Sdk(
-			array(
-				'credentials' => array(
-				'key' => $config['cogauth_aws_key'],
-				'secret' => $config['cogauth_aws_secret'],
-			),
-			'version' => '2016-04-18',
-			'region' => $config['cogauth_aws_region'],
-			)
-		);
-		$this->client = $this->aws->createCognitoIdentityProvider();
-		*/
 	}
 
 	/**
@@ -411,9 +349,9 @@ class cogauth extends \phpbb\auth\provider\base
 				'COGAUTH_AWS_REGION' => $new_config['cogauth_aws_region'],
 				'COGAUTH_AWS_KEY' => $new_config['cogauth_aws_key'],
 				'COGAUTH_AWS_SECRET' => $new_config['cogauth_aws_secret'],
-				'COGAUTH_POOL_ID' => $this->user_pool_id,
-				'COGAUTH_CLIENT_ID' => $this->client_id,
-				'COGAUTH_CLIENT_SECRET' => $this->client_secret,
+				'COGAUTH_POOL_ID' => $new_config['cogauth_pool_id'],
+				'COGAUTH_CLIENT_ID' => $new_config['cogauth_client_id'],
+				'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
 			)
 		);
 	}

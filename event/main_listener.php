@@ -24,7 +24,8 @@ class main_listener implements EventSubscriberInterface
 	{
 		return array(
 			'core.user_setup'				=> 'load_language_on_setup',
-			'core.ucp_profile_reg_details_data' => 'ucp_profile_update',
+			'core.ucp_profile_reg_details_validate' => 'ucp_profile_update',
+			'core.session_create_after' 	=> 'session_create_after',
 			'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
@@ -38,8 +39,11 @@ class main_listener implements EventSubscriberInterface
 	/* @var \phpbb\user */
 	protected $user;
 
-	/** @var string phpEx */
-	protected $php_ext;
+	/* @var \mrfg\cogauth\cognito\cognito */
+	protected $client;
+
+	/* @var string */
+	protected $session_table;
 
 	/**
 	 * Constructor
@@ -47,16 +51,21 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\controller\helper	$helper		Controller helper object
 	 * @param \phpbb\template\template	$template	Template object
 	 * @param \phpbb\user               $user       User object
-	 * @param string                    $php_ext    phpEx
+	 * @param \mrfg\cogauth\cognito\cognito $client
+	 * @param string $session_table
 	 */
-	public function __construct(\phpbb\controller\helper $helper, \phpbb\template\template $template, \phpbb\user $user, $php_ext)
+	public function __construct(
+		\phpbb\controller\helper $helper,
+		\phpbb\template\template $template,
+		\phpbb\user $user,
+		\mrfg\cogauth\cognito\cognito $client,
+		$session_table)
 	{
 		$this->helper   = $helper;
 		$this->template = $template;
 		$this->user     = $user;
-		$this->php_ext  = $php_ext;
-
-
+		$this->client = $client;
+		$this->session_table = $session_table;
 	}
 
 	/**
@@ -77,25 +86,48 @@ class main_listener implements EventSubscriberInterface
 	public function session_gc_after($event)
 	{
 		error_log('session_gc_after - has run');
+		//TODO Tidy sesions
 	}
+
+
+	public function session_create_after($event)
+	{
+		$data = $event['session_data'];
+		if ($data['session_user_id'] !== 1)
+		{
+			error_log('Store access token');
+			// Store the Cognito access token in the DB now we hae the SID for the logged in session.
+			$this->client->store_auth_result($data['session_id']);
+		}
+	}
+
 	public function ucp_profile_update($event)
 	{
-		$data = $event['data'];
-
-		error_log('ucp_profile_update');
-		error_log($event['data']['username']);
-		error_log($event['data']['email']);
-		error_log($event['data']['new_password']);
-		error_log($event['data']['cur_password']);
-		error_log($event['data']['new_password']);
-		error_log('SID: ' . $this->user->session_id);
-
-		if ($data['new_password'] === $data['new_password'] && isset($data['new_password']))
+		if ($event['submit'] &&  !sizeof($event['error']))
 		{
+			error_log('ucp_profile_update, no errors submit ');
+			$data = $event['data'];
 
+			error_log('Password Change: ' . $event['data']['new_password']);
+			$access_token = $this->client->get_access_token();
+			if (isset($access_token))
+			{
+				try
+				{
+					$this->client->changePassword($access_token, $data['cur_password'], $data['new_password']);
+					error_log('Success');
+				}
+				catch  (\Exception $e)  //TODO error handling
+				{
+					error_log('Fail');
+					$event['error'] = array('COGAUTH_PASSWORD_ERROR');
+				}
+			}
+			else
+			{
+				error_log('No Access token found');
+				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
+			}
 		}
-
-
 	}
-
 }

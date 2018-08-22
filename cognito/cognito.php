@@ -70,11 +70,15 @@ class cognito
 	 */
 	protected $db;
 
-
 	/**
 	 * @var string
 	 */
 	protected $cogauth_session;
+
+	/**
+	 * @var array $auth_result
+	 */
+	protected $auth_result;
 
 	/**
 	 * Database Authentication Constructor
@@ -110,7 +114,7 @@ class cognito
 			)
 		);
 		$this->client = $this->aws->createCognitoIdentityProvider();
-
+		$this->auth_result = array();
 	}
 
 
@@ -186,16 +190,9 @@ class cognito
 
 			if (isset($response['AuthenticationResult']))
 			{
-				// login success
-				$auth_result = $response['AuthenticationResult'];
-				$data = array('sid'	=> $this->user->session_id,
-							  'access_token' => $auth_result['AccessToken'],
-							  'expires_in' => $auth_result['ExpiresIn'],
-							  'id_token' => $auth_result['IdToken'],
-							  'refresh_token' => $auth_result['RefreshToken'],
-							  'token_type'  => $auth_result['TokenType']);
-				$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
-				$this->db->sql_query($sql);
+				// login success, store the result locally. The result will be stored in the database once the logged in
+				// session has started  (the SID changes so we cant store it in the DB yet).
+				$this->auth_result = $response['AuthenticationResult'];
 
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
@@ -295,6 +292,7 @@ class cognito
 		}
 
 		try {
+			//TODO Duplicate code here and Authenticate :-(
 			$response = $this->client->adminInitiateAuth(array(
 				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 				'AuthParameters' => array(
@@ -305,6 +303,7 @@ class cognito
 				'ClientId' => $this->client_id,
 				'UserPoolId' => $this->user_pool_id,
 			));
+
 			//return $this->handleAuthenticateResponse($response->toArray());
 		} catch (CognitoIdentityProviderException $e) {
 			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
@@ -326,8 +325,13 @@ class cognito
 				);
 				try
 				{
-					//$response =
-					$this->client->adminRespondToAuthChallenge($params);
+					$response = $this->client->adminRespondToAuthChallenge($params);
+					if (isset($response['AuthenticationResult']))
+					{
+						// login success, store the result locally. The result will be stored in the database once the logged in
+						// session has started  (the SID changes so we cant store it in the DB yet).
+						$this->auth_result = $response['AuthenticationResult'];
+					}
 				} catch (CognitoIdentityProviderException $e) {
 					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
 
@@ -348,6 +352,60 @@ class cognito
 		);
 	}
 
+	/**
+	 * @param string $access_token
+	 * @param string $old_password
+	 * @param string $new_password
+	 * @throws \Exception
+	 * throws TokenExpiryException
+	 * throws TokenVerificationException
+	 */
+	public function changePassword($access_token, $old_password, $new_password)
+	{
+		//TODO $this->verifyAccessToken($access_token);
+
+		try {
+			$this->client->changePassword(array(
+				'AccessToken' => $access_token,
+				'PreviousPassword' => $old_password,
+				'ProposedPassword' => $new_password,
+			));
+		} catch (CognitoIdentityProviderException $e) {
+			error_log($e->getAwsErrorCode());
+			throw $e;
+			// TODO CognitoResponseException::createFromCognitoException($e);
+		}
+	}
+
+
+
+	/**
+	 *
+	 */
+	public function get_access_token()
+	{
+		$sid = $this->user->session_id;
+
+		$sql = 'SELECT access_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) ."'";
+		$result = $this->db->sql_query($sql);
+		$row = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		return $row['access_token'];
+	}
+
+	public function store_auth_result($session_id)
+	{
+		$auth_result = $this->auth_result;
+		$data = array('sid'           => $session_id,
+					  'access_token'  => $auth_result['AccessToken'],
+					  'expires_in'    => $auth_result['ExpiresIn'],
+					  'id_token'      => $auth_result['IdToken'],
+					  'refresh_token' => $auth_result['RefreshToken'],
+					  'token_type'    => $auth_result['TokenType']);
+		$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
+		$this->db->sql_query($sql);
+	}
 
 	/**
 	 * @param array $attributes
@@ -369,7 +427,7 @@ class cognito
 	 * @param $user_id
 	 * @return string
 	 */
-	private function cognito_username($user_id)
+	public function cognito_username($user_id)
 	{
 		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
 	}

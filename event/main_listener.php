@@ -26,6 +26,7 @@ class main_listener implements EventSubscriberInterface
 			'core.user_setup'				=> 'load_language_on_setup',
 			'core.ucp_profile_reg_details_validate' => 'ucp_profile_update',
 			'core.session_create_after' 	=> 'session_create_after',
+			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
@@ -83,13 +84,18 @@ class main_listener implements EventSubscriberInterface
 		$event['lang_set_ext'] = $lang_set_ext;
 	}
 
+	/**
+	 * @param \phpbb\event\data	$event	Event object
+	 */
 	public function session_gc_after($event)
 	{
 		error_log('session_gc_after - has run');
-		//TODO Tidy sesions
+		//TODO Tidy sessions
 	}
 
-
+	/**
+	 * @param \phpbb\event\data	$event	Event object
+	 */
 	public function session_create_after($event)
 	{
 		$data = $event['session_data'];
@@ -101,33 +107,80 @@ class main_listener implements EventSubscriberInterface
 		}
 	}
 
+	/**
+   	 * @param \phpbb\event\data	$event	Event object
+	 */
 	public function ucp_profile_update($event)
 	{
 		if ($event['submit'] &&  !sizeof($event['error']))
 		{
 			error_log('ucp_profile_update, no errors submit ');
 			$data = $event['data'];
-
-			error_log('Password Change: ' . $event['data']['new_password']);
 			$access_token = $this->client->get_access_token();
 			if (isset($access_token))
 			{
-				try
+				if (!empty($data['email']))
 				{
-					$this->client->changePassword($access_token, $data['cur_password'], $data['new_password']);
-					error_log('Success');
+					error_log('Email Change: ' . $event['data']['email']);
+					try {
+						$this->client->update_user_email($data['email'], $access_token);
+					}
+					catch (\Exception $e)  //TODO error handling
+					{
+						error_log('Fail ' . $e->getMessage());
+						$event['error'] = array('COGAUTH_EMAIL_CHANGE_ERROR');
+					}
 				}
-				catch  (\Exception $e)  //TODO error handling
+				if (!empty($data['new_password']))
 				{
-					error_log('Fail');
-					$event['error'] = array('COGAUTH_PASSWORD_ERROR');
+					error_log('Password Change: ' . $event['data']['new_password']);
+					try
+					{
+						$this->client->change_password($access_token, $data['cur_password'], $data['new_password']);
+						error_log('Success');
+					}
+					catch (\Exception $e)  //TODO error handling
+					{
+						error_log('Fail ' . $e->getMessage());
+						$event['error'] = array('COGAUTH_PASSWORD_ERROR');
+					}
 				}
 			}
 			else
 			{
+				//TODO this is not an error if the user has not been migrated, we should migrate the user and set the password.
 				error_log('No Access token found');
 				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 			}
+		}
+	}
+
+	/**
+	 * @param \phpbb\event\data	$event	Event object
+	 */
+	public function acp_profile_update($event)
+	{
+		$data = $event['data'];
+		$user_row = $event['user_row'];
+		$user_id = $event['user_row']['user_id'];
+
+		if (!empty($data['email']) && $data['email'] != $user_row['user_email'])
+		{
+			error_log('Email Change: ' . $data['email'] . ' - ' . $user_row['user_email']);
+			$this->client->admin_update_email($user_id,$data['email']);
+		}
+
+		if (!empty($data['new_password']))
+		{
+			error_log('Password Change: ' . $data['new_password']);
+			$this->client->admin_change_password($user_id,$data['new_password']);
+		}
+
+		$username_clean = utf8_clean_string($data['username']);
+		if (!empty($username_clean) && $username_clean != $user_row['username_clean'])
+		{
+			error_log('Username Change: ' . $data['username']);
+			$this->client->admin_update_username($user_id,$data['username']);
 		}
 	}
 }

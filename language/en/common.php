@@ -40,7 +40,8 @@ $lang = array_merge($lang, array(
 	'COGAUTH_POOL_ID_EXPLAIN'		=> 'AWS Cognito User Pool ID',
 	'COGAUTH_CLIENT_SECRET_EXPLAIN' => 'AWS Cognito Client Secret',
 
-	'COGAUTH_PASSWORD_ERROR' 		=> 'Error setting Cognito password',
-
+	'COGAUTH_PASSWORD_ERROR' 		=> 'Unexpected error setting password (Cognito)',
+	'COGAUTH_EMAIL_CHANGE_ERROR'	=> 'Unexpected error updating email (Cognito)',
+	'COGAUTH_ACP_PROFILE_CHANGE_ERROR'	=> 'Unexpected error updating user profile (Cognito)'
 
 ));

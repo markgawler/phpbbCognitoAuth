@@ -22,6 +22,7 @@ define('COG_ERROR',99);
 define('COG_MIGRATE_SUCCESS',10);
 define('COG_MIGRATE_FAIL', 11);
 
+
 class cognito
 {
 
@@ -135,7 +136,8 @@ class cognito
 			));
 			return array(
 				'status' => COG_USER_FOUND,
-				'user_status' => $response['UserStatus']
+				'user_status' => $response['UserStatus'],
+				'user_attributes' => $response['UserAttributes']
 			);
 
 		} catch (CognitoIdentityProviderException $e) {
@@ -152,7 +154,8 @@ class cognito
 
 		return array(
 			'status' => $status,
-			'user_status' => ''
+			'user_status' => '',
+			'user_attributes' => ''
 		);
 
 	}
@@ -177,23 +180,15 @@ class cognito
 	{
 		$username = $this->cognito_username($user_id);
 		try {
-			$response = $this->client->adminInitiateAuth(array(
-				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
-				'AuthParameters' => array(
-					'USERNAME' => $username,
-					'PASSWORD' => $password,
-					'SECRET_HASH' => $this->cognitoSecretHash($username),
-				),
-				'ClientId' => $this->client_id,
-				'UserPoolId' => $this->user_pool_id,
-			));
+			$response = $this->authenticate_user($username, $password);
 
 			if (isset($response['AuthenticationResult']))
 			{
-				// login success, store the result locally. The result will be stored in the database once the logged in
+				// Successful login.
+				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
 				$this->auth_result = $response['AuthenticationResult'];
-
+				//TODO should we validate the token?
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult']
@@ -204,7 +199,6 @@ class cognito
 					'response'  => $response['ChallengeName']
 				);
 			}
-			//$this->handleAuthenticateResponse($response->toArray()));
 
 		} catch (CognitoIdentityProviderException $e) {
 			switch ($e->getAwsErrorCode())
@@ -213,17 +207,16 @@ class cognito
 					$status = COG_USER_NOT_FOUND;
 				break;
 				case 'NotAuthorizedException':
+					// Try to translate the Cognito error
 					error_log('AWS ERROR (Auth): ' . $e->getAwsErrorMessage());
 					switch ($e->getAwsErrorMessage())
 					{
 						case 'Password attempts exceeded':
 							$status = COG_LOGIN_ERROR_ATTEMPTS;
 						break;
-
 						case 'User is disabled':
 							$status = COG_LOGIN_DISABLED;
 						break;
-
 						default:
 							$status = COG_LOGIN_ERROR_PASSWORD;
 					}
@@ -242,37 +235,123 @@ class cognito
 	}
 
 	/**
-	 * @param string $username
+	 * @param string $nickname - Non normalised username
 	 * @param string $password
-	 * @param string $user_id
+	 * @param int	 $user_id - numeric user ID
 	 * @param string $email
 	 * @return array
 	 * @throws /Exception
 	 */
-	public function migrate_user($username, $password, $user_id, $email)
+	public function migrate_user($nickname, $password, $user_id, $email)
 	{
 		error_log('User Migration --');
-		$cog_user = $this->cognito_username($user_id);
+		$username = $this->cognito_username($user_id);
 
 		$user_attributes = $this->buildAttributesArray(array(
-			'preferred_username' => utf8_clean_string($username),
+			'preferred_username' => utf8_clean_string($nickname),
 			'email' => $email,
-			'nickname' => $username,
+			'nickname' => $nickname,
+			'email_verified' => "True"
 		));
 
+		$result = $this->admin_create_user($username,$password,$user_attributes);
+		if ($result['status'] === COG_MIGRATE_SUCCESS)
+		{
+			try
+			{
+				$response = $this->authenticate_user($username, $password);
+			}
+			catch (CognitoIdentityProviderException $e)
+			{
+				error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
+				throw $e;
+			}
+
+			return $this->admin_respond_to_auth_challenge($response, $password, $username);
+		}
+		return $result;
+	}
+
+	private function admin_respond_to_auth_challenge($response, $password, $username)
+	{
+		switch ($response['ChallengeName'])
+		{
+			case 'NEW_PASSWORD_REQUIRED':
+				$params = array('ChallengeName'      => "NEW_PASSWORD_REQUIRED",
+								'ClientId'           => $this->client_id,
+								'UserPoolId'         => $this->user_pool_id,
+								'ChallengeResponses' => array(
+									'NEW_PASSWORD' => $password,
+									'USERNAME'     => $username,
+									'SECRET_HASH'  => $this->cognitoSecretHash($username)),
+								'Session'            => $response['Session']);
+				try
+				{
+					$response = $this->client->adminRespondToAuthChallenge($params);
+					if (isset($response['AuthenticationResult']))
+					{
+						// login success, store the result locally. The result will be stored in the database once the logged in
+						// session has started  (the SID changes so we cant store it in the DB yet).
+						$this->auth_result = $response['AuthenticationResult'];
+					}
+				}
+				catch (CognitoIdentityProviderException $e)
+				{
+					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
+
+					return array(
+						'status' => COG_MIGRATE_FAIL,
+						'error'  => $e->getAwsErrorCode(),
+					);
+				}
+			break;
+
+			default:
+				error_log('Unhandled response');
+				$response = null;
+		}
+		return  array(
+			'status' => COG_MIGRATE_SUCCESS ,
+			'error' => '',
+		);
+	}
+
+
+	/**
+	 * @param String $username
+	 * @param String $password
+	 * @return \Aws\Result
+	 */
+	private function authenticate_user($username, $password)
+	{
+		$response = $this->client->adminInitiateAuth(array(
+			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
+			'AuthParameters' => array(
+				'USERNAME' => $username,
+				'PASSWORD' => $password,
+				'SECRET_HASH' => $this->cognitoSecretHash($username),
+			),
+			'ClientId' => $this->client_id,
+			'UserPoolId' => $this->user_pool_id,
+		));
+		return $response;
+	}
+
+
+	private function admin_create_user($username, $password, $user_attributes)
+	{
 		try {
-			//$response =
-			$this->client->AdminCreateUser(array(
+			$response = $this->client->AdminCreateUser(array(
 				'UserPoolId' => $this->user_pool_id,
-				'Username' => $cog_user,
+				'Username' => $username,
 				'TemporaryPassword' => $password,
 				'MessageAction' => 'SUPPRESS',
-				'SecretHash' => $this->cognitoSecretHash($cog_user),
+				'SecretHash' => $this->cognitoSecretHash($username),
 				'UserAttributes' => $user_attributes,
 			));
 		}
 		catch (CognitoIdentityProviderException $e) {
-			error_log('Migration Fail: ' . $e->getAwsErrorCode());
+			error_log('Create User Fail: ' . $e->getAwsErrorCode());
 			error_log('AWS Message: ' . $e->getAwsErrorMessage());
 			switch ($e->getAwsErrorCode())
 			{
@@ -290,65 +369,10 @@ class cognito
 					);
 			}
 		}
-
-		try {
-			//TODO Duplicate code here and Authenticate :-(
-			$response = $this->client->adminInitiateAuth(array(
-				'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
-				'AuthParameters' => array(
-					'USERNAME' => $cog_user,
-					'PASSWORD' => $password,
-					'SECRET_HASH' => $this->cognitoSecretHash($cog_user),
-				),
-				'ClientId' => $this->client_id,
-				'UserPoolId' => $this->user_pool_id,
-			));
-
-			//return $this->handleAuthenticateResponse($response->toArray());
-		} catch (CognitoIdentityProviderException $e) {
-			error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
-			throw $e;
-
-		}
-
-		switch ($response['ChallengeName'])
-		{
-			case 'NEW_PASSWORD_REQUIRED':
-				$params = array('ChallengeName'      => "NEW_PASSWORD_REQUIRED",
-								'ClientId'           => $this->client_id,
-								'UserPoolId'         => $this->user_pool_id,
-								'ChallengeResponses' => array(
-									'NEW_PASSWORD'	=> $password,
-									'USERNAME'   	=> $cog_user,
-									'SECRET_HASH'	=> $this->cognitoSecretHash($cog_user)),
-								'Session' => $response['Session']
-				);
-				try
-				{
-					$response = $this->client->adminRespondToAuthChallenge($params);
-					if (isset($response['AuthenticationResult']))
-					{
-						// login success, store the result locally. The result will be stored in the database once the logged in
-						// session has started  (the SID changes so we cant store it in the DB yet).
-						$this->auth_result = $response['AuthenticationResult'];
-					}
-				} catch (CognitoIdentityProviderException $e) {
-					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
-
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-				}
-			break;
-
-			default:
-				error_log('Unhandled response');
-				$response = null;
-		}
-		return  array(
-			'status' => COG_MIGRATE_SUCCESS ,
+		return array(
+			'status' => COG_MIGRATE_SUCCESS,
 			'error' => '',
+			'response' => $response
 		);
 	}
 
@@ -360,7 +384,7 @@ class cognito
 	 * throws TokenExpiryException
 	 * throws TokenVerificationException
 	 */
-	public function changePassword($access_token, $old_password, $new_password)
+	public function change_password($access_token, $old_password, $new_password)
 	{
 		//TODO $this->verifyAccessToken($access_token);
 
@@ -371,12 +395,124 @@ class cognito
 				'ProposedPassword' => $new_password,
 			));
 		} catch (CognitoIdentityProviderException $e) {
-			error_log($e->getAwsErrorCode());
+			error_log('changePassword: ' . $e->getAwsErrorCode());
 			throw $e;
-			// TODO CognitoResponseException::createFromCognitoException($e);
+			// TODO Error handling
 		}
 	}
 
+
+	public function update_user_email($email, $access_token)
+	{
+		//TODO $this->verifyAccessToken($access_token);
+
+		$attr = $this->buildAttributesArray(array(
+			'email' => $email,
+		));
+		try
+		{
+			$this->client->UpdateUserAttributes(array(
+					'AccessToken'    => $access_token,
+					'UserAttributes' => $attr,
+				)
+			);
+		} catch (CognitoIdentityProviderException $e)
+		{
+			// TODO Error handling
+			error_log('update_user_email: ' . $e->getAwsErrorCode());
+			throw $e;
+		}
+	}
+
+	/**
+	 * Admin only Change user password function. This is a hack as the user is deleted and recreated
+	 * @param $user_id
+	 * @param $new_password
+	 */
+	public function admin_change_password($user_id, $new_password)
+	{
+		$user = $this->get_user($user_id);
+		if ($user['status'] === COG_USER_FOUND)
+		{
+			$username = $this->cognito_username($user_id);
+			$this->admin_delete_user($username);
+			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutateable attribute
+			$result = $this->admin_create_user($username,$new_password,$user_attributes);
+			if ($result['status'] == COG_MIGRATE_SUCCESS)
+			{
+				try
+				{
+					$response = $this->authenticate_user($username, $new_password);
+					$this->admin_respond_to_auth_challenge($response, $new_password, $username);
+				} catch (CognitoIdentityProviderException $e)
+				{
+					// TODO Error handling
+					error_log('admin_change_password: ' . $e->getAwsErrorCode());
+				}
+			}
+		}
+
+	}
+
+
+	/**
+	 * Administrator function to update a users email.
+	 * @param integer $user_id
+	 * @param string $new_email
+	 */
+	public function admin_update_email($user_id, $new_email)
+	{
+		$attributes = array('email' => $new_email,
+							'email_verified' => "True");
+		$this->update_user_attributes($attributes, $user_id);
+	}
+
+	/**
+	 * Administrator function to update a users username
+	 * 	this updates the preferred_username and nickname
+	 *
+	 * @param integer $user_id
+	 * @param string $new_username
+	 */
+	public function admin_update_username($user_id, $new_username)
+	{
+		$attributes = array('preferred_username' => utf8_clean_string($new_username),
+							'nickname' => $new_username);
+		$this->update_user_attributes($attributes, $user_id);
+	}
+
+	/**
+	 * Delete a user by user id
+	 * @param int $username
+	 */
+	private function admin_delete_user($username)
+	{
+		$this->client->AdminDeleteUser(
+			array('Username' => $username,
+				  'UserPoolId' => $this->user_pool_id)
+		);
+	}
+
+	/**
+	 * @param array $attributes
+	 * @param string $user_id
+	 */
+	private function update_user_attributes($attributes, $user_id)
+	{
+		$data = array(
+			'UserAttributes' => $this->buildAttributesArray($attributes),
+			'Username'       => $this->cognito_username($user_id),
+			'UserPoolId'     => $this->user_pool_id,
+		);
+		try {
+			$this->client->AdminUpdateUserAttributes($data);
+		} catch (CognitoIdentityProviderException $e)
+		{
+			// TODO Error handling
+			error_log('update_user_attributes: ' . $e->getAwsErrorCode());
+			throw $e;
+		}
+	}
 
 
 	/**
@@ -397,14 +533,21 @@ class cognito
 	public function store_auth_result($session_id)
 	{
 		$auth_result = $this->auth_result;
-		$data = array('sid'           => $session_id,
-					  'access_token'  => $auth_result['AccessToken'],
-					  'expires_in'    => $auth_result['ExpiresIn'],
-					  'id_token'      => $auth_result['IdToken'],
-					  'refresh_token' => $auth_result['RefreshToken'],
-					  'token_type'    => $auth_result['TokenType']);
-		$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
-		$this->db->sql_query($sql);
+		if ($auth_result['AccessToken'])
+		{
+			$data = array('sid'           => $session_id,
+						  'access_token'  => $auth_result['AccessToken'],
+						  'expires_in'    => $auth_result['ExpiresIn'],
+						  'id_token'      => $auth_result['IdToken'],
+						  'refresh_token' => $auth_result['RefreshToken'],
+						  'token_type'    => $auth_result['TokenType']);
+			$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
+			$this->db->sql_query($sql);
+		}
+		else
+		{
+			error_log('Null access token?');
+		}
 	}
 
 	/**
@@ -459,4 +602,21 @@ class cognito
 
 		return base64_encode($hash);
 	}
+
+	/**
+	 * @param array() $attributes
+	 * @return array
+	 */
+	private function clean_attributes($attributes)
+	{
+		$result = array();
+		foreach ($attributes as $key => $value) {
+			if ($value['Name'] != 'sub')
+			{
+				$result[] = $value;
+			}
+		}
+		return $result;
+	}
+
 }

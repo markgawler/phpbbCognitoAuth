@@ -28,6 +28,7 @@ class main_listener implements EventSubscriberInterface
 			'core.session_create_after' 	=> 'session_create_after',
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.delete_user_after' 		=> 'delete_users',
+			'core.user_active_flip_after' => 'user_active_flip',
 			//'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
@@ -194,6 +195,44 @@ class main_listener implements EventSubscriberInterface
 		{
 			error_log('Deleting: ' . $user_id);
 			$this->client->admin_delete_user($user_id);
+		}
+	}
+
+	public function user_active_flip($event)
+	{
+		foreach ($event['user_id_ary'] as $user_id)
+		{
+			error_log($user_id . ' - ' . $event['mode'] . ' - ' . $event['reason']);
+			error_log( $event['activated'] . ' - ' . $event['deactivated']);
+
+			$activated = $event['activated'];
+			$deactivated = $event['deactivated'];
+
+			switch ($event['mode'])
+			{
+				case 'flip':
+					if ($activated && $deactivated)
+					{
+						//TODO error handling
+						error_log('Ambiguous activation/deactivation');
+					}
+					elseif ($activated)
+					{
+						$this->client->enable_user($user_id);
+					}
+					else
+					{
+						$this->client->disable_user($user_id);
+					}
+				break;
+				case 'activate':
+					$this->client->enable_user($user_id);
+
+				break;
+				case 'deactivate':
+					$this->client->disable_user($user_id);
+				break;
+			}
 		}
 	}
 }

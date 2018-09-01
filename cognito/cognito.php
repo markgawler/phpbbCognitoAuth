@@ -504,6 +504,52 @@ class cognito
 		}
 	}
 
+
+	public function enable_user($user_id)
+	{
+		error_log('Enable User');
+		$username = $this->cognito_username($user_id);
+		try {
+			$this->client->adminEnableUser(array(
+				'Username' => $username,
+				'UserPoolId' => $this->user_pool_id));
+		}
+		catch (CognitoIdentityProviderException $e)
+		{
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException': // No user to enable, do nothing
+				break;
+				default:
+					// TODO Error handling
+					error_log('enable_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
+			}
+		}
+	}
+
+	public function disable_user($user_id)
+	{
+		error_log('Disable User');
+
+		$username = $this->cognito_username($user_id);
+		try {
+			$this->client->adminDisableUser(array(
+				'Username' => $username,
+				'UserPoolId' => $this->user_pool_id));
+		}
+		catch (CognitoIdentityProviderException $e)
+		{
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException': // No user to disable, do nothing
+				break;
+				default:
+					// TODO Error handling
+					error_log('disable_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
+			}
+		}
+	}
+
 	/**
 	 * Delete a user by user id
 	 * @param string $username

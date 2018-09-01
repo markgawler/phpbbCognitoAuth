@@ -435,7 +435,7 @@ class cognito
 		if ($user['status'] === COG_USER_FOUND)
 		{
 			$username = $this->cognito_username($user_id);
-			$this->admin_delete_user($username);
+			$this->admin_delete_user_internal($username);
 			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutateable attribute
 			$result = $this->admin_create_user($username,$new_password,$user_attributes);
 			if ($result['status'] == COG_MIGRATE_SUCCESS)
@@ -479,13 +479,36 @@ class cognito
 		$attributes = array('preferred_username' => utf8_clean_string($new_username),
 							'nickname' => $new_username);
 		$this->update_user_attributes($attributes, $user_id);
+
+
+	}
+
+	/**
+	 * @param integer $user_id
+	 */
+	public function admin_delete_user($user_id)
+	{
+		$username = $this->cognito_username($user_id);
+		try {
+			$this->admin_delete_user_internal($username);
+		} catch (CognitoIdentityProviderException $e)
+		{
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException': // No user to delete, do nothing
+				break;
+				default:
+					// TODO Error handling
+					error_log('admin_delete_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
+			}
+		}
 	}
 
 	/**
 	 * Delete a user by user id
-	 * @param int $username
+	 * @param string $username
 	 */
-	private function admin_delete_user($username)
+	private function admin_delete_user_internal($username)
 	{
 		$this->client->AdminDeleteUser(
 			array('Username' => $username,
@@ -604,6 +627,8 @@ class cognito
 	}
 
 	/**
+	 * Removes the non-mutatable attributes from name value pair array.:
+	 * 	- sub
 	 * @param array() $attributes
 	 * @return array
 	 */

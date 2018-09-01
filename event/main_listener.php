@@ -27,7 +27,8 @@ class main_listener implements EventSubscriberInterface
 			'core.ucp_profile_reg_details_validate' => 'ucp_profile_update',
 			'core.session_create_after' 	=> 'session_create_after',
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
-			'core.session_gc_after' 		=> 'session_gc_after',
+			'core.delete_user_after' 		=> 'delete_users',
+			//'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
 
@@ -87,11 +88,11 @@ class main_listener implements EventSubscriberInterface
 	/**
 	 * @param \phpbb\event\data	$event	Event object
 	 */
-	public function session_gc_after($event)
-	{
-		error_log('session_gc_after - has run');
+	//public function session_gc_after($event)
+	//{
+	//	error_log('session_gc_after - has run');
 		//TODO Tidy sessions
-	}
+	//}
 
 	/**
 	 * @param \phpbb\event\data	$event	Event object
@@ -183,4 +184,17 @@ class main_listener implements EventSubscriberInterface
 			$this->client->admin_update_username($user_id,$data['username']);
 		}
 	}
+
+	/**
+	 * @param \phpbb\event\data	$event	Event object
+	 */
+	public function delete_users($event)
+	{
+		foreach ($event['user_ids'] as $user_id)
+		{
+			error_log('Deleting: ' . $user_id);
+			$this->client->admin_delete_user($user_id);
+		}
+	}
 }
+

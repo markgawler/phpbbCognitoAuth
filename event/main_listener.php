@@ -28,7 +28,7 @@ class main_listener implements EventSubscriberInterface
 			'core.session_create_after' 	=> 'session_create_after',
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.delete_user_after' 		=> 'delete_users',
-			'core.user_active_flip_after' => 'user_active_flip',
+			'core.user_active_flip_after' 	=> 'user_active_flip',
 			//'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
@@ -124,26 +124,16 @@ class main_listener implements EventSubscriberInterface
 				if (!empty($data['email']))
 				{
 					error_log('Email Change: ' . $event['data']['email']);
-					try {
-						$this->client->update_user_email($data['email'], $access_token);
-					}
-					catch (\Exception $e)  //TODO error handling
+					if (! $this->client->update_user_email($data['email'], $access_token))
 					{
-						error_log('Fail ' . $e->getMessage());
 						$event['error'] = array('COGAUTH_EMAIL_CHANGE_ERROR');
 					}
 				}
 				if (!empty($data['new_password']))
 				{
 					error_log('Password Change: ' . $event['data']['new_password']);
-					try
+					if (! $this->client->change_password($access_token, $data['cur_password'], $data['new_password']))
 					{
-						$this->client->change_password($access_token, $data['cur_password'], $data['new_password']);
-						error_log('Success');
-					}
-					catch (\Exception $e)  //TODO error handling
-					{
-						error_log('Fail ' . $e->getMessage());
 						$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 					}
 				}

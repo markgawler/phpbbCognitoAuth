@@ -338,6 +338,12 @@ class cognito
 	}
 
 
+	/**
+	 * @param string $username phpBB username (Cognito nickname)
+	 * @param string $password
+	 * @param $user_attributes
+	 * @return array
+	 */
 	private function admin_create_user($username, $password, $user_attributes)
 	{
 		try {
@@ -380,9 +386,7 @@ class cognito
 	 * @param string $access_token
 	 * @param string $old_password
 	 * @param string $new_password
-	 * @throws \Exception
-	 * throws TokenExpiryException
-	 * throws TokenVerificationException
+	 * @return boolean True = Success, False = Fail
 	 */
 	public function change_password($access_token, $old_password, $new_password)
 	{
@@ -394,14 +398,19 @@ class cognito
 				'PreviousPassword' => $old_password,
 				'ProposedPassword' => $new_password,
 			));
+			return true;
 		} catch (CognitoIdentityProviderException $e) {
 			error_log('changePassword: ' . $e->getAwsErrorCode());
-			throw $e;
 			// TODO Error handling
+			return false;
 		}
 	}
 
-
+	/**
+	 * @param string $email
+	 * @param string $access_token
+	 * @return bool (True success, False fail)
+	 */
 	public function update_user_email($email, $access_token)
 	{
 		//TODO $this->verifyAccessToken($access_token);
@@ -414,19 +423,19 @@ class cognito
 			$this->client->UpdateUserAttributes(array(
 					'AccessToken'    => $access_token,
 					'UserAttributes' => $attr,
-				)
-			);
+			));
+			return true;
 		} catch (CognitoIdentityProviderException $e)
 		{
 			// TODO Error handling
 			error_log('update_user_email: ' . $e->getAwsErrorCode());
-			throw $e;
+			return false;
 		}
 	}
 
 	/**
 	 * Admin only Change user password function. This is a hack as the user is deleted and recreated
-	 * @param $user_id
+	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
 	 */
 	public function admin_change_password($user_id, $new_password)
@@ -436,7 +445,7 @@ class cognito
 		{
 			$username = $this->cognito_username($user_id);
 			$this->admin_delete_user_internal($username);
-			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutateable attribute
+			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutatable  attribute
 			$result = $this->admin_create_user($username,$new_password,$user_attributes);
 			if ($result['status'] == COG_MIGRATE_SUCCESS)
 			{
@@ -457,7 +466,7 @@ class cognito
 
 	/**
 	 * Administrator function to update a users email.
-	 * @param integer $user_id
+	 * @param integer $user_id phpBB User ID
 	 * @param string $new_email
 	 */
 	public function admin_update_email($user_id, $new_email)
@@ -471,8 +480,8 @@ class cognito
 	 * Administrator function to update a users username
 	 * 	this updates the preferred_username and nickname
 	 *
-	 * @param integer $user_id
-	 * @param string $new_username
+	 * @param integer $user_id phpBB User ID
+	 * @param string $new_username phpBB username (Nickname for Cognito)
 	 */
 	public function admin_update_username($user_id, $new_username)
 	{
@@ -484,7 +493,7 @@ class cognito
 	}
 
 	/**
-	 * @param integer $user_id
+	 * @param integer $user_id phpBB user ID
 	 */
 	public function admin_delete_user($user_id)
 	{
@@ -504,7 +513,9 @@ class cognito
 		}
 	}
 
-
+	/**
+	 * @param integer $user_id phpBB user ID
+	 */
 	public function enable_user($user_id)
 	{
 		error_log('Enable User');
@@ -527,6 +538,9 @@ class cognito
 		}
 	}
 
+	/**
+	 * @param integer $user_id phpBB user ID
+	 */
 	public function disable_user($user_id)
 	{
 		error_log('Disable User');
@@ -585,7 +599,7 @@ class cognito
 
 
 	/**
-	 *
+	 * @return string Cognito Access Token
 	 */
 	public function get_access_token()
 	{
@@ -599,6 +613,9 @@ class cognito
 		return $row['access_token'];
 	}
 
+	/**
+	 * @param string $session_id  phpBB SID
+	 */
 	public function store_auth_result($session_id)
 	{
 		$auth_result = $this->auth_result;

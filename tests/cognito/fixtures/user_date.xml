@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<dataset>
+    <table name="phpbb_cogauth_session">
+        <column>sid</column>
+        <column>access_token</column>
+        <column>expires_in</column>
+        <column>id_token</column>
+        <column>refresh_token</column>
+        <column>token_type</column>
+        <row>
+            <value>a652e8fe432c7b6d6e42eb134ae9054a</value>
+            <value>eyJraWQiOiJndlwvcmNDQTBMWUhMd2piUlVmMUFweEJESVRlRlwvbHRrTUFzNXRjTUJJUzQ9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJlZDgzYTkxMi04ZTUwLTRhOWYtYjVhNi1kOGJhNjVmMTYzZjciLCJldmVudF9pZCI6ImQ3YjgwOWNmLWI0NjEtMTFlOC05M2I2LTYzNThkYThlMTJiOSIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE1MzY1MTkyOTYsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX1Q3emptcXhhMSIsImV4cCI6MTUzNjUyMjg5NiwiaWF0IjoxNTM2NTE5Mjk2LCJqdGkiOiI0MjljNTY0OC05YTk4LTRmOGItOWRiMS1kMWFiYjZiZDM3NDEiLCJjbGllbnRfaWQiOiJmMjRhcXBkZjNhYnMyazFiMGc4bXRkdHY3IiwidXNlcm5hbWUiOiJ1MDAwMDQ5In0.i9BGWE3tgO7OjQM44cOrKK_uynq5r7vH_27IjZ747f5U7_iwQLUquxKMdU7NFg12dU264xbP3hbW_xXIPtC0IckEef1fM-V_9JQdr2iBEibugPXSME51-6KqUnzYidedFUswdZ_xvURDgZZehjD08e7V_0BNqFzmiCohBjV7i5JR-bJmhsE33bWOE1qBXFbR47x8iaI558O8ZG_06zvgQHFP08BRkwVSVyUqfv_hDkwObHGNES3eCvqLqzw0_yMr21_U52dNZE9oIWe7z01GFxiKcXB02TFHxiPFtG_Fkcv053OGBmNsY1ARVPafifSOIn6_pN-WU6aoCcaqjV63hg</value>
+            <value>3600</value>
+            <value>eyJraWQiOiJQRW4xU01leXZzSEpGZlFrSjI3c0tpQ2w0UXYydmp5cTZGYjdWVFVyaUJFPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJlZDgzYTkxMi04ZTUwLTRhOWYtYjVhNi1kOGJhNjVmMTYzZjciLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLmV1LXdlc3QtMS5hbWF6b25hd3MuY29tXC9ldS13ZXN0LTFfVDd6am1xeGExIiwiY29nbml0bzp1c2VybmFtZSI6InUwMDAwNDkiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJsZWZ0YWJpdCIsImF1ZCI6ImYyNGFxcGRmM2FiczJrMWIwZzhtdGR0djciLCJldmVudF9pZCI6ImQ3YjgwOWNmLWI0NjEtMTFlOC05M2I2LTYzNThkYThlMTJiOSIsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTM2NTE5Mjk2LCJuaWNrbmFtZSI6ImxlZnRhYml0IiwiZXhwIjoxNTM2NTIyODk2LCJpYXQiOjE1MzY1MTkyOTYsImVtYWlsIjoibGVmdGFiaXRAd2xlci5jby51ayJ9.TpnztquH5INNC842ax9_goOSSicyUZkCcNHgSZ6c_qVjGb75pvJh9NoIn7Jn57eBTzMJb0K5ufDbPt9mt_q7YRawut2sr1zi-SKKAzU0kWvx1y5ubC-z4ALOzpwIlmtusByBQeZWUoQNd5TWJZ1y_PC_LULpd7C80qLX-ph_Gbgh_Ur4xU23emTuJbND8nKcPXM3VMHq5Hl7pOHy_CjazDJW41Bph6xB-_kn7WZ1vnRObwbH-I10d21BKxMvdloAzYu5DP2uQ9SuVsTnyEILuhBR9jV8yZ7GVHDh_5swj-eHRH9eM3_pDUvtcxnZTcVa9JG2CXIfjmpzAauYWc2hAQ</value>
+            <value>Bearer</value>
+        </row>
+    </table>
+</dataset>

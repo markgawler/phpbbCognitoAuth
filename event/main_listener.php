@@ -33,12 +33,6 @@ class main_listener implements EventSubscriberInterface
 		);
 	}
 
-	/* @var \phpbb\controller\helper */
-	protected $helper;
-
-	/* @var \phpbb\template\template */
-	protected $template;
-
 	/* @var \phpbb\user */
 	protected $user;
 
@@ -51,23 +45,17 @@ class main_listener implements EventSubscriberInterface
 	/**
 	 * Constructor
 	 *
-	 * @param \phpbb\controller\helper	$helper		Controller helper object
-	 * @param \phpbb\template\template	$template	Template object
 	 * @param \phpbb\user               $user       User object
 	 * @param \mrfg\cogauth\cognito\cognito $client
 	 * @param string $session_table
 	 */
 	public function __construct(
-		\phpbb\controller\helper $helper,
-		\phpbb\template\template $template,
 		\phpbb\user $user,
 		\mrfg\cogauth\cognito\cognito $client,
 		$session_table)
 	{
-		$this->helper   = $helper;
-		$this->template = $template;
-		$this->user     = $user;
-		$this->client = $client;
+		$this->user          = $user;
+		$this->client        = $client;
 		$this->session_table = $session_table;
 	}
 
@@ -101,13 +89,12 @@ class main_listener implements EventSubscriberInterface
 	public function session_create_after($event)
 	{
 		$data = $event['session_data'];
-		if ($data['session_user_id'] !== 1)
-		{
-			error_log('Store access token');
+		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
+        {
 			// Store the Cognito access token in the DB now we hae the SID for the logged in session.
-			$this->client->store_auth_result($data['session_id']);
+            $this->client->store_auth_result($data['session_id']);
 		}
-	}
+    }
 
 	/**
    	 * @param \phpbb\event\data	$event	Event object
@@ -192,9 +179,6 @@ class main_listener implements EventSubscriberInterface
 	{
 		foreach ($event['user_id_ary'] as $user_id)
 		{
-			error_log($user_id . ' - ' . $event['mode'] . ' - ' . $event['reason']);
-			error_log( $event['activated'] . ' - ' . $event['deactivated']);
-
 			$activated = $event['activated'];
 			$deactivated = $event['deactivated'];
 

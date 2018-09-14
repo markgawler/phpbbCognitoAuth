@@ -3,8 +3,6 @@ services:
     mrfg.cogauth.listener:
         class: mrfg\cogauth\event\main_listener
         arguments:
-            - '@controller.helper'
-            - '@template'
             - '@user'
             - '@mrfg.cogauth.cognito'
             - '%mrfg.cogauth.tables.cogauth_session%'

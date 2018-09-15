@@ -9,14 +9,17 @@ services:
         tags:
             - { name: event.listener }
 
+    mrfg.cogauth.cognito_client_wrapper:
+        class: mrfg\cogauth\cognito\cognito_client_wrapper
 
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
         arguments:
-            - '@dbal.conn'
-            - '@config'
-            - '@user'
-            - '%mrfg.cogauth.tables.cogauth_session%'
+        - '@dbal.conn'
+        - '@config'
+        - '@user'
+        - '@mrfg.cogauth.cognito_client_wrapper'
+        - '%mrfg.cogauth.tables.cogauth_session%'
 
 imports:
 - { resource: auth.yml }

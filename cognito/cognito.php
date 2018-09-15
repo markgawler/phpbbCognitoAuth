@@ -76,6 +76,9 @@ class cognito
 	 */
 	protected $cogauth_session;
 
+	/** @var \mrfg\cogauth\cognito\cognito_client_wrapper $aws_wrapper */
+	protected $aws_wrapper;
+
 	/**
 	 * @var array $auth_result
 	 */
@@ -84,16 +87,18 @@ class cognito
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\db\driver\driver_interface		$db
-	 * @param	\phpbb\config\config 		$config
-	 * @param	\phpbb\user			$user
-	 * @param	string				$cogauth_session
+	 * @param	\phpbb\db\driver\driver_interface	$db
+	 * @param	\phpbb\config\config 		        $config
+	 * @param	\phpbb\user			                $user
+     * @param   \mrfg\cogauth\cognito\cognito_client_wrapper $client,
+     * @param	string				                $cogauth_session
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\user $user,
-		$cogauth_session)
+        cognito_client_wrapper $client,
+        $cogauth_session)
 	{
 		$this->db = $db;
 		$this->config = $config;
@@ -104,18 +109,18 @@ class cognito
 		$this->client_id = $config['cogauth_client_id'];
 		$this->client_secret = $config['cogauth_client_secret'];
 
-		$this->aws = new \Aws\Sdk(
-			array(
-				'credentials' => array(
-					'key' => $config['cogauth_aws_key'],
-					'secret' => $config['cogauth_aws_secret'],
-				),
-				'version' => '2016-04-18',
-				'region' => $config['cogauth_aws_region'],
-			)
-		);
-		$this->client = $this->aws->createCognitoIdentityProvider();
-		$this->auth_result = array();
+        $this->auth_result = array();
+
+        $args = array(
+            'credentials' => array(
+                'key' => $config['cogauth_aws_key'],
+                'secret' => $config['cogauth_aws_secret'],
+            ),
+            'version' => '2016-04-18',
+            'region' => $config['cogauth_aws_region'],
+        );
+        $this->client = $client;
+        $client->create_client($args);
 	}
 
 
@@ -130,7 +135,7 @@ class cognito
 		$username = $this->cognito_username($user_id);
 		try
 		{
-			$response = $this->client->AdminGetUser(array(
+			$response = $this->client->admin_get_user(array(
 				"Username"   => $username,
 				"UserPoolId" => $this->user_pool_id
 			));
@@ -287,7 +292,7 @@ class cognito
 								'Session'            => $response['Session']);
 				try
 				{
-					$response = $this->client->adminRespondToAuthChallenge($params);
+					$response = $this->client->admin_respond_to_auth_challenge($params);
 					if (isset($response['AuthenticationResult']))
 					{
 						// login success, store the result locally. The result will be stored in the database once the logged in
@@ -324,7 +329,7 @@ class cognito
 	 */
 	private function authenticate_user($username, $password)
 	{
-		$response = $this->client->adminInitiateAuth(array(
+		$response = $this->client->admin_initiate_auth(array(
 			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 			'AuthParameters' => array(
 				'USERNAME' => $username,
@@ -393,7 +398,7 @@ class cognito
 		//TODO $this->verifyAccessToken($access_token);
 
 		try {
-			$this->client->changePassword(array(
+			$this->client->change_password(array(
 				'AccessToken' => $access_token,
 				'PreviousPassword' => $old_password,
 				'ProposedPassword' => $new_password,
@@ -420,7 +425,7 @@ class cognito
 		));
 		try
 		{
-			$this->client->UpdateUserAttributes(array(
+			$this->client->update_user_attributes(array(
 					'AccessToken'    => $access_token,
 					'UserAttributes' => $attr,
 			));
@@ -547,7 +552,7 @@ class cognito
 
 		$username = $this->cognito_username($user_id);
 		try {
-			$this->client->adminDisableUser(array(
+			$this->client->admin_disable_user(array(
 				'Username' => $username,
 				'UserPoolId' => $this->user_pool_id));
 		}
@@ -570,7 +575,7 @@ class cognito
 	 */
 	private function admin_delete_user_internal($username)
 	{
-		$this->client->AdminDeleteUser(
+		$this->client->admin_delete_user(
 			array('Username' => $username,
 				  'UserPoolId' => $this->user_pool_id)
 		);
@@ -588,7 +593,7 @@ class cognito
 			'UserPoolId'     => $this->user_pool_id,
 		);
 		try {
-			$this->client->AdminUpdateUserAttributes($data);
+			$this->client->admin_update_user_attributes($data);
 		} catch (CognitoIdentityProviderException $e)
 		{
 			// TODO Error handling

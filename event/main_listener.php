@@ -192,19 +192,19 @@ class main_listener implements EventSubscriberInterface
 					}
 					elseif ($activated)
 					{
-						$this->client->enable_user($user_id);
+						$this->client->admin_enable_user($user_id);
 					}
 					else
 					{
-						$this->client->disable_user($user_id);
+						$this->client->admin_disable_user($user_id);
 					}
 				break;
 				case 'activate':
-					$this->client->enable_user($user_id);
+					$this->client->admin_enable_user($user_id);
 
 				break;
 				case 'deactivate':
-					$this->client->disable_user($user_id);
+					$this->client->admin_disable_user($user_id);
 				break;
 			}
 		}

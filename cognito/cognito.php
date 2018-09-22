@@ -1,14 +1,20 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: mrfg
+ *
+ * AWS Cognito Authentication. An extension for the phpBB Forum Software package.
+ *
+ * @copyright (c) 2018, Mark Gawler
+ * @license GNU General Public License, version 2 (GPL-2.0)
+ *
  * Date: 19/08/18
- * Time: 20:00
+ *
  */
 
 namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
 
+use mrfg\cogauth\cognito\exception\TokenExpiryException;
+use mrfg\cogauth\cognito\exception\TokenVerificationException;
 
 define('COG_LOGIN_SUCCESS', 1);
 define('COG_LOGIN_NO_AUTH', 2);
@@ -25,64 +31,47 @@ define('COG_MIGRATE_FAIL', 11);
 
 class cognito
 {
-
-	/**
-	 * @var \phpbb\config\config $config Config object
-	 */
+	/**@var \phpbb\config\config $config Config object */
 	protected $config;
 
-	/**
-	 * @var \phpbb\request\request $request Request object
-	 */
+	/**@var \phpbb\request\request $request Request object */
 	protected $request;
 
-	/**
-	 * @var \phpbb\user
-	 */
+	/** @var \phpbb\user */
 	protected $user;
 
-	/**
-	 * @var \Aws\Sdk
-	 */
+	/**@var \Aws\Sdk */
 	protected $aws;
 
-	/**
-	 * @var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient
-	 */
+	/**@var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient */
 	protected $client;
 
-	/**
-	 * @var $String
-	 */
+	/**@var $String */
 	protected $user_pool_id;
 
-	/**
-	 * @var $string
-	 */
+	/**@var $string */
 	protected $client_id;
 
-	/**
-	 * @var String
-	 */
+	/** @var String */
 	protected $client_secret;
 
-	/**
-	 * @var \phpbb\db\driver\driver_interface
-	 */
+	/** @var string */
+	protected $region;
+
+	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-	/**
-	 * @var string
-	 */
+	/**@var string */
 	protected $cogauth_session;
 
 	/** @var \mrfg\cogauth\cognito\cognito_client_wrapper $aws_wrapper */
 	protected $aws_wrapper;
 
-	/**
-	 * @var array $auth_result
-	 */
+	/**@var array $auth_result */
 	protected $auth_result;
+
+    /** @var \mrfg\cogauth\cognito\web_token */
+    protected $web_token;
 
 	/**
 	 * Database Authentication Constructor
@@ -90,7 +79,8 @@ class cognito
 	 * @param	\phpbb\db\driver\driver_interface	$db
 	 * @param	\phpbb\config\config 		        $config
 	 * @param	\phpbb\user			                $user
-     * @param   \mrfg\cogauth\cognito\cognito_client_wrapper $client,
+     * @param   cognito_client_wrapper              $client,
+     * @param   web_token                           $web_token
      * @param	string				                $cogauth_session
 	 */
 	public function __construct(
@@ -98,6 +88,7 @@ class cognito
 		\phpbb\config\config $config,
 		\phpbb\user $user,
         cognito_client_wrapper $client,
+        web_token $web_token,
         $cogauth_session)
 	{
 		$this->db = $db;
@@ -108,6 +99,7 @@ class cognito
 		$this->user_pool_id = $config['cogauth_pool_id'];
 		$this->client_id = $config['cogauth_client_id'];
 		$this->client_secret = $config['cogauth_client_secret'];
+        $this->region = $config['cogauth_aws_region'];
 
         $this->auth_result = array();
 
@@ -117,11 +109,12 @@ class cognito
                 'secret' => $config['cogauth_aws_secret'],
             ),
             'version' => '2016-04-18',
-            'region' => $config['cogauth_aws_region'],
+            'region' =>  $this->region,
         );
         $this->client = $client;
         $client->create_client($args);
-	}
+        $this->web_token = $web_token;
+    }
 
 
 	/**
@@ -193,7 +186,6 @@ class cognito
 				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
 				$this->auth_result = $response['AuthenticationResult'];
-				//TODO should we validate the token?
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult']
@@ -252,7 +244,7 @@ class cognito
 		error_log('User Migration --');
 		$username = $this->cognito_username($user_id);
 
-		$user_attributes = $this->buildAttributesArray(array(
+		$user_attributes = $this->build_attributes_array(array(
 			'preferred_username' => utf8_clean_string($nickname),
 			'email' => $email,
 			'nickname' => $nickname,
@@ -288,7 +280,7 @@ class cognito
 								'ChallengeResponses' => array(
 									'NEW_PASSWORD' => $password,
 									'USERNAME'     => $username,
-									'SECRET_HASH'  => $this->cognitoSecretHash($username)),
+									'SECRET_HASH'  => $this->cognito_secret_hash($username)),
 								'Session'            => $response['Session']);
 				try
 				{
@@ -334,7 +326,7 @@ class cognito
 			'AuthParameters' => array(
 				'USERNAME' => $username,
 				'PASSWORD' => $password,
-				'SECRET_HASH' => $this->cognitoSecretHash($username),
+				'SECRET_HASH' => $this->cognito_secret_hash($username),
 			),
 			'ClientId' => $this->client_id,
 			'UserPoolId' => $this->user_pool_id,
@@ -357,7 +349,7 @@ class cognito
 				'Username' => $username,
 				'TemporaryPassword' => $password,
 				'MessageAction' => 'SUPPRESS',
-				'SecretHash' => $this->cognitoSecretHash($username),
+				'SecretHash' => $this->cognito_secret_hash($username),
 				'UserAttributes' => $user_attributes,
 			));
 		}
@@ -418,9 +410,19 @@ class cognito
 	 */
 	public function update_user_email($email, $access_token)
 	{
-		//TODO $this->verifyAccessToken($access_token);
+        try {
+            $this->web_token->verify_access_token($access_token);
+        } catch (TokenVerificationException $e)
+        {
+            error_log('update_user_email: ' . $e->getMessage());
+            return false;
+        } catch (TokenExpiryException $e)
+        {
+            error_log('update_user_email: ' . $e->getMessage());
+            return false;
+        }
 
-		$attr = $this->buildAttributesArray(array(
+		$attr = $this->build_attributes_array(array(
 			'email' => $email,
 		));
 		try
@@ -521,7 +523,7 @@ class cognito
 	/**
 	 * @param integer $user_id phpBB user ID
 	 */
-	public function enable_user($user_id)
+	public function admin_enable_user($user_id)
 	{
 		error_log('Enable User');
 		$username = $this->cognito_username($user_id);
@@ -546,7 +548,7 @@ class cognito
 	/**
 	 * @param integer $user_id phpBB user ID
 	 */
-	public function disable_user($user_id)
+	public function admin_disable_user($user_id)
 	{
 		error_log('Disable User');
 
@@ -588,7 +590,7 @@ class cognito
 	private function update_user_attributes($attributes, $user_id)
 	{
 		$data = array(
-			'UserAttributes' => $this->buildAttributesArray($attributes),
+			'UserAttributes' => $this->build_attributes_array($attributes),
 			'Username'       => $this->cognito_username($user_id),
 			'UserPoolId'     => $this->user_pool_id,
 		);
@@ -614,7 +616,7 @@ class cognito
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
-
+        // TODO Validate token
 		return $row['access_token'];
 	}
 
@@ -645,7 +647,7 @@ class cognito
 	 * @param array $attributes
 	 * @return array
 	 */
-	private function buildAttributesArray(array $attributes)
+	private function build_attributes_array(array $attributes)
 	{
 		$userAttributes = array();
 		foreach ($attributes as $key => $value) {
@@ -672,7 +674,7 @@ class cognito
 	 *
 	 * @return string
 	 */
-	public function cognitoSecretHash($username)
+	public function cognito_secret_hash($username)
 	{
 		return $this->hash($username . $this->client_id);
 	}
@@ -684,7 +686,7 @@ class cognito
 	 */
 	protected function hash($message)
 	{
-		$hash = hash_hmac(
+        $hash = hash_hmac(
 			'sha256',
 			$message,
 			$this->client_secret,

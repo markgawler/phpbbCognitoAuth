@@ -59,6 +59,7 @@ class main_listener implements EventSubscriberInterface
 		$this->session_table = $session_table;
 	}
 
+
 	/**
 	 * Load common language files during user setup
 	 *

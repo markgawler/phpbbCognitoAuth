@@ -28,7 +28,8 @@
         }
     },
     "require-dev": {
-        "phing/phing": "2.4.*"
-
+        "phing/phing": "2.4.*",
+        "phpunit/dbunit": "~2.0",
+        "phpunit/phpunit": "^5.7"
     }
 }

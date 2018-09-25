@@ -19,6 +19,9 @@ class cognito_test extends \phpbb_test_case
     /** @var $user \phpbb\user */
     protected $user;
 
+    //** @var $language \phpbb\language\language */
+    //protected $language;
+
     /** @var $cognito_client \phpbb\config\config */
     protected $config;
 
@@ -33,9 +36,13 @@ class cognito_test extends \phpbb_test_case
     {
         parent::setUp();
 
-        $this->user = $this->getMockBuilder('\phpbb\user')
-            ->disableOriginalConstructor()
-            ->getMock();
+		$this->user = $this->getMockBuilder('\phpbb\user')
+			->disableOriginalConstructor()
+			->getMock();
+
+		/*$this->language = $this->getMockBuilder('\phpbb\language\language')
+			->disableOriginalConstructor()
+			->getMock();*/
 
         $this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
             ->disableOriginalConstructor()

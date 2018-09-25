@@ -8,10 +8,6 @@
 
 namespace mrfg\cogauth\auth\provider;
 
-//use phpbb\debug\error_handler;
-//use phpbb\install\module\install_database\task\add_default_data;
-//use phpbb\passwords\driver\sha1_smf;
-
 class cogauth extends \phpbb\auth\provider\base
 {
 	/**
@@ -44,6 +40,11 @@ class cogauth extends \phpbb\auth\provider\base
 	protected $user;
 
 	/**
+	 * @var \phpbb\language\language
+	 */
+	protected $language;
+
+	/**
 	 * @var \phpbb\
 	 */
 	protected $php_ext;
@@ -63,6 +64,9 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	protected $cognito_client;
 
+	/**  @var \mrfg\cogauth\cognito\web_token $web_token */
+	protected $web_token;
+
 	/**
 	 * Database Authentication Constructor
 	 *
@@ -71,8 +75,10 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @param	\phpbb\passwords\manager	$passwords_manager
 	 * @param	\phpbb\request\request		$request
 	 * @param	\phpbb\user			$user
+	 * @param	\phpbb\language\language $language
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
 	 * @param 	\mrfg\cogauth\cognito\cognito $cognito_client
+	 * @param 	\mrfg\cogauth\cognito\web_token $web_token
 	 * @param	string				$phpbb_root_path
 	 * @param	string				$php_ext
 	 */
@@ -82,8 +88,10 @@ class cogauth extends \phpbb\auth\provider\base
 		\phpbb\passwords\manager $passwords_manager,
 		\phpbb\request\request $request,
 		\phpbb\user $user,
+		\phpbb\language\language $language,
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
 		\mrfg\cogauth\cognito\cognito $cognito_client,
+		\mrfg\cogauth\cognito\web_token $web_token,
 		$phpbb_root_path, $php_ext)
 	{
 		$this->db = $db;
@@ -91,11 +99,29 @@ class cogauth extends \phpbb\auth\provider\base
 		$this->passwords_manager = $passwords_manager;
 		$this->request = $request;
 		$this->user = $user;
+		$this->language = $language;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
 		$this->phpbb_container = $phpbb_container;
 		$this->cognito_client = $cognito_client;
+		$this->web_token = $web_token;
 	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function init()
+	{
+		// region and pool may have changed so force refresh of the keys
+		$keys = $this->web_token->download_jwt_web_keys(true);
+		if ($keys === false)
+		{
+			/** @noinspection PhpUndefinedFieldInspection */
+			$message = $this->language->lang('COGAUTH_AWS_KEY_SET_ERROR') . adm_back_link($this->u_action);
+			trigger_error($message,E_USER_WARNING);
+		}
+	}
+
 
 	/**
 	 * {@inheritdoc}

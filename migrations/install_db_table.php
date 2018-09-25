@@ -51,15 +51,3 @@ class install_db_table extends \phpbb\db\migration\migration
 	}
 
 }
-/*
-"AuthenticationResult": {
-	"AccessToken": "string",
-      "ExpiresIn": number,
-      "IdToken": "string",
-      "NewDeviceMetadata": {
-		"DeviceGroupKey": "string",
-         "DeviceKey": "string"
-      },
-      "RefreshToken": "string",
-      "TokenType": "string"
-*/

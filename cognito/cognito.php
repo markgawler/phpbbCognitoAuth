@@ -13,7 +13,6 @@
 namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
 
-use mrfg\cogauth\cognito\exception\TokenExpiryException;
 use mrfg\cogauth\cognito\exception\TokenVerificationException;
 
 define('COG_LOGIN_SUCCESS', 1);
@@ -410,13 +409,10 @@ class cognito
 	 */
 	public function update_user_email($email, $access_token)
 	{
+        error_log('update_user_email');
         try {
             $this->web_token->verify_access_token($access_token);
         } catch (TokenVerificationException $e)
-        {
-            error_log('update_user_email: ' . $e->getMessage());
-            return false;
-        } catch (TokenExpiryException $e)
         {
             error_log('update_user_email: ' . $e->getMessage());
             return false;

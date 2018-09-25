@@ -12,6 +12,12 @@ services:
     mrfg.cogauth.cognito_client_wrapper:
         class: mrfg\cogauth\cognito\cognito_client_wrapper
 
+    mrfg.cogauth.web_token:
+        class: mrfg\cogauth\cognito\web_token
+        arguments:
+        - '@config'
+        - '@cache.driver'
+
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
         arguments:
@@ -19,6 +25,7 @@ services:
         - '@config'
         - '@user'
         - '@mrfg.cogauth.cognito_client_wrapper'
+        - '@mrfg.cogauth.web_token'
         - '%mrfg.cogauth.tables.cogauth_session%'
 
 imports:

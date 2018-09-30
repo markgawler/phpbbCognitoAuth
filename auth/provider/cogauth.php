@@ -153,7 +153,6 @@ class cogauth extends \phpbb\auth\provider\base
 		}
 
 		$username_clean = utf8_clean_string($username);
-
 		$sql = 'SELECT *
 			FROM ' . USERS_TABLE . "
 			WHERE username_clean = '" . $this->db->sql_escape($username_clean) . "'";
@@ -245,6 +244,8 @@ class cogauth extends \phpbb\auth\provider\base
 		// Find the user in AWS Cognito, we only authenticate against cognito if user exists and confirmed
 		// otherwise we attempt to migrate the user if the user authenticated via phpBB rules.
 		$cognito_status = $this->cognito_client->get_user($row['user_id']);
+		error_log('Status: ' . $cognito_status);
+
 		if ($cognito_status['status'] == COG_USER_FOUND &&  $cognito_status['user_status'] == 'CONFIRMED')
 		{
 			$status = $this->cognito_client->authenticate($row['user_id'], $password);
@@ -277,7 +278,7 @@ class cogauth extends \phpbb\auth\provider\base
 			}
 
 		}
-		// Check password papBB rules...
+		// Check password phpBB rules...
 		//else
 		//$authenticated = false;
 		elseif ($this->passwords_manager->check($password, $row['user_password'], $row))

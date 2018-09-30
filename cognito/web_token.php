@@ -29,22 +29,28 @@ class web_token
     /** @var /phpbb/ */
     protected $cache;
 
+    /** @var string $jwsk_url_template */
+    protected $jwsk_url_template;
+
     /**
      * web_token constructor.
      * @param \phpbb\config\config  $config
 	 * @param \phpbb\cache\driver\driver_interface $cache
+	 * @param string $jwsk_url_template
      */
     public function __construct(
     	\phpbb\config\config $config,
-		\phpbb\cache\driver\driver_interface $cache)
+		\phpbb\cache\driver\driver_interface $cache,
+		$jwsk_url_template)
     {
+    	$this->jwsk_url_template = $jwsk_url_template;
 		$this->config = $config;
 		$this->cache = $cache;
     }
 
     /**
-     * @param $access_token
-     * @return boolean false is decode fails
+     * @param string $access_token
+	 * @return boolean false is decode fails
 	 * @return array os claims if decode succeeds
      */
     public function decode_token($access_token)
@@ -52,7 +58,13 @@ class web_token
         $algorithmManager = AlgorithmManager::create(array(new RS256()));
         $serializerManager = new CompactSerializer(new StandardConverter());
         try {
-            $jws = $serializerManager->unserialize($access_token);
+			if (is_string($access_token))
+			{
+				/** @var $access_token \Jose\Component\Signature\Serializer\string */
+				$jws = $serializerManager->unserialize($access_token);
+			} else {
+        		return false;
+			}
         } catch (\Exception $e)     // \LogicException  | InvalidArgumentException
         {
         	return false;
@@ -78,14 +90,13 @@ class web_token
     /**
      * Verifies the given access token and returns the username
      *
-     * @param string $accessToken
-     * @throws TokenVerificationException
+	 * @param \Jose\Component\Signature\Serializer\string $access_token
+	 * @throws TokenVerificationException
      * @return string
      */
-    public function verify_access_token($accessToken)
+    public function verify_access_token($access_token)
     {
-        error_log('verify_access_token');
-        $jwt_payload = $this->decode_token($accessToken);
+        $jwt_payload = $this->decode_token($access_token);
         if ($jwt_payload === false)
 		{
 			throw new TokenVerificationException('token decode failed');
@@ -122,18 +133,16 @@ class web_token
 		}
 		if ($keys === false)
 		{
-			$keys = @file_get_contents($this->get_uri() . '/.well-known/jwks.json');
+			$url = $this->get_uri();
+			$keys = @file_get_contents($url . '/.well-known/jwks.json');
 			$this->cache->put('_cogauth_jwt_web_keys', $keys);
-		}
-		else {
-			error_log('use cache');
 		}
 		return $keys;
 	}
 
 	private function get_uri()
 	{
-		return sprintf('https://cognito-idp.%s.amazonaws.com/%s',
+		return sprintf($this->jwsk_url_template,
 			$this->config['cogauth_aws_region'],
 			$this->config['cogauth_pool_id']);
 	}

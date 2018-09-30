@@ -240,7 +240,6 @@ class cognito
 	 */
 	public function migrate_user($nickname, $password, $user_id, $email)
 	{
-		error_log('User Migration --');
 		$username = $this->cognito_username($user_id);
 
 		$user_attributes = $this->build_attributes_array(array(
@@ -343,7 +342,7 @@ class cognito
 	private function admin_create_user($username, $password, $user_attributes)
 	{
 		try {
-			$response = $this->client->AdminCreateUser(array(
+			$response = $this->client->admin_create_user(array(
 				'UserPoolId' => $this->user_pool_id,
 				'Username' => $username,
 				'TemporaryPassword' => $password,
@@ -379,14 +378,25 @@ class cognito
 	}
 
 	/**
+	 * @param int $user_id phpBB user_id
 	 * @param string $access_token
 	 * @param string $old_password
 	 * @param string $new_password
 	 * @return boolean True = Success, False = Fail
 	 */
-	public function change_password($access_token, $old_password, $new_password)
+	public function change_password($user_id, $access_token, $old_password, $new_password)
 	{
-		//TODO $this->verifyAccessToken($access_token);
+		$username = $this->cognito_username($user_id);
+		try {
+			/** @var $access_token \Jose\Component\Signature\Serializer\string */
+			if ($username != $this->web_token->verify_access_token($access_token))
+			{
+				return false;
+			}
+		} catch (TokenVerificationException $e)
+		{
+			return false;
+		}
 
 		try {
 			$this->client->change_password(array(
@@ -403,18 +413,22 @@ class cognito
 	}
 
 	/**
+	 * @param int $user_id phpBB user_id
 	 * @param string $email
 	 * @param string $access_token
 	 * @return bool (True success, False fail)
 	 */
-	public function update_user_email($email, $access_token)
+	public function update_user_email($user_id, $email, $access_token)
 	{
-        error_log('update_user_email');
-        try {
-            $this->web_token->verify_access_token($access_token);
+		$username = $this->cognito_username($user_id);
+		try {
+			/** @var $access_token \Jose\Component\Signature\Serializer\string */
+			if ($username != $this->web_token->verify_access_token($access_token))
+			{
+				return false;
+			}
         } catch (TokenVerificationException $e)
         {
-            error_log('update_user_email: ' . $e->getMessage());
             return false;
         }
 
@@ -521,7 +535,6 @@ class cognito
 	 */
 	public function admin_enable_user($user_id)
 	{
-		error_log('Enable User');
 		$username = $this->cognito_username($user_id);
 		try {
 			$this->client->adminEnableUser(array(
@@ -546,8 +559,6 @@ class cognito
 	 */
 	public function admin_disable_user($user_id)
 	{
-		error_log('Disable User');
-
 		$username = $this->cognito_username($user_id);
 		try {
 			$this->client->admin_disable_user(array(

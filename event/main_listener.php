@@ -102,17 +102,18 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function ucp_profile_update($event)
 	{
+
 		if ($event['submit'] &&  !sizeof($event['error']))
 		{
-			error_log('ucp_profile_update, no errors submit ');
 			$data = $event['data'];
+
 			$access_token = $this->client->get_access_token();
 			if (isset($access_token))
 			{
+				$user_id = $this->user->data['user_id'];
 				if (!empty($data['email']))
 				{
-					error_log('Email Change: ' . $event['data']['email']);
-					if (! $this->client->update_user_email($data['email'], $access_token))
+					if (! $this->client->update_user_email($user_id, $data['email'], $access_token))
 					{
 						$event['error'] = array('COGAUTH_EMAIL_CHANGE_ERROR');
 					}
@@ -120,7 +121,7 @@ class main_listener implements EventSubscriberInterface
 				if (!empty($data['new_password']))
 				{
 					error_log('Password Change: ' . $event['data']['new_password']);
-					if (! $this->client->change_password($access_token, $data['cur_password'], $data['new_password']))
+					if (! $this->client->change_password($user_id, $access_token, $data['cur_password'], $data['new_password']))
 					{
 						$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 					}
@@ -146,20 +147,17 @@ class main_listener implements EventSubscriberInterface
 
 		if (!empty($data['email']) && $data['email'] != $user_row['user_email'])
 		{
-			error_log('Email Change: ' . $data['email'] . ' - ' . $user_row['user_email']);
 			$this->client->admin_update_email($user_id,$data['email']);
 		}
 
 		if (!empty($data['new_password']))
 		{
-			error_log('Password Change: ' . $data['new_password']);
 			$this->client->admin_change_password($user_id,$data['new_password']);
 		}
 
 		$username_clean = utf8_clean_string($data['username']);
 		if (!empty($username_clean) && $username_clean != $user_row['username_clean'])
 		{
-			error_log('Username Change: ' . $data['username']);
 			$this->client->admin_update_username($user_id,$data['username']);
 		}
 	}
@@ -171,7 +169,6 @@ class main_listener implements EventSubscriberInterface
 	{
 		foreach ($event['user_ids'] as $user_id)
 		{
-			error_log('Deleting: ' . $user_id);
 			$this->client->admin_delete_user($user_id);
 		}
 	}

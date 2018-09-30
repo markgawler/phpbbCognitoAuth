@@ -12,15 +12,12 @@
  */
 
 namespace mrfg\cogauth\tests\event_listener;
+use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
 
 class cognito_test extends \phpbb_test_case
 {
-
     /** @var $user \phpbb\user */
     protected $user;
-
-    //** @var $language \phpbb\language\language */
-    //protected $language;
 
     /** @var $cognito_client \phpbb\config\config */
     protected $config;
@@ -28,9 +25,11 @@ class cognito_test extends \phpbb_test_case
     /** @var $db \phpbb\db\driver\driver_interface */
     protected $db;
 
-    /** @var  $web_token \mrfg\cogauth\cognito\web_token|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var $web_token \mrfg\cogauth\cognito\web_token|\PHPUnit_Framework_MockObject_MockObject */
     protected $web_token;
 
+    /** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
+	protected $client;
 
     public function setUp()
     {
@@ -39,10 +38,6 @@ class cognito_test extends \phpbb_test_case
 		$this->user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
 			->getMock();
-
-		/*$this->language = $this->getMockBuilder('\phpbb\language\language')
-			->disableOriginalConstructor()
-			->getMock();*/
 
         $this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
             ->disableOriginalConstructor()
@@ -57,6 +52,10 @@ class cognito_test extends \phpbb_test_case
             ->setMethods(array('verify_access_token'))
             ->getMock();
 
+		$this->client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
+			->disableOriginalConstructor()
+			->getMock();
+
         $map = array(
             array('cogauth_pool_id', 'eu-west-1_T0xxxxx1'),
             array('cogauth_client_id', 'faaaaaaaaaaaaaaaaaaaaaav7'),
@@ -70,13 +69,8 @@ class cognito_test extends \phpbb_test_case
 
     public function test_get_user_valid()
     {
-        $client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
-            ->disableOriginalConstructor()
-            ->setMethods(array('create_client', 'admin_get_user'))
-            ->getMock();
-
         /** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
-        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $client, $this->web_token, '');
+        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
 
         $attr = array(
             array(
@@ -86,12 +80,12 @@ class cognito_test extends \phpbb_test_case
                 'Name' => 'nickname',
                 'Value' => 'fred')
         );
-        $client->method('admin_get_user')
+        $this->client->method('admin_get_user')
             ->willReturn(array(
                 'UserStatus' => 'CONFIRMED',
                 'UserAttributes' => $attr));
 
-        $client->expects($this->once())
+        $this->client->expects($this->once())
             ->method('admin_get_user')
             ->with(array(
                 "Username" => 'u001234',
@@ -114,15 +108,10 @@ class cognito_test extends \phpbb_test_case
             true
         ));
 
-        $client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
-            ->disableOriginalConstructor()
-            ->setMethods(array('create_client', 'admin_initiate_auth'))
-            ->getMock();
-
         /** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
-        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $client, $this->web_token, '');
+        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
 
-        $client->method('admin_initiate_auth')
+        $this->client->method('admin_initiate_auth')
             ->willReturn(array(
                 'AuthenticationResult' => array('AccessToken' => 'token_string_1234'),
                 'ChallengeName' => 'NEW_PASSWORD_REQUIRED',
@@ -130,7 +119,7 @@ class cognito_test extends \phpbb_test_case
                 'Session' => 'QWERTYUIOP'
             ));
 
-        $client->expects($this->once())
+        $this->client->expects($this->once())
             ->method('admin_initiate_auth')
             ->with(array(
                 'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
@@ -150,19 +139,15 @@ class cognito_test extends \phpbb_test_case
 
     public function test_update_user_email()
     {
-        $client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
-            ->disableOriginalConstructor()
-            ->setMethods(array('create_client', 'update_user_attributes'))
-            ->getMock();
-
         /** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
-        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $client, $this->web_token, '');
+        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
 
         $this->web_token->expects($this->once())
             ->method('verify_access_token')
-            ->with('9876543210');
+            ->with('9876543210')
+			->willReturn('u000123');
 
-        $client->expects($this->once())
+        $this->client->expects($this->once())
             ->method('update_user_attributes')
             ->with(array(
                 'AccessToken' => '9876543210',
@@ -172,35 +157,96 @@ class cognito_test extends \phpbb_test_case
                 )),
             ));
 
-        $response = $cognito->update_user_email('fred@mail.com', '9876543210');
+        $response = $cognito->update_user_email(123,'fred@mail.com', '9876543210');
         $this->assertTrue($response, 'Asserting update_user_email');
     }
 
 
     public function test_update_user_email_fail01()
     {
-        $client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
-            ->disableOriginalConstructor()
-            ->setMethods(array('create_client', 'update_user_attributes'))
-            ->getMock();
-
         /** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
-        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $client, $this->web_token, '');
+        $cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
 
         $this->web_token->method('verify_access_token')
             ->willThrowException(new \mrfg\cogauth\cognito\exception\TokenVerificationException);
 
         $this->web_token->expects($this->once())
             ->method('verify_access_token')
-            ->with('9876543210');
+            ->with('9876543210')
+			->willReturn('u000123');
 
-        $client->expects($this->never())
+		$this->client->expects($this->never())
             ->method('update_user_attributes');
 
-
-
-        $response = $cognito->update_user_email('fred@mail.com', '9876543210');
+        $response = $cognito->update_user_email(123,'fred@mail.com', '9876543210');
         $this->assertFalse($response, 'Asserting update_user_email failed');
     }
+
+    public function test_change_password()
+	{
+		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
+		$cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
+
+		$this->web_token->expects($this->once())
+			->method('verify_access_token')
+			->with('5678901234')
+			->willReturn('u000321');
+
+		$this->client->expects($this->once())
+			->method('change_password')
+			->with(array(
+				'AccessToken' => '5678901234',
+				'PreviousPassword' => 'sTr0NgPaSsWoD',
+				'ProposedPassword' => 'PaSsWoDsTr0Ng'
+			));
+
+		$response = $cognito->change_password(
+			321,'5678901234', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
+		$this->assertTrue($response, 'Asserting change_password');
+	}
+
+	public function test_change_password_wrong_pwd()
+	{
+		/* @var $command \Aws\CommandInterface */
+		$command = $this->getMockBuilder('\Aws\CommandInterface')
+			->disableOriginalConstructor()
+			->getMock();
+
+		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
+		$cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
+
+		$this->web_token->expects($this->once())
+			->method('verify_access_token')
+			->with('5678901234')
+			->willReturn('u000123');
+
+		$this->client->method('change_password')
+			->willThrowException(new CognitoIdentityProviderException('some message',$command,array()));
+
+		$response = $cognito->change_password(
+			321,'5678901234', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
+		$this->assertFalse($response, 'Asserting change_password fail');
+	}
+
+	public function test_change_password_invalid_token()
+	{
+		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
+		$cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
+
+		$this->web_token->method('verify_access_token')
+			->willThrowException(new \mrfg\cogauth\cognito\exception\TokenVerificationException);
+
+		$this->web_token->expects($this->once())
+			->method('verify_access_token')
+			->with('4567890123')
+			->willReturn('u000131');
+
+		$this->client->expects($this->never())
+			->method('change_password');
+
+		$response = $cognito->change_password(
+			313,'4567890123', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
+		$this->assertFalse($response, 'Asserting change_password fail access token invalid');
+	}
 
 }

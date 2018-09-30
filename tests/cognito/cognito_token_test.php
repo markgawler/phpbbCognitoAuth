@@ -15,27 +15,22 @@ namespace mrfg\cogauth\tests\cognito;
 
 class cognito_token_test extends \phpbb_test_case
 {
+	/* @var $config \phpbb\config\config|\PHPUnit_Framework_MockObject_MockObject */
+	protected $config;
 
-    /** @var $user \phpbb\user */
-    protected $user;
-
-    /** @var $cognito_client \phpbb\config\config */
-    protected $config;
-
-    /** @var $db \phpbb\db\driver\driver_interface */
-    protected $db;
-
-    /** @var $web_token \mrfg\cogauth\cognito\web_token*/
-    protected $web_token;
+	/* @var $cache \phpbb\cache\driver\driver_interface|\PHPUnit_Framework_MockObject_MockObject */
+	protected $cache;
 
 
-    public function setUp()
+	public function setUp()
     {
         parent::setUp();
 
         $this->config = $this->getMockBuilder('\phpbb\config\config')
             ->disableOriginalConstructor()
             ->getMock();
+
+		$this->cache = $this->getMockForAbstractClass('\phpbb\cache\driver\driver_interface');
 
         $map =array(
             array('cogauth_pool_id','eu-west-1_T0xxxxx1'),
@@ -44,14 +39,74 @@ class cognito_token_test extends \phpbb_test_case
         $this->config->method('offsetGet')->will($this->returnValueMap($map));
     }
 
-    public function test_verify_access_token()
+    public function test_download_jwt_web_keys_cached()
     {
 
-        //$wt = new \mrfg\cogauth\cognito\web_token($this->config);
+    	$test_keys = file_get_contents(__DIR__ . '/.well-known/jwks.json');
+    	$this->cache->method('get')
+			->willReturn($test_keys);
 
-        //$username = $wt->verify_access_token('hello');
-		$username = True;
-        $this->assertTrue($username,'Its true');
+    	$this->cache->expects($this->once())
+			->method('get')
+			->with('_cogauth_jwt_web_keys');
 
+		$this->cache->expects($this->never())
+			->method('put');
+
+        $wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, '');
+
+        $keys = $wt->download_jwt_web_keys();
+        $this->assertEquals($test_keys, $keys, 'Asserting correct return of cached jwks key');
     }
+
+	public function test_download_jwt_web_keys()
+	{
+		$test_keys = file_get_contents(__DIR__ . '/.well-known/jwks.json');
+		$this->cache->method('get')
+			->willReturn(false);
+
+		$this->cache->expects($this->once())
+			->method('get')
+			->with('_cogauth_jwt_web_keys');
+
+		$this->cache->expects($this->once())
+			->method('put')
+			->with('_cogauth_jwt_web_keys',$test_keys);
+
+		$this->config->expects($this->at(0))
+			->method('offsetGet')
+			->with('cogauth_aws_region');
+
+		$this->config->expects($this->at(1))
+			->method('offsetGet')
+			->with('cogauth_pool_id');
+
+		$this->config->expects($this->exactly(2))
+			->method('offsetGet');
+
+		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+
+		$keys = $wt->download_jwt_web_keys();
+		$this->assertEquals($test_keys, $keys, 'Asserting correct return of non-cached jwks key');
+	}
+
+	public function test_decode_token_invalid_token_01()
+	{
+		$token = null;
+		$this->cache->expects($this->never())
+			->method('get');
+		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+		$this->assertTrue($wt->decode_token($token) === false, 'Asserting decoding invalid token returns False');
+	}
+
+	public function test_decode_token_invalid_token_02()
+	{
+		/** @var $token \Jose\Component\Signature\Serializer\string */
+		$token = 'invalid string';
+		$this->cache->expects($this->never())
+			->method('get');
+		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+		$this->assertTrue($wt->decode_token($token) === false, 'Asserting decoding invalid token returns False');
+	}
 }
+

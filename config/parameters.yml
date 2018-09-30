@@ -1,0 +1,2 @@
+parameters:
+    mrfg.cogauth.jwsk_url_template: 'https://cognito-idp.%%s.amazonaws.com/%%s'

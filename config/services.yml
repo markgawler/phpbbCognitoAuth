@@ -17,6 +17,7 @@ services:
         arguments:
         - '@config'
         - '@cache.driver'
+        - '%mrfg.cogauth.jwsk_url_template%'
 
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
@@ -28,8 +29,10 @@ services:
         - '@mrfg.cogauth.web_token'
         - '%mrfg.cogauth.tables.cogauth_session%'
 
+
 imports:
 - { resource: auth.yml }
 - { resource: tables.yml }
+- { resource: parameters.yml }
 
 

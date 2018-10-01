@@ -182,6 +182,35 @@ class cognito_test extends \phpbb_test_case
         $this->assertFalse($response, 'Asserting update_user_email failed');
     }
 
+	public function test_change_email_user_not_found()
+	{
+		// this can only happen is the cognito user gets deleted after login. The access toke would in all other cases be invalid
+
+		/* @var $command \Aws\CommandInterface */
+		$command = $this->getMockBuilder('\Aws\CommandInterface')
+			->disableOriginalConstructor()
+			->getMock();
+
+		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
+		$cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
+
+		$this->web_token->expects($this->once())
+			->method('verify_access_token')
+			->with('4567890123')
+			->willReturn('u000135');
+
+		$this->client->expects($this->once())
+			->method('update_user_attributes')
+			->willThrowException(new CognitoIdentityProviderException('some message',
+				$command,array('code' => 'UserNotFoundException')));
+
+		$response = $cognito->update_user_email(
+			135,'fred@mail.com','4567890123');
+		$this->assertTrue($response, 'Asserting update_user_email fail access user not found');
+	}
+
+
+
     public function test_change_password()
 	{
 		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
@@ -247,6 +276,33 @@ class cognito_test extends \phpbb_test_case
 		$response = $cognito->change_password(
 			313,'4567890123', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
 		$this->assertFalse($response, 'Asserting change_password fail access token invalid');
+	}
+
+	public function test_change_password_user_not_found()
+	{
+		// this can only happen is the cognito user gets deleted after login. The access toke would in all other cases be invalid
+
+		/* @var $command \Aws\CommandInterface */
+		$command = $this->getMockBuilder('\Aws\CommandInterface')
+			->disableOriginalConstructor()
+			->getMock();
+
+		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
+		$cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->client, $this->web_token, '');
+
+		$this->web_token->expects($this->once())
+			->method('verify_access_token')
+			->with('4567890123')
+			->willReturn('u000132');
+
+		$this->client->expects($this->once())
+			->method('change_password')
+			->willThrowException(new CognitoIdentityProviderException('some message',
+				$command,array('code' => 'UserNotFoundException')));
+
+		$response = $cognito->change_password(
+			132,'4567890123', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
+		$this->assertTrue($response, 'Asserting change_password fail user not found');
 	}
 
 }

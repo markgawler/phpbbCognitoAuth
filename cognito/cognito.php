@@ -389,7 +389,7 @@ class cognito
 		$username = $this->cognito_username($user_id);
 		try {
 			/** @var $access_token \Jose\Component\Signature\Serializer\string */
-			if ($username != $this->web_token->verify_access_token($access_token))
+			if ($username !=  $this->web_token->verify_access_token($access_token))
 			{
 				return false;
 			}
@@ -406,9 +406,17 @@ class cognito
 			));
 			return true;
 		} catch (CognitoIdentityProviderException $e) {
-			error_log('changePassword: ' . $e->getAwsErrorCode());
-			// TODO Error handling
-			return false;
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException':
+					// Can only happen if the Cognito user is deleted after the user logs in.
+					return true;
+				break;
+				default:
+					error_log('changePassword: ' . $e->getAwsErrorCode());
+					// TODO Error handling
+					return false;
+			}
 		}
 	}
 
@@ -444,9 +452,17 @@ class cognito
 			return true;
 		} catch (CognitoIdentityProviderException $e)
 		{
-			// TODO Error handling
-			error_log('update_user_email: ' . $e->getAwsErrorCode());
-			return false;
+			switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException':
+					// Can only happen if the Cognito user is deleted after the user logs in.
+					return true;
+				break;
+				default:
+					error_log('update_user_email: ' . $e->getAwsErrorCode());
+					// TODO Error handling
+					return false;
+			}
 		}
 	}
 
@@ -623,7 +639,6 @@ class cognito
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
-        // TODO Validate token
 		return $row['access_token'];
 	}
 

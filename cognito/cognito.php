@@ -72,12 +72,16 @@ class cognito
     /** @var \mrfg\cogauth\cognito\web_token */
     protected $web_token;
 
+    /** @var \phpbb\log\log_interface $log */
+    protected $log;
+
 	/**
 	 * Database Authentication Constructor
 	 *
 	 * @param	\phpbb\db\driver\driver_interface	$db
 	 * @param	\phpbb\config\config 		        $config
 	 * @param	\phpbb\user			                $user
+	 * @param 	\phpbb\log\log_interface			$log
      * @param   cognito_client_wrapper              $client,
      * @param   web_token                           $web_token
      * @param	string				                $cogauth_session
@@ -86,6 +90,7 @@ class cognito
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\user $user,
+		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
         web_token $web_token,
         $cogauth_session)
@@ -113,6 +118,7 @@ class cognito
         $this->client = $client;
         $client->create_client($args);
         $this->web_token = $web_token;
+        $this->log = $log;
     }
 
 
@@ -406,17 +412,7 @@ class cognito
 			));
 			return true;
 		} catch (CognitoIdentityProviderException $e) {
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					// Can only happen if the Cognito user is deleted after the user logs in.
-					return true;
-				break;
-				default:
-					error_log('changePassword: ' . $e->getAwsErrorCode());
-					// TODO Error handling
-					return false;
-			}
+			return $this->handle_error($e,$user_id,'change_password');
 		}
 	}
 
@@ -452,18 +448,30 @@ class cognito
 			return true;
 		} catch (CognitoIdentityProviderException $e)
 		{
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					// Can only happen if the Cognito user is deleted after the user logs in.
-					return true;
-				break;
-				default:
-					error_log('update_user_email: ' . $e->getAwsErrorCode());
-					// TODO Error handling
-					return false;
-			}
+			return $this->handle_error($e,$user_id,'update_user_email');
 		}
+	}
+
+	/**
+	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
+	 * @param $user_id
+	 * @param $action
+	 * @return bool
+	 */
+	private function handle_error($e, $user_id, $action)
+	{
+		switch ($e->getAwsErrorCode())
+		{
+			case 'UserNotFoundException':
+				// Can only happen if the Cognito user is deleted after the user logs in.
+				return true;
+			break;
+			default:
+				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
+					array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
+		}
+		return false;
 	}
 
 	/**

@@ -44,7 +44,8 @@ $lang = array_merge($lang, array(
 	'COGAUTH_EMAIL_CHANGE_ERROR'	=> 'Unexpected error updating email (Cognito)',
 	'COGAUTH_ACP_PROFILE_CHANGE_ERROR'	=> 'Unexpected error updating user profile (Cognito)',
 
-	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region'
+	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region',
 
+	'COGAUTH_UNEXPECTED_ERROR'		=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"'
 
 ));

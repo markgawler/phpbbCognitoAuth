@@ -25,6 +25,7 @@ services:
         - '@dbal.conn'
         - '@config'
         - '@user'
+        - '@log'
         - '@mrfg.cogauth.cognito_client_wrapper'
         - '@mrfg.cogauth.web_token'
         - '%mrfg.cogauth.tables.cogauth_session%'

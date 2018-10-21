@@ -13,11 +13,6 @@ namespace mrfg\cogauth\migrations;
 
 class install_db_table extends \phpbb\db\migration\migration
 {
-	//public function effectively_installed()
-	//{
-	//	return isset($this->config['cogauth_pool_id']);
-	//}
-
 	static public function depends_on()
 	{
 		return array('\mrfg\cogauth\migrations\install_acp_module');

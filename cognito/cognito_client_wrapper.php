@@ -82,14 +82,23 @@ class cognito_client_wrapper
         return $this->client->adminDisableUser($args);
     }
 
-    /**
-     * @param $args
-     * @return \Aws\Result
-     */
-    public function admin_delete_user($args)
-    {
-        return $this->client->AdminDeleteUser($args);
-    }
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function admin_delete_user($args)
+	{
+		return $this->client->AdminDeleteUser($args);
+	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function admin_enable_user($args)
+	{
+		return $this->client->adminEnableUser($args);
+	}
 
     /**
      * @param $args

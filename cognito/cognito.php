@@ -45,7 +45,7 @@ class cognito
 	/**@var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient */
 	protected $client;
 
-	/**@var $String */
+	/**@var $string */
 	protected $user_pool_id;
 
 	/**@var $string */
@@ -123,7 +123,7 @@ class cognito
 
 
 	/**
-	 * @param string $user_id
+	 * @param int $user_id phpBB user Id
 	 * @return array
 	 *
 	 * User Status UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
@@ -144,7 +144,15 @@ class cognito
 			);
 
 		} catch (CognitoIdentityProviderException $e) {
-			switch ($e->getAwsErrorCode())
+			$user_not_found = $this->handleCognitoIdentityProviderException($e,$user_id,'get_user', true);
+			if ($user_not_found)
+			{
+				$status = COG_USER_NOT_FOUND;
+			}
+			else{
+				$status = COG_ERROR;
+			}
+			/*switch ($e->getAwsErrorCode())
 			{
 				case 'UserNotFoundException':
 					$status = COG_USER_NOT_FOUND;
@@ -152,7 +160,7 @@ class cognito
 				default:
 					$status = COG_ERROR;
 					error_log($e->getAwsErrorMessage());
-			}
+			}*/
 		}
 
 		return array(
@@ -165,7 +173,7 @@ class cognito
 
 
 	/**
-	 * @param string $user_id
+	 * @param int $user_id phpBB User ID
 	 * @param string $password
 	 *
 	 * @return array
@@ -181,9 +189,8 @@ class cognito
 	 */
 	public function authenticate($user_id, $password)
 	{
-		$username = $this->cognito_username($user_id);
 		try {
-			$response = $this->authenticate_user($username, $password);
+			$response = $this->authenticate_user($user_id, $password);
 
 			if (isset($response['AuthenticationResult']))
 			{
@@ -210,7 +217,7 @@ class cognito
 				break;
 				case 'NotAuthorizedException':
 					// Try to translate the Cognito error
-					error_log('AWS ERROR (Auth): ' . $e->getAwsErrorMessage());
+					//error_log('AWS ERROR (Auth): ' . $e->getAwsErrorMessage());
 					switch ($e->getAwsErrorMessage())
 					{
 						case 'Password attempts exceeded':
@@ -226,8 +233,7 @@ class cognito
 
 				default;
 					$status = COG_LOGIN_NO_AUTH;
-					error_log('Unhandled Authentication Error: ' . $e->getAwsErrorCode());
-					error_log('Unhandled Authentication Error: ' . $e->getAwsErrorMessage());
+					$this->handleCognitoIdentityProviderException($e, $user_id, 'authenticate');
 			}
 		}
 		return array(
@@ -239,15 +245,13 @@ class cognito
 	/**
 	 * @param string $nickname - Non normalised username
 	 * @param string $password
-	 * @param int	 $user_id - numeric user ID
+	 * @param int	 $user_id - phpBB numeric user ID
 	 * @param string $email
 	 * @return array
 	 * @throws /Exception
 	 */
 	public function migrate_user($nickname, $password, $user_id, $email)
 	{
-		$username = $this->cognito_username($user_id);
-
 		$user_attributes = $this->build_attributes_array(array(
 			'preferred_username' => utf8_clean_string($nickname),
 			'email' => $email,
@@ -255,26 +259,32 @@ class cognito
 			'email_verified' => "True"
 		));
 
-		$result = $this->admin_create_user($username,$password,$user_attributes);
+		$result = $this->admin_create_user($user_id, $password, $user_attributes);
 		if ($result['status'] === COG_MIGRATE_SUCCESS)
 		{
 			try
 			{
-				$response = $this->authenticate_user($username, $password);
+				$response = $this->authenticate_user($user_id, $password);
 			}
 			catch (CognitoIdentityProviderException $e)
 			{
-				error_log('Authentication: ErrorCode : ' . $e->getAwsErrorCode());
-				throw $e;
+				$this->handleCognitoIdentityProviderException($e, $user_id, 'migrate_user - authenticate_user');
+				return $result;
 			}
-
-			return $this->admin_respond_to_auth_challenge($response, $password, $username);
+			return $this->admin_respond_to_auth_challenge($response, $password, $user_id);
 		}
 		return $result;
 	}
 
-	private function admin_respond_to_auth_challenge($response, $password, $username)
+	/**
+	 * @param \Aws\result $response
+	 * @param string $password
+	 * @param int $user_id phpBB user id
+	 * @return array
+	 */
+	private function admin_respond_to_auth_challenge($response, $password, $user_id)
 	{
+		$username = $this->cognito_username($user_id);
 		switch ($response['ChallengeName'])
 		{
 			case 'NEW_PASSWORD_REQUIRED':
@@ -298,7 +308,7 @@ class cognito
 				}
 				catch (CognitoIdentityProviderException $e)
 				{
-					error_log('Challenge: ErrorCode : ' . $e->getAwsErrorCode());
+					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_respond_to_auth_challenge');
 
 					return array(
 						'status' => COG_MIGRATE_FAIL,
@@ -308,7 +318,11 @@ class cognito
 			break;
 
 			default:
-				error_log('Unhandled response');
+				//error_log('Unhandled response');
+				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_CHALLENGE', time(),
+					array('admin_respond_to_auth_challenge', $response['ChallengeName']));
+
 				$response = null;
 		}
 		return  array(
@@ -319,12 +333,13 @@ class cognito
 
 
 	/**
-	 * @param String $username
+	 * @param int $user_id phpBB user id
 	 * @param String $password
 	 * @return \Aws\Result
 	 */
-	private function authenticate_user($username, $password)
+	private function authenticate_user($user_id, $password)
 	{
+		$username = $this->cognito_username($user_id);
 		$response = $this->client->admin_initiate_auth(array(
 			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 			'AuthParameters' => array(
@@ -340,13 +355,15 @@ class cognito
 
 
 	/**
-	 * @param string $username phpBB username (Cognito nickname)
+	 * @param int $user_id phpBB user id
 	 * @param string $password
 	 * @param $user_attributes
 	 * @return array
 	 */
-	private function admin_create_user($username, $password, $user_attributes)
+	private function admin_create_user($user_id, $password, $user_attributes)
 	{
+		$username = $this->cognito_username($user_id);
+
 		try {
 			$response = $this->client->admin_create_user(array(
 				'UserPoolId' => $this->user_pool_id,
@@ -358,8 +375,9 @@ class cognito
 			));
 		}
 		catch (CognitoIdentityProviderException $e) {
-			error_log('Create User Fail: ' . $e->getAwsErrorCode());
-			error_log('AWS Message: ' . $e->getAwsErrorMessage());
+
+			//error_log('Create User Fail: ' . $e->getAwsErrorCode());
+			//error_log('AWS Message: ' . $e->getAwsErrorMessage());
 			switch ($e->getAwsErrorCode())
 			{
 				case 'InvalidPasswordException':
@@ -370,6 +388,7 @@ class cognito
 				break;
 
 				default:
+					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_create_user');
 					return  array(
 						'status' => COG_MIGRATE_FAIL,
 						'error' => $e->getAwsErrorCode(),
@@ -412,7 +431,7 @@ class cognito
 			));
 			return true;
 		} catch (CognitoIdentityProviderException $e) {
-			return $this->handle_error($e,$user_id,'change_password');
+			return $this->handleCognitoIdentityProviderException($e,$user_id,'change_password', true);
 		}
 	}
 
@@ -448,29 +467,27 @@ class cognito
 			return true;
 		} catch (CognitoIdentityProviderException $e)
 		{
-			return $this->handle_error($e,$user_id,'update_user_email');
+			return $this->handleCognitoIdentityProviderException($e,$user_id,'update_user_email', true);
 		}
 	}
 
 	/**
 	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
-	 * @param $user_id
-	 * @param $action
-	 * @return bool
+	 * @param int $user_id 			phpBB user ID
+	 * @param string $action		Action Message
+	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
+	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
 	 */
-	private function handle_error($e, $user_id, $action)
+	private function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
 	{
-		switch ($e->getAwsErrorCode())
+		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
 		{
-			case 'UserNotFoundException':
-				// Can only happen if the Cognito user is deleted after the user logs in.
-				return true;
-			break;
-			default:
-				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
-				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
-					array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
+			// Can only happen if the Cognito user is deleted after the user logs in.
+			return true;
 		}
+		$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
+			array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
 		return false;
 	}
 
@@ -484,20 +501,18 @@ class cognito
 		$user = $this->get_user($user_id);
 		if ($user['status'] === COG_USER_FOUND)
 		{
-			$username = $this->cognito_username($user_id);
-			$this->admin_delete_user_internal($username);
+			$this->admin_delete_user_internal($user_id);
 			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutatable  attribute
-			$result = $this->admin_create_user($username,$new_password,$user_attributes);
+			$result = $this->admin_create_user($user_id,$new_password,$user_attributes);
 			if ($result['status'] == COG_MIGRATE_SUCCESS)
 			{
 				try
 				{
-					$response = $this->authenticate_user($username, $new_password);
-					$this->admin_respond_to_auth_challenge($response, $new_password, $username);
+					$response = $this->authenticate_user($user_id, $new_password);
+					$this->admin_respond_to_auth_challenge($response, $new_password, $user_id);
 				} catch (CognitoIdentityProviderException $e)
 				{
-					// TODO Error handling
-					error_log('admin_change_password: ' . $e->getAwsErrorCode());
+					$this->handleCognitoIdentityProviderException($e,$user_id,'admin_change_password');
 				}
 			}
 		}
@@ -529,8 +544,6 @@ class cognito
 		$attributes = array('preferred_username' => utf8_clean_string($new_username),
 							'nickname' => $new_username);
 		$this->update_user_attributes($attributes, $user_id);
-
-
 	}
 
 	/**
@@ -538,19 +551,12 @@ class cognito
 	 */
 	public function admin_delete_user($user_id)
 	{
-		$username = $this->cognito_username($user_id);
 		try {
-			$this->admin_delete_user_internal($username);
+			$this->admin_delete_user_internal($user_id);
 		} catch (CognitoIdentityProviderException $e)
 		{
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException': // No user to delete, do nothing
-				break;
-				default:
-					// TODO Error handling
-					error_log('admin_delete_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
-			}
+			// 'UserNotFoundException'  No user to delete, do nothing
+			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_delete_user',true);
 		}
 	}
 
@@ -561,20 +567,15 @@ class cognito
 	{
 		$username = $this->cognito_username($user_id);
 		try {
-			$this->client->adminEnableUser(array(
+			$this->client->admin_enable_user(array(
 				'Username' => $username,
 				'UserPoolId' => $this->user_pool_id));
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException': // No user to enable, do nothing
-				break;
-				default:
-					// TODO Error handling
-					error_log('enable_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
-			}
+			error_log('CognitoIdentityProviderException:' . $e->getAwsErrorCode());
+			//'UserNotFoundException': // No user to enable, do nothing
+			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_enable_user',true);
 		}
 	}
 
@@ -591,32 +592,29 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException': // No user to disable, do nothing
-				break;
-				default:
-					// TODO Error handling
-					error_log('disable_user: ' . $e->getAwsErrorMessage() .', ' . $e->getAwsErrorCode());
-			}
+			// 'UserNotFoundException': // No user to disable, do nothing
+			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_disable_user',true);
 		}
 	}
 
 	/**
 	 * Delete a user by user id
-	 * @param string $username
+	 *
+	 * @param int $user_id phpBB user ID
 	 */
-	private function admin_delete_user_internal($username)
+	private function admin_delete_user_internal($user_id)
 	{
+		$user_id = $this->cognito_username($user_id);
+
 		$this->client->admin_delete_user(
-			array('Username' => $username,
+			array('Username' => $user_id,
 				  'UserPoolId' => $this->user_pool_id)
 		);
 	}
 
 	/**
 	 * @param array $attributes
-	 * @param string $user_id
+	 * @param int $user_id phpBB user id
 	 */
 	private function update_user_attributes($attributes, $user_id)
 	{
@@ -629,9 +627,8 @@ class cognito
 			$this->client->admin_update_user_attributes($data);
 		} catch (CognitoIdentityProviderException $e)
 		{
-			// TODO Error handling
-			error_log('update_user_attributes: ' . $e->getAwsErrorCode());
-			throw $e;
+			$this->handleCognitoIdentityProviderException($e,$user_id,'update_user_attributes');
+			//throw $e;
 		}
 	}
 
@@ -642,7 +639,6 @@ class cognito
 	public function get_access_token()
 	{
 		$sid = $this->user->session_id;
-
 		$sql = 'SELECT access_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) ."'";
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
@@ -660,17 +656,34 @@ class cognito
 		{
 			$data = array('sid'           => $session_id,
 						  'access_token'  => $auth_result['AccessToken'],
-						  'expires_in'    => $auth_result['ExpiresIn'],
+						  'expires_at'    => $auth_result['ExpiresIn'] +time(),
 						  'id_token'      => $auth_result['IdToken'],
 						  'refresh_token' => $auth_result['RefreshToken'],
 						  'token_type'    => $auth_result['TokenType']);
 			$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
 			$this->db->sql_query($sql);
 		}
-		else
-		{
-			error_log('Null access token?');
-		}
+	}
+
+	/**
+	 * @param string $session_id phpBB Session id
+	 * @return int nuber of rows deleted
+	 */
+	public function phpbb_session_killed($session_id)
+	{
+		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($session_id) ."'";
+		$this->db->sql_query($sql);
+		return $this->db->sql_affectedrows();
+	}
+
+	/**
+	 * @return int number of rows deleted
+	 */
+	public function delete_expired_sessions()
+	{
+		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE expires_at < " . time();
+		$this->db->sql_query($sql);
+		return $this->db->sql_affectedrows();
 	}
 
 	/**
@@ -690,7 +703,7 @@ class cognito
 	}
 
 	/**
-	 * @param $user_id
+	 * @param int $user_id phpBB user id
 	 * @return string
 	 */
 	public function cognito_username($user_id)
@@ -722,7 +735,6 @@ class cognito
 			$this->client_secret,
 			true
 		);
-
 		return base64_encode($hash);
 	}
 

@@ -46,6 +46,7 @@ $lang = array_merge($lang, array(
 
 	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region',
 
-	'COGAUTH_UNEXPECTED_ERROR'		=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"'
+	'COGAUTH_UNEXPECTED_ERROR'		=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',
+	'COGAUTH_UNEXPECTED_CHALLENGE'		=> '<strong>CogAuth, Unexpected result:</strong><br>»Action: "%1$s", <br>Result: "%2$s"',
 
 ));

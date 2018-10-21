@@ -23,13 +23,14 @@ class main_listener implements EventSubscriberInterface
 	static public function getSubscribedEvents()
 	{
 		return array(
+			'core.session_kill_after'		=> 'session_kill_after',
 			'core.user_setup'				=> 'load_language_on_setup',
 			'core.ucp_profile_reg_details_validate' => 'ucp_profile_update',
 			'core.session_create_after' 	=> 'session_create_after',
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.delete_user_after' 		=> 'delete_users',
 			'core.user_active_flip_after' 	=> 'user_active_flip',
-			//'core.session_gc_after' 		=> 'session_gc_after',
+			'core.session_gc_after' 		=> 'session_gc_after',
 		);
 	}
 
@@ -78,11 +79,12 @@ class main_listener implements EventSubscriberInterface
 	/**
 	 * @param \phpbb\event\data	$event	Event object
 	 */
-	//public function session_gc_after($event)
-	//{
-	//	error_log('session_gc_after - has run');
-		//TODO Tidy sessions
-	//}
+
+	public function session_gc_after(/** @noinspection PhpUnusedParameterInspection */ $event)
+	{
+		error_log('session_gc_after - has run');
+		$this->client->delete_expired_sessions();
+	}
 
 	/**
 	 * @param \phpbb\event\data	$event	Event object
@@ -96,6 +98,15 @@ class main_listener implements EventSubscriberInterface
             $this->client->store_auth_result($data['session_id']);
 		}
     }
+
+	/**
+	 * @param \phpbb\event\data	$event	Event object
+	 */
+	public function session_kill_after($event)
+	{
+		$session = $event['session_id'];
+		$this->client->phpbb_session_killed($session);
+	}
 
 	/**
    	 * @param \phpbb\event\data	$event	Event object
@@ -130,7 +141,7 @@ class main_listener implements EventSubscriberInterface
 			else
 			{
 				//TODO this is not an error if the user has not been migrated, we should migrate the user and set the password.
-				error_log('No Access token found');
+				//error_log('No Access token found');
 				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 			}
 		}

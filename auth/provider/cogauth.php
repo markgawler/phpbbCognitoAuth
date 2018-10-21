@@ -244,7 +244,6 @@ class cogauth extends \phpbb\auth\provider\base
 		// Find the user in AWS Cognito, we only authenticate against cognito if user exists and confirmed
 		// otherwise we attempt to migrate the user if the user authenticated via phpBB rules.
 		$cognito_status = $this->cognito_client->get_user($row['user_id']);
-		error_log('Status: ' . $cognito_status);
 
 		if ($cognito_status['status'] == COG_USER_FOUND &&  $cognito_status['user_status'] == 'CONFIRMED')
 		{

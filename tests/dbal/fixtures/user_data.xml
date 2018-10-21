@@ -3,7 +3,7 @@
     <table name="phpbb_cogauth_session">
         <column>sid</column>
         <column>access_token</column>
-        <column>expires_in</column>
+        <column>expires_at</column>
         <column>id_token</column>
         <column>refresh_token</column>
         <column>token_type</column>

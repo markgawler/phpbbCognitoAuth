@@ -11,6 +11,7 @@ services:
             - '@service_container'
             - '@mrfg.cogauth.cognito'
             - '@mrfg.cogauth.web_token'
+            - '@log'
             - '%core.root_path%'
             - '%core.php_ext%'
             - '%mrfg.cogauth.tables.cogauth_session%'

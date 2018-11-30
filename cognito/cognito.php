@@ -126,7 +126,8 @@ class cognito
 	 * @param int $user_id phpBB user Id
 	 * @return array
 	 *
-	 * User Status UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
+	 * user_status = UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
+	 * status =  COG_USER_FOUND | COG_USER_NOT_FOUND | COG_ERROR
 	 */
 	public function get_user($user_id)
 	{
@@ -217,7 +218,6 @@ class cognito
 				break;
 				case 'NotAuthorizedException':
 					// Try to translate the Cognito error
-					//error_log('AWS ERROR (Auth): ' . $e->getAwsErrorMessage());
 					switch ($e->getAwsErrorMessage())
 					{
 						case 'Password attempts exceeded':

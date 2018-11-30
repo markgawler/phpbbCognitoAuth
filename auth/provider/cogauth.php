@@ -67,6 +67,9 @@ class cogauth extends \phpbb\auth\provider\base
 	/**  @var \mrfg\cogauth\cognito\web_token $web_token */
 	protected $web_token;
 
+	/** @var \phpbb\log\log_interface	$log */
+	protected $log;
+
 	/**
 	 * Database Authentication Constructor
 	 *
@@ -79,6 +82,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
 	 * @param 	\mrfg\cogauth\cognito\cognito $cognito_client
 	 * @param 	\mrfg\cogauth\cognito\web_token $web_token
+	 * @param   \phpbb\log\log_interface	$log	Logger instance
 	 * @param	string				$phpbb_root_path
 	 * @param	string				$php_ext
 	 */
@@ -92,6 +96,7 @@ class cogauth extends \phpbb\auth\provider\base
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
 		\mrfg\cogauth\cognito\cognito $cognito_client,
 		\mrfg\cogauth\cognito\web_token $web_token,
+		\phpbb\log\log_interface $log,
 		$phpbb_root_path, $php_ext)
 	{
 		$this->db = $db;
@@ -105,6 +110,7 @@ class cogauth extends \phpbb\auth\provider\base
 		$this->phpbb_container = $phpbb_container;
 		$this->cognito_client = $cognito_client;
 		$this->web_token = $web_token;
+		$this->log =$log;
 	}
 
 	/**
@@ -128,7 +134,8 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function login($username, $password)
 	{
-		$authenticated = false;
+		$authenticated_phpbb = false;
+		$authenticated_cognito = false;
 		// Auth plugins get the password untrimmed.
 		// For compatibility we trim() here.
 		$password = trim($password);
@@ -243,15 +250,15 @@ class cogauth extends \phpbb\auth\provider\base
 
 		// Find the user in AWS Cognito, we only authenticate against cognito if user exists and confirmed
 		// otherwise we attempt to migrate the user if the user authenticated via phpBB rules.
-		$cognito_status = $this->cognito_client->get_user($row['user_id']);
+		$cognito_user = $this->cognito_client->get_user($row['user_id']);
 
-		if ($cognito_status['status'] == COG_USER_FOUND &&  $cognito_status['user_status'] == 'CONFIRMED')
+		if ($cognito_user['status'] == COG_USER_FOUND &&  $cognito_user['user_status'] == 'CONFIRMED')
 		{
-			$status = $this->cognito_client->authenticate($row['user_id'], $password);
-			switch ($status['status'])
+			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password);
+			switch ($auth_status['status'])
 			{
 				case COG_LOGIN_SUCCESS:
-					$authenticated = true;
+					$authenticated_cognito = true;
 					error_log('Aws Cognito authenticated');
 				break;
 
@@ -280,7 +287,7 @@ class cogauth extends \phpbb\auth\provider\base
 		// Check password phpBB rules...
 		//else
 		//$authenticated = false;
-		elseif ($this->passwords_manager->check($password, $row['user_password'], $row))
+		if ($this->passwords_manager->check($password, $row['user_password'], $row))
 		{
 			// Check for old password hash...
 			if ($this->passwords_manager->convert_flag || strlen($row['user_password']) == 32)
@@ -295,10 +302,10 @@ class cogauth extends \phpbb\auth\provider\base
 
 				$row['user_password'] = $hash;
 			}
-			$authenticated = true;
+			$authenticated_phpbb = true;
 		}
 
-		if ($authenticated)
+		if ($authenticated_phpbb)
 		{
 			// Authenticated either by phpBB or Cognito.
 			$sql = 'DELETE FROM ' . LOGIN_ATTEMPT_TABLE . '
@@ -315,7 +322,7 @@ class cogauth extends \phpbb\auth\provider\base
 			}
 
 			// User inactive...
-			if ($row['user_type'] == USER_INACTIVE || $row['user_type'] == USER_IGNORE || $cognito_status['user_status'] == 'UNCONFIRMED' )
+			if ($row['user_type'] == USER_INACTIVE || $row['user_type'] == USER_IGNORE || $cognito_user['user_status'] == 'UNCONFIRMED' )
 			{
 				return array(
 					'status'    => LOGIN_ERROR_ACTIVE,
@@ -325,9 +332,20 @@ class cogauth extends \phpbb\auth\provider\base
 			}
 
 			// Migrate user to AWS Cognito as phpBB login success
-			if ($cognito_status['status'] == COG_USER_NOT_FOUND)
+			if ($cognito_user['status'] == COG_USER_NOT_FOUND)
 			{
+				// Migrate the user
 				$this->cognito_client->migrate_user($row['username'], $password, $row['user_id'], $row['user_email']);
+				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_MIGRATE_USER', time(), array($row['username']));
+			}
+			elseif ($authenticated_cognito == false && $cognito_user['status'] == COG_USER_FOUND)
+			{
+				// Cognito user exists, but failed to authenticate password (other failures dont get this far).
+				// automatic password reset
+				$this->cognito_client->admin_change_password($row['user_id'],$password);
+				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_AUTO_PASSWD_RESET', time(),array($row['username']));
 			}
 
 			// Successful login... set user_login_attempts to zero...

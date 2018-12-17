@@ -69,22 +69,24 @@ class cognito
 	/**@var array $auth_result */
 	protected $auth_result;
 
-    /** @var \mrfg\cogauth\cognito\web_token */
+    /** @var \mrfg\cogauth\cognito\web_token_phpbb */
     protected $web_token;
 
     /** @var \phpbb\log\log_interface $log */
     protected $log;
 
+    /** @var string  A token stored in a cookie which is the key to the cogauth_session table */
+	protected $session_token;
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\db\driver\driver_interface	$db
-	 * @param	\phpbb\config\config 		        $config
-	 * @param	\phpbb\user			                $user
-	 * @param 	\phpbb\log\log_interface			$log
-     * @param   cognito_client_wrapper              $client,
-     * @param   web_token                           $web_token
-     * @param	string				                $cogauth_session
+	 * @param	\phpbb\db\driver\driver_interface $db
+	 * @param	\phpbb\config\config              $config
+	 * @param	\phpbb\user                       $user
+	 * @param 	\phpbb\log\log_interface          $log
+     * @param   cognito_client_wrapper             $client,
+     * @param   web_token_phpbb                    $web_token
+     * @param	string                            $cogauth_session
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -92,7 +94,7 @@ class cognito
 		\phpbb\user $user,
 		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
-        web_token $web_token,
+        web_token_phpbb $web_token,
         $cogauth_session)
 	{
 		$this->db = $db;
@@ -176,7 +178,7 @@ class cognito
 	/**
 	 * @param int $user_id phpBB User ID
 	 * @param string $password
-	 *
+	 * @throws \Exception
 	 * @return array
 	 *
 	 *  status:
@@ -188,7 +190,7 @@ class cognito
 	 *      COG_LOGIN_ERROR_ATTEMPTS
 	 *
 	 */
-	public function authenticate($user_id, $password)
+	public function authenticate($user_id, $password, $username_clean)
 	{
 		try {
 			$response = $this->authenticate_user($user_id, $password);
@@ -198,10 +200,13 @@ class cognito
 				// Successful login.
 				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
-				$this->auth_result = $response['AuthenticationResult'];
+				$token = $this->get_unique_token();
+				$this->session_token = $token;
+				$this->store_auth_result($response['AuthenticationResult'],$user_id, $username_clean);
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
-					'response'  => $response['AuthenticationResult']
+					'response'  => $response['AuthenticationResult'],
+					'session_token' => $token
 				);
 			} else {
 				return array(
@@ -318,7 +323,6 @@ class cognito
 			break;
 
 			default:
-				//error_log('Unhandled response');
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_CHALLENGE', time(),
 					array('admin_respond_to_auth_challenge', $response['ChallengeName']));
@@ -434,6 +438,7 @@ class cognito
 			return $this->handleCognitoIdentityProviderException($e,$user_id,'change_password', true);
 		}
 	}
+
 
 	/**
 	 * @param int $user_id phpBB user_id
@@ -634,12 +639,14 @@ class cognito
 
 
 	/**
+	 * Get the access token for the curent SID
 	 * @return string Cognito Access Token
 	 */
 	public function get_access_token()
 	{
 		$sid = $this->user->session_id;
-		$sql = 'SELECT access_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) ."'";
+		$sql = 'SELECT access_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
+
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
@@ -647,27 +654,110 @@ class cognito
 	}
 
 	/**
-	 * @param string $session_id  phpBB SID
+	 * @return array Cognito Access data stored for sesion
+	 * @param string Optional session_token from cookie otherwise the SID is used.
 	 */
-	public function store_auth_result($session_id)
+	public function get_access_data($session_token)
 	{
-		$auth_result = $this->auth_result;
+
+		$sql = 'SELECT access_token,user_id,username_clean  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
+
+		$result = $this->db->sql_query($sql);
+		$row = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+		return $row;
+	}
+
+
+
+	/**
+	 * @param $session_token (from cookie)
+	 * @return array (active = bool, [username = cognito username])
+	 */
+	public function is_session_valid($session_token)
+	{
+		$access_data = $this->get_access_data($session_token);
+		$access_token = $access_data['access_token'];
+		if (!$access_token)
+		{
+			// No token found in DB
+			return array('active' => false);
+		}
+		try
+		{
+			$username = $this->web_token->verify_access_token($access_token);
+
+			return array(
+				'active' => true,
+				'username' => $username,
+				'username_clean' => $access_data['username_clean']);
+		} catch (TokenVerificationException $e)
+		{
+			if ($e->getMessage() == 'token expired')
+			{
+				error_log('Expired fff');
+				//todo we should try refreshing the token here
+				return array('active' => false);
+			}
+			else
+			{
+				error_log($e->getMessage());
+				return array('active' => false);
+			}
+		}
+	}
+
+
+	/**
+	 * @param array $auth_result
+	 * @param int $user_id
+	 * @param string $username_clean
+	 *
+	 */
+	private function store_auth_result($auth_result, $user_id, $username_clean)
+	{
 		if ($auth_result['AccessToken'])
 		{
-			$data = array('sid'           => $session_id,
-						  'access_token'  => $auth_result['AccessToken'],
-						  'expires_at'    => $auth_result['ExpiresIn'] +time(),
-						  'id_token'      => $auth_result['IdToken'],
-						  'refresh_token' => $auth_result['RefreshToken'],
-						  'token_type'    => $auth_result['TokenType']);
+			$data = array(
+				'user_id'		=> $user_id,
+				'username_clean' => $username_clean,
+				'sid'           => '',
+				'access_token'  => $auth_result['AccessToken'],
+				'expires_at'    => $auth_result['ExpiresIn'] +time(),
+				'id_token'      => $auth_result['IdToken'],
+				'refresh_token' => $auth_result['RefreshToken'],
+				'token_type'    => $auth_result['TokenType'],
+				'session_token' => $this->session_token
+			);
 			$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
 			$this->db->sql_query($sql);
 		}
 	}
 
 	/**
+	 * Get the cognito_session table key
+	 * @return string
+	 */
+	public function get_session_token()
+	{
+		return $this->session_token;
+	}
+
+	/**
+	 * @param string $session_id  phpBB SID
+	 */
+	public function store_sid($session_id)
+	{
+		$data = array('sid' => $session_id,);
+		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
+			" WHERE session_token = '" . $this->session_token . "'";
+		$this->db->sql_query($sql);
+
+	}
+
+	/**
 	 * @param string $session_id phpBB Session id
-	 * @return int nuber of rows deleted
+	 * @return int number of rows deleted
 	 */
 	public function phpbb_session_killed($session_id)
 	{
@@ -755,5 +845,27 @@ class cognito
 		}
 		return $result;
 	}
+
+	/**
+	 * @param $length
+	 * @return string A unique Token
+	 * @throws \Exception
+	 */
+	private function get_unique_token($length = 32){
+		$token = "";
+		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
+		$code_alphabet.= "0123456789";
+		$max = strlen($code_alphabet); // edited
+
+		for ($i=0; $i < $length; $i++) {
+			$token .= $code_alphabet[random_int(0, $max-1)];
+		}
+
+		return $token;
+	}
+
+
+
 
 }

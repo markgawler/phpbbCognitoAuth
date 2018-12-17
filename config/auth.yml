@@ -10,7 +10,7 @@ services:
             - '@language'
             - '@service_container'
             - '@mrfg.cogauth.cognito'
-            - '@mrfg.cogauth.web_token'
+            - '@mrfg.cogauth.web_token_phpbb'
             - '@log'
             - '%core.root_path%'
             - '%core.php_ext%'

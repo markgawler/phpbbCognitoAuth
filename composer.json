@@ -3,7 +3,7 @@
     "type": "phpbb-extension",
     "description": "AWS Cognito Authentication extension",
     "homepage": "http://wler.co.uk",
-    "version": "1.0.3-dev",
+    "version": "1.0.4-dev",
     "time": "2018-08-02",
     "license": "GPL-2.0-only",
     "authors": [

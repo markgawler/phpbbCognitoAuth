@@ -94,8 +94,11 @@ class main_listener implements EventSubscriberInterface
 		$data = $event['session_data'];
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
         {
-			// Store the Cognito access token in the DB now we hae the SID for the logged in session.
-            $this->client->store_auth_result($data['session_id']);
+			// Now we have the SID we can stor it in the cogauth_session table..
+            $this->client->store_sid($data['session_id']);
+
+            // Set the cookie to the new cognito session token.
+			$this->user->set_cookie('cogauth', $this->client->get_session_token(), 0);
 		}
     }
 

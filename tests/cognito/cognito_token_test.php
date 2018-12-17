@@ -53,7 +53,7 @@ class cognito_token_test extends \phpbb_test_case
 		$this->cache->expects($this->never())
 			->method('put');
 
-        $wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, '');
+        $wt = new \mrfg\cogauth\cognito\web_token_phpbb($this->config, $this->cache, '');
 
         $keys = $wt->download_jwt_web_keys();
         $this->assertEquals($test_keys, $keys, 'Asserting correct return of cached jwks key');
@@ -84,7 +84,7 @@ class cognito_token_test extends \phpbb_test_case
 		$this->config->expects($this->exactly(2))
 			->method('offsetGet');
 
-		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+		$wt = new \mrfg\cogauth\cognito\web_token_phpbb($this->config, $this->cache, __DIR__ . '');
 
 		$keys = $wt->download_jwt_web_keys();
 		$this->assertEquals($test_keys, $keys, 'Asserting correct return of non-cached jwks key');
@@ -95,7 +95,7 @@ class cognito_token_test extends \phpbb_test_case
 		$token = null;
 		$this->cache->expects($this->never())
 			->method('get');
-		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+		$wt = new \mrfg\cogauth\cognito\web_token_phpbb($this->config, $this->cache, __DIR__ . '');
 		$this->assertTrue($wt->decode_token($token) === false, 'Asserting decoding invalid token returns False');
 	}
 
@@ -105,7 +105,7 @@ class cognito_token_test extends \phpbb_test_case
 		$token = 'invalid string';
 		$this->cache->expects($this->never())
 			->method('get');
-		$wt = new \mrfg\cogauth\cognito\web_token($this->config, $this->cache, __DIR__ . '');
+		$wt = new \mrfg\cogauth\cognito\web_token_phpbb($this->config, $this->cache, __DIR__ . '');
 		$this->assertTrue($wt->decode_token($token) === false, 'Asserting decoding invalid token returns False');
 	}
 }

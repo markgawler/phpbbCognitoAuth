@@ -24,14 +24,20 @@ class install_db_table extends \phpbb\db\migration\migration
 			'add_tables'	=> array(
 				$this->table_prefix . 'cogauth_session'	=> array(
 					'COLUMNS'	=> array(
+						'session_token' => array('CHAR:32', 0),
+						'juser_id' => array('INT:11'),
+						'user_id' => array('INT:11'),
 						'sid'		=> array('CHAR:32', ''),
 						'access_token'	=> array('TEXT', ''),
-						'expires_in' => array('INT:11', 0),
+						'expires_at' => array('INT:11', 0),
 						'id_token' => array('TEXT',''),
 						'refresh_token' => array('TEXT',''),
 						'token_type'  => array('VCHAR:32',''),
+						'username_clean' => array('VCHAR:255',''),
 					),
-					'PRIMARY_KEY'	=> array('sid',),
+					'PRIMARY_KEY'	=> array('session_token',),
+					'KEYS' => array(
+						'i_d'            => array('INDEX', 'sid')),
 				),
 			),
 		);
@@ -44,5 +50,4 @@ class install_db_table extends \phpbb\db\migration\migration
 			),
 		);
 	}
-
 }

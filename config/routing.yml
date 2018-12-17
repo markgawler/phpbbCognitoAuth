@@ -1,0 +1,3 @@
+acme_demo_route:
+    path: /cogauth/cmd/{command}/{payload}
+    defaults: { _controller: mrfg.cogauth.controller:handle, command: "", payload: "" }

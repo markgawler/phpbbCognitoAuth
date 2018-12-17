@@ -64,7 +64,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	protected $cognito_client;
 
-	/**  @var \mrfg\cogauth\cognito\web_token $web_token */
+	/**  @var \mrfg\cogauth\cognito\web_token_phpbb $web_token */
 	protected $web_token;
 
 	/** @var \phpbb\log\log_interface	$log */
@@ -73,18 +73,18 @@ class cogauth extends \phpbb\auth\provider\base
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\db\driver\driver_interface		$db
-	 * @param	\phpbb\config\config 		$config
-	 * @param	\phpbb\passwords\manager	$passwords_manager
-	 * @param	\phpbb\request\request		$request
-	 * @param	\phpbb\user			$user
-	 * @param	\phpbb\language\language $language
+	 * @param	\phpbb\db\driver\driver_interface                         $db
+	 * @param	\phpbb\config\config                                      $config
+	 * @param	\phpbb\passwords\manager                                  $passwords_manager
+	 * @param	\phpbb\request\request                                    $request
+	 * @param	\phpbb\user                                               $user
+	 * @param	\phpbb\language\language                                  $language
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
-	 * @param 	\mrfg\cogauth\cognito\cognito $cognito_client
-	 * @param 	\mrfg\cogauth\cognito\web_token $web_token
-	 * @param   \phpbb\log\log_interface	$log	Logger instance
-	 * @param	string				$phpbb_root_path
-	 * @param	string				$php_ext
+	 * @param 	\mrfg\cogauth\cognito\cognito                             $cognito_client
+	 * @param 	\mrfg\cogauth\cognito\web_token_phpbb                     $web_token
+	 * @param   \phpbb\log\log_interface                                   $log	Logger instance
+	 * @param	string                                                    $phpbb_root_path
+	 * @param	string                                                    $php_ext
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -95,7 +95,7 @@ class cogauth extends \phpbb\auth\provider\base
 		\phpbb\language\language $language,
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
 		\mrfg\cogauth\cognito\cognito $cognito_client,
-		\mrfg\cogauth\cognito\web_token $web_token,
+		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
 		\phpbb\log\log_interface $log,
 		$phpbb_root_path, $php_ext)
 	{
@@ -254,7 +254,7 @@ class cogauth extends \phpbb\auth\provider\base
 
 		if ($cognito_user['status'] == COG_USER_FOUND &&  $cognito_user['user_status'] == 'CONFIRMED')
 		{
-			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password);
+			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password, $row['username_clean']);
 			switch ($auth_status['status'])
 			{
 				case COG_LOGIN_SUCCESS:
@@ -284,6 +284,10 @@ class cogauth extends \phpbb\auth\provider\base
 			}
 
 		}
+		else
+		{
+			$auth_status['session_token'] = null;
+		}
 		// Check password phpBB rules...
 		//else
 		//$authenticated = false;
@@ -304,7 +308,6 @@ class cogauth extends \phpbb\auth\provider\base
 			}
 			$authenticated_phpbb = true;
 		}
-
 		if ($authenticated_phpbb)
 		{
 			// Authenticated either by phpBB or Cognito.
@@ -353,6 +356,7 @@ class cogauth extends \phpbb\auth\provider\base
 				'status'    => LOGIN_SUCCESS,
 				'error_msg' => false,
 				'user_row'  => $row,
+				'session_token' => $auth_status['session_token'],
 			);
 		}
 

@@ -30,7 +30,7 @@ class cognito_db_test extends \phpbb_database_test_case
 	/** @var string */
 	protected $table_prefix;
 
-    /** @var $web_token \mrfg\cogauth\cognito\web_token|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
     protected $web_token;
 
     /** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
@@ -73,7 +73,7 @@ class cognito_db_test extends \phpbb_database_test_case
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->web_token = $this->getMockBuilder('\mrfg\cogauth\cognito\web_token')
+        $this->web_token = $this->getMockBuilder('\mrfg\cogauth\cognito\web_token_phpbb')
             ->disableOriginalConstructor()
             ->setMethods(array('verify_access_token'))
             ->getMock();

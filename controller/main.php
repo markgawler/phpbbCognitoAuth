@@ -63,11 +63,10 @@ class main
 	 * Demo controller for route /demo/{name}
 	 *
 	 * @param string $command
-	 * @param string $payload
 	 * @throws \phpbb\exception\http_exception
 	 * @return \Symfony\Component\HttpFoundation\Response A Symfony Response object
 	 */
-	public function handle($command,$payload)
+	public function handle($command)
 	{
 		//TODO	validate request
 		if ($command === 'bertie')

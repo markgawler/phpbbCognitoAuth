@@ -57,7 +57,6 @@ class main_listener implements EventSubscriberInterface
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
-	 * @param \phpbb\auth\auth $auth
 	 * @param \phpbb\request\request_interface  $request
 	 * @param \phpbb\config\config      $config
 	 * @param \mrfg\cogauth\cognito\cognito $client
@@ -65,14 +64,12 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function __construct(
 		\phpbb\user $user,
-		\phpbb\auth\auth $auth,
 		\phpbb\request\request_interface $request,
 		\phpbb\config\config $config,
 		\mrfg\cogauth\cognito\cognito $client,
 		$session_table)
 	{
 		$this->user = $user;
-		$this->auth	= $auth;
 		$this->request = $request;
 		$this->config = $config;
 		$this->client = $client;

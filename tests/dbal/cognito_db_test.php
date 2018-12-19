@@ -138,6 +138,9 @@ class cognito_db_test extends \phpbb_database_test_case
 		$this->assertEquals(1,$rows, 'Asserting no rows effected.');
 	}
 
+	/**
+	 * @throws \Exception
+	 */
 	public function test_session_expired_02()
 	{
 		// Add an expired token
@@ -150,13 +153,16 @@ class cognito_db_test extends \phpbb_database_test_case
 				'RefreshToken' => 'yyyyyyy',
 				'TokenType' => 'fakeNews'
 			)));
-		$this->cognito->authenticate(1234,'password');
-		$this->cognito->store_auth_result('A1234567890');
+		$this->cognito->authenticate(1234,'password','some_user');
 
 
 		$rows = $this->cognito->delete_expired_sessions();
 		$this->assertEquals(2,$rows, 'Asserting no rows effected.');
 	}
+
+	/**
+	 * @throws \Exception
+	 */
 	public function test_session_expired_03()
 	{
 		// Add ata token that will expire in one hour
@@ -169,8 +175,7 @@ class cognito_db_test extends \phpbb_database_test_case
 				'RefreshToken' => 'yyyyyyy',
 				'TokenType' => 'fakeNews'
 			)));
-		$this->cognito->authenticate(1233,'password');
-		$this->cognito->store_auth_result('A1234567891');
+		$this->cognito->authenticate(1233,'password','some_user');
 
 
 		$rows = $this->cognito->delete_expired_sessions();

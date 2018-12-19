@@ -178,6 +178,7 @@ class cognito
 	/**
 	 * @param int $user_id phpBB User ID
 	 * @param string $password
+	 * @param string $username_clean - the cleaned version of the username to be stored
 	 * @throws \Exception
 	 * @return array
 	 *

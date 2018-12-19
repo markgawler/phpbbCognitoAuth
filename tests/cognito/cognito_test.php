@@ -117,7 +117,9 @@ class cognito_test extends \phpbb_test_case
 
 	}
 
-
+	/**
+	 * @throws \Exception
+	 */
     public function test_authenticate_user()
     {
         $hash = base64_encode(hash_hmac(
@@ -148,7 +150,7 @@ class cognito_test extends \phpbb_test_case
                 'UserPoolId' => 'eu-west-1_T0xxxxx1',
             ));
 
-        $response = $this->cognito->authenticate(1234, 'Str0n@-p@ssw0rd');
+        $response = $this->cognito->authenticate(1234, 'Str0n@-p@ssw0rd','some_user');
         $this->assertTrue($response['status'] === COG_LOGIN_SUCCESS);
         $this->assertTrue($response['response'] == array('AccessToken' => 'token_string_1234'), 'Asserting AccessToken is returned');
     }

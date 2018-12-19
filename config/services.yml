@@ -4,7 +4,6 @@ services:
         class: mrfg\cogauth\event\main_listener
         arguments:
             - '@user'
-            - '@auth'
             - '@request'
             - '@config'
             - '@mrfg.cogauth.cognito'

@@ -4,6 +4,9 @@ services:
         class: mrfg\cogauth\event\main_listener
         arguments:
             - '@user'
+            - '@auth'
+            - '@request'
+            - '@config'
             - '@mrfg.cogauth.cognito'
             - '%mrfg.cogauth.tables.cogauth_session%'
         tags:
@@ -15,20 +18,20 @@ services:
     mrfg.cogauth.web_token_phpbb:
         class: mrfg\cogauth\cognito\web_token_phpbb
         arguments:
-        - '@config'
-        - '@cache.driver'
-        - '%mrfg.cogauth.jwsk_url_template%'
+            - '@config'
+            - '@cache.driver'
+            - '%mrfg.cogauth.jwsk_url_template%'
 
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
         arguments:
-        - '@dbal.conn'
-        - '@config'
-        - '@user'
-        - '@log'
-        - '@mrfg.cogauth.cognito_client_wrapper'
-        - '@mrfg.cogauth.web_token_phpbb'
-        - '%mrfg.cogauth.tables.cogauth_session%'
+            - '@dbal.conn'
+            - '@config'
+            - '@user'
+            - '@log'
+            - '@mrfg.cogauth.cognito_client_wrapper'
+            - '@mrfg.cogauth.web_token_phpbb'
+            - '%mrfg.cogauth.tables.cogauth_session%'
 
     mrfg.cogauth.controller:
         class: mrfg\cogauth\controller\main

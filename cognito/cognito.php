@@ -674,7 +674,7 @@ class cognito
 	 * @param $session_token (from cookie)
 	 * @return array (active = bool, [username = cognito username])
 	 */
-	public function is_session_valid($session_token)
+	public function validate_session($session_token)
 	{
 		$access_data = $this->get_access_data($session_token);
 		$access_token = $access_data['access_token'];
@@ -689,6 +689,7 @@ class cognito
 
 			return array(
 				'active' => true,
+				'user_id' => $access_data['user_id'],
 				'username' => $username,
 				'username_clean' => $access_data['username_clean']);
 		} catch (TokenVerificationException $e)
@@ -741,6 +742,15 @@ class cognito
 	public function get_session_token()
 	{
 		return $this->session_token;
+	}
+
+	/**
+	 * Store the cognito_session table key
+	 * @param string $token;
+	 */
+	public function store_session_token($token)
+	{
+		$this->session_token = $token;
 	}
 
 	/**

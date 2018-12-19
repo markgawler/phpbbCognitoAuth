@@ -36,14 +36,13 @@ class main
 	/**
 	 * Constructor
 	 *
-	 * @param \phpbb\config\config      $config
 	 * @param \phpbb\user               $user
+	 * @param \phpbb\config\config      $config
 	 * @param \phpbb\request\request_interface  $request
 	 * @param \mrfg\cogauth\auth\provider\cogauth $auth
 	 * @param \mrfg\cogauth\cognito\cognito $cognito
 	 * @param \phpbb\language\language $language
-
-	 */
+ */
 	public function __construct(
 		\phpbb\config\config $config,
 		\phpbb\user $user,
@@ -79,10 +78,10 @@ class main
 		$command = strtolower($command);
 		switch ($command)
 		{
-			case 'username_clean':
-				$username = $this->request->variable('username','');
-				$result = $this->username_clean($username);
-			break;
+			//case 'username_clean':
+			//	$username = $this->request->variable('username','');
+			//	$result = $this->username_clean($username);
+			//break;
 			case 'authenticate':
 				$result = $this->authenticate(
 					$this->request->variable('username',''),
@@ -106,10 +105,10 @@ class main
 	 * @param $username
 	 * @return array content to return, 'username_clean => 'username'
 	 */
-	private function username_clean($username)
-	{
-		return array ('username_clean' => utf8_clean_string($username));
-	}
+	//private function username_clean($username)
+	//{
+	//	return array ('username_clean' => utf8_clean_string($username));
+	//}
 
 	/**
 	 * @param string $username
@@ -147,7 +146,7 @@ class main
 		error_log('is_session_active');
 		if ($session_token !== '')
 		{
-			$result = $this->cognito->is_session_valid($session_token);
+			$result = $this->cognito->validate_session($session_token);
 			return $result;
 		}
 		return array('error' => 'invalid token');

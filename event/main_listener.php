@@ -25,6 +25,7 @@ class main_listener implements EventSubscriberInterface
 		return array(
 			'core.session_kill_after'		=> 'session_kill_after',
 			'core.user_setup'				=> 'load_language_on_setup',
+			'core.user_setup_after'			=> 'user_setup_after',
 			'core.ucp_profile_reg_details_validate' => 'ucp_profile_update',
 			'core.session_create_after' 	=> 'session_create_after',
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
@@ -37,6 +38,15 @@ class main_listener implements EventSubscriberInterface
 	/* @var \phpbb\user */
 	protected $user;
 
+	/* @var \phpbb\auth\auth */
+	protected $auth;
+
+	/* @var \phpbb\request\request 	phpBB request object */
+	protected $request;
+
+	/* @var \phpbb\config\config */
+	protected $config;
+
 	/* @var \mrfg\cogauth\cognito\cognito */
 	protected $client;
 
@@ -47,16 +57,25 @@ class main_listener implements EventSubscriberInterface
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
+	 * @param \phpbb\auth\auth $auth
+	 * @param \phpbb\request\request_interface  $request
+	 * @param \phpbb\config\config      $config
 	 * @param \mrfg\cogauth\cognito\cognito $client
 	 * @param string $session_table
 	 */
 	public function __construct(
 		\phpbb\user $user,
+		\phpbb\auth\auth $auth,
+		\phpbb\request\request_interface $request,
+		\phpbb\config\config $config,
 		\mrfg\cogauth\cognito\cognito $client,
 		$session_table)
 	{
-		$this->user          = $user;
-		$this->client        = $client;
+		$this->user = $user;
+		$this->auth	= $auth;
+		$this->request = $request;
+		$this->config = $config;
+		$this->client = $client;
 		$this->session_table = $session_table;
 	}
 
@@ -77,12 +96,56 @@ class main_listener implements EventSubscriberInterface
 	}
 
 	/**
+	 * Sesion synchronisation
+	 *
+	 * @since version
+	 */
+	public function user_setup_after()
+	{
+		if (!$this->user->data['is_bot'])
+		{
+			$user_id = $this->user->data['user_id'];
+			$session_token = $this->request->variable($this->config['cookie_name'] . '_cogauth', '', false, \phpbb\request\request_interface::COOKIE);
+			if ($session_token == '')
+			{
+				if ($user_id != ANONYMOUS)
+				{
+					$this->user->session_kill();
+					$this->user->session_begin();
+				}
+			}
+			else
+			{
+				// Check session is valid
+				$cognito_session = $this->client->validate_session($session_token);
+				$session_active = $cognito_session['active'];
+
+				if ($user_id == ANONYMOUS && $session_active)
+				{
+					$this->client->store_session_token($session_token);  // save the token so that it gets put back in the cookie
+					// Not Logged In - attempt to login / start session
+					//$this->user->session_kill();
+					error_log('Session Create: ' . $cognito_session['user_id']);
+					$this->user->session_create($cognito_session['user_id'], false, false, true);  //todo  remember me
+					//$this->auth->acl($this->user->data);
+					//$this->user->setup();
+				}
+
+				if ($user_id != ANONYMOUS && !$session_active)
+				{
+					// Logged in - Log out / end session
+					$this->user->session_kill();
+					$this->user->session_begin();
+				}
+			}
+		}
+	}
+
+	/**
 	 * @param \phpbb\event\data	$event	Event object
 	 */
-
 	public function session_gc_after(/** @noinspection PhpUnusedParameterInspection */ $event)
 	{
-		error_log('session_gc_after - has run');
 		$this->client->delete_expired_sessions();
 	}
 
@@ -91,6 +154,7 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function session_create_after($event)
 	{
+		//error_log('session_create_after');
 		$data = $event['session_data'];
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
         {
@@ -109,6 +173,9 @@ class main_listener implements EventSubscriberInterface
 	{
 		$session = $event['session_id'];
 		$this->client->phpbb_session_killed($session);
+
+		// Destroy the session cookie to force logout of bridged app
+		$this->user->set_cookie('cogauth', '', 0);
 	}
 
 	/**
@@ -213,7 +280,6 @@ class main_listener implements EventSubscriberInterface
 				break;
 				case 'activate':
 					$this->client->admin_enable_user($user_id);
-
 				break;
 				case 'deactivate':
 					$this->client->admin_disable_user($user_id);

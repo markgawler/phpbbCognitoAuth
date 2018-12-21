@@ -63,7 +63,7 @@ class main
 	 * Demo controller for route /demo/{name}
 	 *
 	 * @param string $command
-	 * @throws \phpbb\exception\http_exception
+	 * @throws \phpbb\exception\http_exception | \Exception
 	 * @return \Symfony\Component\HttpFoundation\Response A Symfony Response object
 	 */
 	public function handle($command)
@@ -77,10 +77,6 @@ class main
 		$command = strtolower($command);
 		switch ($command)
 		{
-			//case 'username_clean':
-			//	$username = $this->request->variable('username','');
-			//	$result = $this->username_clean($username);
-			//break;
 			case 'authenticate':
 				$result = $this->authenticate(
 					$this->request->variable('username',''),
@@ -100,19 +96,12 @@ class main
 		return new \Symfony\Component\HttpFoundation\Response($content, Response::HTTP_OK);
 	}
 
-	/**
-	 * @param $username
-	 * @return array content to return, 'username_clean => 'username'
-	 */
-	//private function username_clean($username)
-	//{
-	//	return array ('username_clean' => utf8_clean_string($username));
-	//}
 
 	/**
 	 * @param string $username
 	 * @param string $password
 	 * @return array user_id, username_clean, authenticated (bool), error
+	 * @throws \Exception
 	 */
 	private function authenticate($username, $password)
 	{
@@ -135,6 +124,7 @@ class main
 		return $response;
 	}
 
+
 	/**
 	 * @param $session_token
 	 * @return array
@@ -142,7 +132,6 @@ class main
 	 */
 	private function is_session_active($session_token)
 	{
-		error_log('is_session_active');
 		if ($session_token !== '')
 		{
 			$result = $this->cognito->validate_session($session_token);

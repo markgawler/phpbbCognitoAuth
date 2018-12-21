@@ -130,7 +130,13 @@ class cogauth extends \phpbb\auth\provider\base
 
 
 	/**
-	 * {@inheritdoc}
+	 * @param $username
+	 * @param $password
+	 *
+	 * @return array
+	 *
+	 * @since version
+	 * @throws \Exception
 	 */
 	public function login($username, $password)
 	{

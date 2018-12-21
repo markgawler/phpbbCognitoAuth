@@ -13,6 +13,7 @@ namespace mrfg\cogauth\event;
 /**
  * @ignore
  */
+
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -57,6 +58,7 @@ class main_listener implements EventSubscriberInterface
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
+	 * @param \phpbb\auth\auth $auth
 	 * @param \phpbb\request\request_interface  $request
 	 * @param \phpbb\config\config      $config
 	 * @param \mrfg\cogauth\cognito\cognito $client
@@ -64,12 +66,14 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function __construct(
 		\phpbb\user $user,
+		\phpbb\auth\auth $auth,
 		\phpbb\request\request_interface $request,
 		\phpbb\config\config $config,
 		\mrfg\cogauth\cognito\cognito $client,
 		$session_table)
 	{
 		$this->user = $user;
+		$this->auth = $auth;
 		$this->request = $request;
 		$this->config = $config;
 		$this->client = $client;
@@ -107,7 +111,8 @@ class main_listener implements EventSubscriberInterface
 			{
 				if ($user_id != ANONYMOUS)
 				{
-					$this->user->session_kill();
+					$this->user->session_kill(true);
+					$this->auth->acl($this->user->data);
 					$this->user->session_begin();
 				}
 			}
@@ -121,18 +126,19 @@ class main_listener implements EventSubscriberInterface
 				{
 					$this->client->store_session_token($session_token);  // save the token so that it gets put back in the cookie
 					// Not Logged In - attempt to login / start session
-					//$this->user->session_kill();
-					error_log('Session Create: ' . $cognito_session['user_id']);
+					$this->user->session_kill();
 					$this->user->session_create($cognito_session['user_id'], false, false, true);  //todo  remember me
-					//$this->auth->acl($this->user->data);
-					//$this->user->setup();
+					$this->auth->acl($this->user->data);
+					$this->user->setup();
 				}
 
 				if ($user_id != ANONYMOUS && !$session_active)
 				{
 					// Logged in - Log out / end session
-					$this->user->session_kill();
+					$this->user->session_kill(true);
+					$this->auth->acl($this->user->data);
 					$this->user->session_begin();
+
 				}
 			}
 		}

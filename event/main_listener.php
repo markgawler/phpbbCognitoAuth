@@ -103,7 +103,8 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function user_setup_after()
 	{
-		if (!$this->user->data['is_bot'])
+		$mode = $this->request->variable('mode','');
+		if (!$this->user->data['is_bot'] &&  $mode != 'login' && $mode != 'logout')
 		{
 			$user_id = $this->user->data['user_id'];
 			$session_token = $this->request->variable($this->config['cookie_name'] . '_cogauth', '', false, \phpbb\request\request_interface::COOKIE);

@@ -112,6 +112,8 @@ class main_listener implements EventSubscriberInterface
 			{
 				if ($user_id != ANONYMOUS)
 				{
+					// Kill session as the the user was logged out in another Tab or Window.
+					// todo killing the phpbb cookie in the bridged application would save having to doe this
 					$this->user->session_kill(true);
 					$this->auth->acl($this->user->data);
 					$this->user->session_begin();
@@ -123,7 +125,8 @@ class main_listener implements EventSubscriberInterface
 				$cognito_session = $this->client->validate_session($session_token);
 				$session_active = $cognito_session['active'];
 
-				if ($user_id == ANONYMOUS && $session_active)
+				// Check for inconsitence between user id and session state
+				if (($user_id == ANONYMOUS && $session_active) || $user_id != $cognito_session['user_id'])
 				{
 					$this->client->store_session_token($session_token);  // save the token so that it gets put back in the cookie
 					// Not Logged In - attempt to login / start session

@@ -83,7 +83,7 @@ class main
 					$this->request->variable('password','')
 				);
 			break;
-			case 'active_session':
+			case 'validate_session':
 				$session_token = $this->request->variable('session_token','');
 				$result = $this->is_session_active($session_token);
 			break;

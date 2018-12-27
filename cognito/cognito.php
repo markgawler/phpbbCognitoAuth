@@ -381,8 +381,6 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e) {
 
-			//error_log('Create User Fail: ' . $e->getAwsErrorCode());
-			//error_log('AWS Message: ' . $e->getAwsErrorMessage());
 			switch ($e->getAwsErrorCode())
 			{
 				case 'InvalidPasswordException':
@@ -669,8 +667,6 @@ class cognito
 		return $row;
 	}
 
-
-
 	/**
 	 * @param $session_token (from cookie)
 	 * @return array (active = bool, [username = cognito username])
@@ -867,7 +863,7 @@ class cognito
 		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
 		$code_alphabet.= "0123456789";
-		$max = strlen($code_alphabet); // edited
+		$max = strlen($code_alphabet);
 
 		for ($i=0; $i < $length; $i++) {
 			$token .= $code_alphabet[random_int(0, $max-1)];

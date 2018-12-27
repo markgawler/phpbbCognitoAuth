@@ -88,7 +88,6 @@ abstract class web_token
 		if ($jwt_payload['exp'] < time()) {
 			throw new TokenVerificationException('token expired');
 		}
-//		error_log('jwt_payload - username '. $jwt_payload['username']);
 		return $jwt_payload['username'];
 	}
 

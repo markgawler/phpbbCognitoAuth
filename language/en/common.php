@@ -19,7 +19,6 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
-
 	'ACP_COGAUTH'					=> 'Settings',
 	'ACP_COGAUTH_SETTING_SAVED'		=> 'Settings have been saved successfully!',
 	'COGAUTH_SETTINGS'				=> 'Settings',

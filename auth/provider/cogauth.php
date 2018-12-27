@@ -397,17 +397,25 @@ class cogauth extends \phpbb\auth\provider\base
 
 	public function get_acp_template($new_config)
 	{
-		return array(
-			'TEMPLATE_FILE'	=> '@mrfg_cogauth/auth_provider_cogauth.html',
-			'TEMPLATE_VARS'	=> array(
-				'COGAUTH_AWS_REGION' => $new_config['cogauth_aws_region'],
-				'COGAUTH_AWS_KEY' => $new_config['cogauth_aws_key'],
-				'COGAUTH_AWS_SECRET' => $new_config['cogauth_aws_secret'],
-				'COGAUTH_POOL_ID' => $new_config['cogauth_pool_id'],
-				'COGAUTH_CLIENT_ID' => $new_config['cogauth_client_id'],
-				'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
-			)
-		);
+		if ($new_config['auth_method'] == 'cogauth')
+		{
+
+			return array(
+				'TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
+				'TEMPLATE_VARS' => array(
+					'COGAUTH_AWS_REGION'    => $new_config['cogauth_aws_region'],
+					'COGAUTH_AWS_KEY'       => $new_config['cogauth_aws_key'],
+					'COGAUTH_AWS_SECRET'    => $new_config['cogauth_aws_secret'],
+					'COGAUTH_POOL_ID'       => $new_config['cogauth_pool_id'],
+					'COGAUTH_CLIENT_ID'     => $new_config['cogauth_client_id'],
+					'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
+				)
+			);
+		}
+		else
+		{
+			return array();
+		}
 	}
 
 }

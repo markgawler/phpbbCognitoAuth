@@ -18,7 +18,8 @@
         "php": ">=5.3.3",
         "composer/installers": "~1.0",
         "web-token/jwt-signature": "^1.0",
-        "ext-json": "*"
+        "ext-json": "*",
+        "aws/aws-sdk-php": "3.*"
     },
     "extra": {
         "display-name": "AWS Cognito Authentication",
@@ -29,7 +30,6 @@
     "require-dev": {
         "phing/phing": "2.4.*",
         "phpunit/dbunit": "~2.0",
-        "phpunit/phpunit": "^5.7",
-        "aws/aws-sdk-php": "3.*"
+        "phpunit/phpunit": "^5.7"
     }
 }

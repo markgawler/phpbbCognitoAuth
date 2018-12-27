@@ -29,13 +29,11 @@ class main_module
 	 */
 	function main(/** @noinspection PhpUnusedParameterInspection */ $id  , $mode)
 	{
+		/**@var	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container */
 		global $phpbb_container;
 
 		/** @var \phpbb\config\config $config Config object */
 		$config = $phpbb_container->get('config');
-
-		/** @var \phpbb\db\driver\driver_interface $db Database object */
-		//$db = $phpbb_container->get('db');
 
 		/** @var \phpbb\request\request $request Request object */
 		$request  = $phpbb_container->get('request');
@@ -46,11 +44,7 @@ class main_module
 		/** @var \phpbb\language\language $language Language object */
 		$language = $phpbb_container->get('language');
 
-		global $user;
-		global $phpbb_root_path, $phpbb_admin_path, $phpEx;
-		//global $db, $table_prefix;
-
-		$this->tpl_name = 'main_body';
+		$this->tpl_name = 'cogauth_body';
 
 		$this->page_title = $language->lang('ACP_COGAUTH_TITLE');
 
@@ -63,7 +57,6 @@ class main_module
 			'COGAUTH_ACP_MODE'	=> $mode,
 			'U_ACTION'			=> $this->u_action,
 		);
-error_log("Mode: ". $mode);
 		switch ($mode)
 		{
 			case 'settings':
@@ -73,7 +66,7 @@ error_log("Mode: ". $mode);
 						trigger_error('FORM_INVALID');
 					} else {
 
-						$config->set('mrfg_cogauth_secret_key', $request->variable('cogauth_secret_key', ''));
+						$config->set('cogauth_secret_key', $request->variable('cogauth_secret_key', ''));
 
 						trigger_error($language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 					}

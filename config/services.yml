@@ -33,20 +33,7 @@ services:
             - '@mrfg.cogauth.web_token_phpbb'
             - '%mrfg.cogauth.tables.cogauth_session%'
 
-    mrfg.cogauth.controller:
-        class: mrfg\cogauth\controller\main
-        arguments:
-            - '@config'
-            - '@user'
-            - '@request'
-            - '@auth.provider.cogauth'
-            - '@mrfg.cogauth.cognito'
-            - '@language'
-
 imports:
 - { resource: auth.yml }
 - { resource: tables.yml }
 - { resource: parameters.yml }
-
-
-

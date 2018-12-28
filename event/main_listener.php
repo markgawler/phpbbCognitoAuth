@@ -38,23 +38,14 @@ class main_listener implements EventSubscriberInterface
 	/* @var \phpbb\user */
 	protected $user;
 
-	/* @var \phpbb\auth\auth */
-	protected $auth;
-
-	/* @var \phpbb\request\request 	phpBB request object */
-	protected $request;
-
-	/* @var \phpbb\config\config */
-	protected $config;
-
 	/* @var \mrfg\cogauth\cognito\cognito */
 	protected $client;
 
-	/* @var string */
-	protected $session_table;
-
 	/* @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
+
+	/* @var string */
+	protected $session_table;
 
 	/**
 	 * Constructor

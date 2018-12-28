@@ -75,7 +75,7 @@ class cognito
     /** @var \phpbb\log\log_interface $log */
     protected $log;
 
-    /** @var string  A token stored in a cookie which is the key to the cogauth_session table */
+    /** @var string  The key to the cogauth_session table */
 	protected $session_token;
 	/**
 	 * Database Authentication Constructor
@@ -654,7 +654,7 @@ class cognito
 
 	/**
 	 * @return array Cognito Access data stored for sesion
-	 * @param string Optional session_token from cookie otherwise the SID is used.
+	 * @param string session_token to get the data for.
 	 */
 	public function get_access_data($session_token)
 	{
@@ -668,7 +668,7 @@ class cognito
 	}
 
 	/**
-	 * @param $session_token (from cookie)
+	 * @param $session_token
 	 * @return array (active = bool, [username = cognito username])
 	 */
 	public function validate_session($session_token)

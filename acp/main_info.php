@@ -16,7 +16,7 @@ class main_info
 		return array(
 			'filename'	=> '\mrfg\cogauth\acp\main_module',
 			'title'		=> 'ACP_COGAUTH_TITLE',
-			'version'	=> '1.0.4',
+			'version'	=> '1.0.5',
 			'modes'		=> array(
 				'settings'	=> array(
 					'title' => 'ACP_COGAUTH_TITLE_CFG',

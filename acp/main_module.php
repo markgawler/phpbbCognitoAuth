@@ -74,7 +74,6 @@ class main_module
 
 				$template->assign_vars(array_merge($commonVars, array(
 					'COGAUTH_SECRET_KEY' 	=> $config['cogauth_secret_key'],
-
 				)));
 			break;
 			//end case

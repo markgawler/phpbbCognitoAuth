@@ -53,29 +53,26 @@ class main_listener implements EventSubscriberInterface
 	/* @var string */
 	protected $session_table;
 
+	/* @var \phpbb\event\dispatcher_interface */
+	protected $dispatcher;
+
 	/**
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
-	 * @param \phpbb\auth\auth $auth
-	 * @param \phpbb\request\request_interface  $request
-	 * @param \phpbb\config\config      $config
 	 * @param \mrfg\cogauth\cognito\cognito $client
+	 * @param \phpbb\event\dispatcher_interface	$dispatcher	Event dispatcher
 	 * @param string $session_table
 	 */
 	public function __construct(
 		\phpbb\user $user,
-		\phpbb\auth\auth $auth,
-		\phpbb\request\request_interface $request,
-		\phpbb\config\config $config,
 		\mrfg\cogauth\cognito\cognito $client,
+		\phpbb\event\dispatcher_interface $dispatcher,
 		$session_table)
 	{
 		$this->user = $user;
-		$this->auth = $auth;  // todo not used
-		$this->request = $request; // todo not used
-		$this->config = $config;  // todo not used
 		$this->client = $client;
+		$this->dispatcher = $dispatcher;
 		$this->session_table = $session_table;
 	}
 
@@ -116,8 +113,18 @@ class main_listener implements EventSubscriberInterface
 			// Now we have the SID we can stor it in the cogauth_session table..
             $this->client->store_sid($data['session_id']);
 
-            // Set the cookie to the new cognito session token.
-			$this->user->set_cookie('cogauth', $this->client->get_session_token(), 0);
+			/** @noinspection PhpUnusedLocalVariableInspection */
+			$session_token = $this->client->get_session_token();
+
+			/**
+			 * Cogauth session after create event
+			 *
+			 * @event mrfg.cogauth.session_create_after
+			 * @var  string  session_token
+			 * @since 1.1
+			 */
+			$vars = array('session_token',);
+			extract($this->dispatcher->trigger_event('mrfg.cogauth.session_create_after', compact($vars)));
 		}
     }
 
@@ -127,10 +134,21 @@ class main_listener implements EventSubscriberInterface
 	public function session_kill_after($event)
 	{
 		$session = $event['session_id'];
+		/** @noinspection PhpUnusedLocalVariableInspection */
+		$session_token = $this->client->get_session_token();
+
 		$this->client->phpbb_session_killed($session);
 
-		// Destroy the session cookie to force logout of bridged app
-		$this->user->set_cookie('cogauth', '', 0);
+
+		/**
+		 * Cogauth session kill after event
+		 *
+		 * @event mrfg.cogauth.session_kill_after
+		 * @var  string  session_token
+		 * @since 1.1
+		 */
+		$vars = array('session_token',);
+		extract($this->dispatcher->trigger_event('mrfg.cogauth.session_kill_after', compact($vars)));
 	}
 
 	/**

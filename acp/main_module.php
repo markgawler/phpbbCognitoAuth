@@ -66,14 +66,14 @@ class main_module
 						trigger_error('FORM_INVALID');
 					} else {
 
-						$config->set('cogauth_secret_key', $request->variable('cogauth_secret_key', ''));
+						$config->set('cogauth_token_refresh_gc', $request->variable('cogauth_token_refresh_gc', ''));
 
-						trigger_error($language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
+						trigger_error($language->lang('ACP_COGAUTH_TOKEN_REFRESH') . adm_back_link($this->u_action));
 					}
 				}
 
 				$template->assign_vars(array_merge($commonVars, array(
-					'COGAUTH_SECRET_KEY' 	=> $config['cogauth_secret_key'],
+					'COGAUTH_TOKEN_REFRESH' 	=> $config['cogauth_token_refresh_gc'],
 				)));
 			break;
 			//end case

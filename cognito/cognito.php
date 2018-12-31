@@ -14,6 +14,8 @@ namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
 
 use mrfg\cogauth\cognito\exception\TokenVerificationException;
+//use phpbb\request\request;
+//use phpbb\request\request_interface;
 
 define('COG_LOGIN_SUCCESS', 1);
 define('COG_LOGIN_NO_AUTH', 2);
@@ -33,7 +35,7 @@ class cognito
 	/**@var \phpbb\config\config $config Config object */
 	protected $config;
 
-	/**@var \phpbb\request\request $request Request object */
+	/**@var \phpbb\request\request_interface $request Request object */
 	protected $request;
 
 	/** @var \phpbb\user */
@@ -77,21 +79,28 @@ class cognito
 
     /** @var string  The key to the cogauth_session table */
 	protected $session_token;
+
+	/** @var int Time in seconds */
+	protected $last_active;
+
+
 	/**
 	 * Database Authentication Constructor
 	 *
 	 * @param	\phpbb\db\driver\driver_interface $db
 	 * @param	\phpbb\config\config              $config
 	 * @param	\phpbb\user                       $user
-	 * @param 	\phpbb\log\log_interface          $log
-     * @param   cognito_client_wrapper             $client,
-     * @param   web_token_phpbb                    $web_token
-     * @param	string                            $cogauth_session
+	 * @param   \phpbb\request\request_interface  $request
+	 * @param   \phpbb\log\log_interface 		  $log
+     * @param   cognito_client_wrapper            $client,
+     * @param   web_token_phpbb                   $web_token
+     * @param	string                            $cogauth_session - db table name
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\user $user,
+		\phpbb\request\request_interface $request,
 		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
         web_token_phpbb $web_token,
@@ -100,6 +109,7 @@ class cognito
 		$this->db = $db;
 		$this->config = $config;
 		$this->user = $user;
+		$this->request = $request;
 		$this->cogauth_session =$cogauth_session;
 
 		$this->user_pool_id = $config['cogauth_pool_id'];
@@ -122,58 +132,6 @@ class cognito
         $this->web_token = $web_token;
         $this->log = $log;
     }
-
-
-	/**
-	 * @param int $user_id phpBB user Id
-	 * @return array
-	 *
-	 * user_status = UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
-	 * status =  COG_USER_FOUND | COG_USER_NOT_FOUND | COG_ERROR
-	 */
-	public function get_user($user_id)
-	{
-		$username = $this->cognito_username($user_id);
-		try
-		{
-			$response = $this->client->admin_get_user(array(
-				"Username"   => $username,
-				"UserPoolId" => $this->user_pool_id
-			));
-			return array(
-				'status' => COG_USER_FOUND,
-				'user_status' => $response['UserStatus'],
-				'user_attributes' => $response['UserAttributes']
-			);
-
-		} catch (CognitoIdentityProviderException $e) {
-			$user_not_found = $this->handleCognitoIdentityProviderException($e,$user_id,'get_user', true);
-			if ($user_not_found)
-			{
-				$status = COG_USER_NOT_FOUND;
-			}
-			else{
-				$status = COG_ERROR;
-			}
-			/*switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					$status = COG_USER_NOT_FOUND;
-				break;
-				default:
-					$status = COG_ERROR;
-					error_log($e->getAwsErrorMessage());
-			}*/
-		}
-
-		return array(
-			'status' => $status,
-			'user_status' => '',
-			'user_attributes' => ''
-		);
-
-	}
-
 
 	/**
 	 * @param int $user_id phpBB User ID
@@ -249,6 +207,156 @@ class cognito
 	}
 
 	/**
+	 * @param int $user_id phpBB user id
+	 * @param String $password
+	 * @return \Aws\Result
+	 */
+	private function authenticate_user($user_id, $password)
+	{
+		$username = $this->cognito_username($user_id);
+		$response = $this->client->admin_initiate_auth(array(
+			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
+			'AuthParameters' => array(
+				'USERNAME' => $username,
+				'PASSWORD' => $password,
+				'SECRET_HASH' => $this->cognito_secret_hash($username),
+			),
+			'ClientId' => $this->client_id,
+			'UserPoolId' => $this->user_pool_id,
+		));
+		return $response;
+	}
+
+	private function refresh_access_token($refresh_token, $user_id)
+	{
+		error_log('refresh_access_token');
+		$username = $this->cognito_username($user_id);
+		$response = $this->client->admin_initiate_auth(array(
+			'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
+			'AuthParameters' => array(
+				'REFRESH_TOKEN' => $refresh_token,
+				'SECRET_HASH'   => $this->cognito_secret_hash($username),
+			),
+			'ClientId'       => $this->client_id,
+			'UserPoolId'     => $this->user_pool_id,
+		));
+
+		return $response;
+	}
+
+	/**
+	 * @param int $user_id phpBB user id
+	 * @return string
+	 */
+	public function cognito_username($user_id)
+	{
+		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
+	}
+
+	/**
+	 * @param string $username
+	 *
+	 * @return string
+	 */
+	public function cognito_secret_hash($username)
+	{
+		return $this->hash($username . $this->client_id);
+	}
+
+	/**
+	 * @param string $message
+	 *
+	 * @return string
+	 */
+	protected function hash($message)
+	{
+        $hash = hash_hmac(
+			'sha256',
+			$message,
+			$this->client_secret,
+			true
+		);
+		return base64_encode($hash);
+	}
+
+	/**
+	 * @param $length
+	 * @return string A unique Token
+	 * @throws \Exception
+	 */
+	private function get_unique_token($length = 32){
+		$token = "";
+		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
+		$code_alphabet.= "0123456789";
+		$max = strlen($code_alphabet);
+
+		for ($i=0; $i < $length; $i++) {
+			$token .= $code_alphabet[random_int(0, $max-1)];
+		}
+
+		return $token;
+	}
+
+	/**
+	 * @param array $auth_result
+	 * @param int $user_id
+	 * @param string $username_clean
+	 * @param bool $update True is this is to update (i.e. result of refreshing access_token)
+	 */
+	private function store_auth_result($auth_result, $user_id, $username_clean, $update = false)
+	{
+		if ($auth_result['AccessToken'])
+		{
+			$data1 = array(
+				'access_token'  => $auth_result['AccessToken'],
+				'expires_at'    => $auth_result['ExpiresIn'] +time(),
+				'id_token'      => $auth_result['IdToken'],
+				'token_type'    => $auth_result['TokenType'],
+			);
+			if ($update)
+			{
+				$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data1) .
+					" WHERE session_token = '" . $this->session_token . "'";
+			}
+			else
+			{
+				$data2 = array(
+					'user_id'		=> $user_id,
+					'username_clean' => $username_clean,
+					'sid'           => '',
+					'session_token' => $this->session_token,
+					'refresh_token' => $auth_result['RefreshToken'],
+				);
+				$fields = array_merge($data1, $data2);
+				$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $fields);
+			}
+
+			$this->db->sql_query($sql);
+		}
+	}
+
+	/**
+	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
+	 * @param int $user_id 			phpBB user ID
+	 * @param string $action		Action Message
+	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
+	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
+	 */
+	private function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
+	{
+		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
+		{
+			// Can only happen if the Cognito user is deleted after the user logs in.
+			return true;
+		}
+		$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
+			array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
+		return false;
+	}
+
+	/**
 	 * @param string $nickname - Non normalised username
 	 * @param string $password
 	 * @param int	 $user_id - phpBB numeric user ID
@@ -280,6 +388,68 @@ class cognito
 			return $this->admin_respond_to_auth_challenge($response, $password, $user_id);
 		}
 		return $result;
+	}
+
+	/**
+	 * @param array $attributes
+	 * @return array
+	 */
+	private function build_attributes_array(array $attributes)
+	{
+		$userAttributes = array();
+		foreach ($attributes as $key => $value) {
+			$userAttributes[] = array(
+				'Name' => (string)$key,
+				'Value' => (string)$value,
+			);
+		}
+		return $userAttributes;
+	}
+
+	/**
+	 * @param int $user_id phpBB user id
+	 * @param string $password
+	 * @param $user_attributes
+	 * @return array
+	 */
+	private function admin_create_user($user_id, $password, $user_attributes)
+	{
+		$username = $this->cognito_username($user_id);
+
+		try {
+			$response = $this->client->admin_create_user(array(
+				'UserPoolId' => $this->user_pool_id,
+				'Username' => $username,
+				'TemporaryPassword' => $password,
+				'MessageAction' => 'SUPPRESS',
+				'SecretHash' => $this->cognito_secret_hash($username),
+				'UserAttributes' => $user_attributes,
+			));
+		}
+		catch (CognitoIdentityProviderException $e) {
+
+			switch ($e->getAwsErrorCode())
+			{
+				case 'InvalidPasswordException':
+					return  array(
+						'status' => COG_MIGRATE_FAIL,
+						'error' => $e->getAwsErrorCode(),
+					);
+				break;
+
+				default:
+					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_create_user');
+					return  array(
+						'status' => COG_MIGRATE_FAIL,
+						'error' => $e->getAwsErrorCode(),
+					);
+			}
+		}
+		return array(
+			'status' => COG_MIGRATE_SUCCESS,
+			'error' => '',
+			'response' => $response
+		);
 	}
 
 	/**
@@ -336,75 +506,6 @@ class cognito
 		);
 	}
 
-
-	/**
-	 * @param int $user_id phpBB user id
-	 * @param String $password
-	 * @return \Aws\Result
-	 */
-	private function authenticate_user($user_id, $password)
-	{
-		$username = $this->cognito_username($user_id);
-		$response = $this->client->admin_initiate_auth(array(
-			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
-			'AuthParameters' => array(
-				'USERNAME' => $username,
-				'PASSWORD' => $password,
-				'SECRET_HASH' => $this->cognito_secret_hash($username),
-			),
-			'ClientId' => $this->client_id,
-			'UserPoolId' => $this->user_pool_id,
-		));
-		return $response;
-	}
-
-
-	/**
-	 * @param int $user_id phpBB user id
-	 * @param string $password
-	 * @param $user_attributes
-	 * @return array
-	 */
-	private function admin_create_user($user_id, $password, $user_attributes)
-	{
-		$username = $this->cognito_username($user_id);
-
-		try {
-			$response = $this->client->admin_create_user(array(
-				'UserPoolId' => $this->user_pool_id,
-				'Username' => $username,
-				'TemporaryPassword' => $password,
-				'MessageAction' => 'SUPPRESS',
-				'SecretHash' => $this->cognito_secret_hash($username),
-				'UserAttributes' => $user_attributes,
-			));
-		}
-		catch (CognitoIdentityProviderException $e) {
-
-			switch ($e->getAwsErrorCode())
-			{
-				case 'InvalidPasswordException':
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-				break;
-
-				default:
-					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_create_user');
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-			}
-		}
-		return array(
-			'status' => COG_MIGRATE_SUCCESS,
-			'error' => '',
-			'response' => $response
-		);
-	}
-
 	/**
 	 * @param int $user_id phpBB user_id
 	 * @param string $access_token
@@ -437,7 +538,6 @@ class cognito
 			return $this->handleCognitoIdentityProviderException($e,$user_id,'change_password', true);
 		}
 	}
-
 
 	/**
 	 * @param int $user_id phpBB user_id
@@ -476,26 +576,6 @@ class cognito
 	}
 
 	/**
-	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
-	 * @param int $user_id 			phpBB user ID
-	 * @param string $action		Action Message
-	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
-	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
-	 */
-	private function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
-	{
-		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
-		{
-			// Can only happen if the Cognito user is deleted after the user logs in.
-			return true;
-		}
-		$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
-		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
-			array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
-		return false;
-	}
-
-	/**
 	 * Admin only Change user password function. This is a hack as the user is deleted and recreated
 	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
@@ -523,6 +603,88 @@ class cognito
 
 	}
 
+	/**
+	 * @param int $user_id phpBB user Id
+	 * @return array
+	 *
+	 * user_status = UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
+	 * status =  COG_USER_FOUND | COG_USER_NOT_FOUND | COG_ERROR
+	 */
+	public function get_user($user_id)
+	{
+		$username = $this->cognito_username($user_id);
+		try
+		{
+			$response = $this->client->admin_get_user(array(
+				"Username"   => $username,
+				"UserPoolId" => $this->user_pool_id
+			));
+			return array(
+				'status' => COG_USER_FOUND,
+				'user_status' => $response['UserStatus'],
+				'user_attributes' => $response['UserAttributes']
+			);
+
+		} catch (CognitoIdentityProviderException $e) {
+			$user_not_found = $this->handleCognitoIdentityProviderException($e,$user_id,'get_user', true);
+			if ($user_not_found)
+			{
+				$status = COG_USER_NOT_FOUND;
+			}
+			else{
+				$status = COG_ERROR;
+			}
+			/*switch ($e->getAwsErrorCode())
+			{
+				case 'UserNotFoundException':
+					$status = COG_USER_NOT_FOUND;
+				break;
+				default:
+					$status = COG_ERROR;
+					error_log($e->getAwsErrorMessage());
+			}*/
+		}
+
+		return array(
+			'status' => $status,
+			'user_status' => '',
+			'user_attributes' => ''
+		);
+
+	}
+
+	/**
+	 * Delete a user by user id
+	 *
+	 * @param int $user_id phpBB user ID
+	 */
+	private function admin_delete_user_internal($user_id)
+	{
+		$user_id = $this->cognito_username($user_id);
+
+		$this->client->admin_delete_user(
+			array('Username' => $user_id,
+				  'UserPoolId' => $this->user_pool_id)
+		);
+	}
+
+	/**
+	 * Removes the non-mutatable attributes from name value pair array.:
+	 * 	- sub
+	 * @param array() $attributes
+	 * @return array
+	 */
+	private function clean_attributes($attributes)
+	{
+		$result = array();
+		foreach ($attributes as $key => $value) {
+			if ($value['Name'] != 'sub')
+			{
+				$result[] = $value;
+			}
+		}
+		return $result;
+	}
 
 	/**
 	 * Administrator function to update a users email.
@@ -534,6 +696,26 @@ class cognito
 		$attributes = array('email' => $new_email,
 							'email_verified' => "True");
 		$this->update_user_attributes($attributes, $user_id);
+	}
+
+	/**
+	 * @param array $attributes
+	 * @param int $user_id phpBB user id
+	 */
+	private function update_user_attributes($attributes, $user_id)
+	{
+		$data = array(
+			'UserAttributes' => $this->build_attributes_array($attributes),
+			'Username'       => $this->cognito_username($user_id),
+			'UserPoolId'     => $this->user_pool_id,
+		);
+		try {
+			$this->client->admin_update_user_attributes($data);
+		} catch (CognitoIdentityProviderException $e)
+		{
+			$this->handleCognitoIdentityProviderException($e,$user_id,'update_user_attributes');
+			//throw $e;
+		}
 	}
 
 	/**
@@ -602,43 +784,7 @@ class cognito
 	}
 
 	/**
-	 * Delete a user by user id
-	 *
-	 * @param int $user_id phpBB user ID
-	 */
-	private function admin_delete_user_internal($user_id)
-	{
-		$user_id = $this->cognito_username($user_id);
-
-		$this->client->admin_delete_user(
-			array('Username' => $user_id,
-				  'UserPoolId' => $this->user_pool_id)
-		);
-	}
-
-	/**
-	 * @param array $attributes
-	 * @param int $user_id phpBB user id
-	 */
-	private function update_user_attributes($attributes, $user_id)
-	{
-		$data = array(
-			'UserAttributes' => $this->build_attributes_array($attributes),
-			'Username'       => $this->cognito_username($user_id),
-			'UserPoolId'     => $this->user_pool_id,
-		);
-		try {
-			$this->client->admin_update_user_attributes($data);
-		} catch (CognitoIdentityProviderException $e)
-		{
-			$this->handleCognitoIdentityProviderException($e,$user_id,'update_user_attributes');
-			//throw $e;
-		}
-	}
-
-
-	/**
-	 * Get the access token for the curent SID
+	 * Get the access token for the current SID
 	 * @return string Cognito Access Token
 	 */
 	public function get_access_token()
@@ -652,19 +798,27 @@ class cognito
 		return $row['access_token'];
 	}
 
-	/**
-	 * @return array Cognito Access data stored for sesion
-	 * @param string session_token to get the data for.
-	 */
-	public function get_access_data($session_token)
+	//todo is this this used
+	public function get_last_active()
 	{
+		if ($this->last_active)
+		{
+			error_log('get_last_active - cache');
+			return $this->last_active;
+		}
+		else
+		{
+			$sid = $this->user->session_id;
+			$sql = 'SELECT last_active FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
 
-		$sql = 'SELECT access_token,user_id,username_clean  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
+			$result = $this->db->sql_query($sql);
+			$row = $this->db->sql_fetchrow($result);
+			$this->db->sql_freeresult($result);
+			$this->last_active = $row['last_active'];
+			error_log('get_last_active - ' . $this->last_active);
 
-		$result = $this->db->sql_query($sql);
-		$row = $this->db->sql_fetchrow($result);
-		$this->db->sql_freeresult($result);
-		return $row;
+			return $this->last_active;
+		}
 	}
 
 	/**
@@ -707,29 +861,53 @@ class cognito
 
 
 	/**
-	 * @param array $auth_result
-	 * @param int $user_id
-	 * @param string $username_clean
+	 * Attempt to refresh all access tokens that will expire in the next twn minutes
 	 *
+	 * @since 1.2
 	 */
-	private function store_auth_result($auth_result, $user_id, $username_clean)
+	public function refresh_access_tokens()
 	{
-		if ($auth_result['AccessToken'])
+		error_log('GC: refresh_access_tokens');
+		$refresh_time = time() + 600;  // refresh any access tokens that expire next 10 minutes
+		$sql = 'SELECT * FROM ' . $this->cogauth_session . " WHERE expires_at < " . $refresh_time;
+		$result = $this->db->sql_query($sql);
+
+		while ($row = $this->db->sql_fetchrow($result))
 		{
-			$data = array(
-				'user_id'		=> $user_id,
-				'username_clean' => $username_clean,
-				'sid'           => '',
-				'access_token'  => $auth_result['AccessToken'],
-				'expires_at'    => $auth_result['ExpiresIn'] +time(),
-				'id_token'      => $auth_result['IdToken'],
-				'refresh_token' => $auth_result['RefreshToken'],
-				'token_type'    => $auth_result['TokenType'],
-				'session_token' => $this->session_token
-			);
-			$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $data);
-			$this->db->sql_query($sql);
+			try
+			{
+				$user_id = $row['user_id'];
+				$response = $this->refresh_access_token($row['refresh_token'],$user_id);
+				$this->session_token = $row['session_token'];
+				if (isset($response['AuthenticationResult']))
+				{
+					// Successful refresh of access token
+					$this->store_auth_result($response['AuthenticationResult'], $user_id, $row['username_clean'],true);
+
+				}
+			} catch (CognitoIdentityProviderException $e)
+			{
+				$this->handleCognitoIdentityProviderException($e, $user_id, 'refresh_access_tokens');
+			}
 		}
+		$this->db->sql_freeresult($result);
+	}
+
+
+	/**
+	 * @return array Cognito Access data stored for sesion
+	 * @param string session_token to get the data for.
+	 */
+	public function get_access_data($session_token)
+	{
+		$sql = 'SELECT access_token,user_id,username_clean,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
+
+		$result = $this->db->sql_query($sql);
+		$row = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		$this->last_active = $row['last_active'];
+		return $row;
 	}
 
 	/**
@@ -751,13 +929,51 @@ class cognito
 	}
 
 	/**
-	 * @param string $session_id  phpBB SID
+	 * @param string $phpbb_sid        phpBB SID
 	 */
-	public function store_sid($session_id)
+	public function store_sid($phpbb_sid)
 	{
-		$data = array('sid' => $session_id,);
+		if (!$this->session_token)
+		{
+			// This will happen on auto login as authenticate is not called to start the session
+			// As this is an auto login the previous SID must be in the cookie, so we use this to find the
+			// session_token.
+			error_log('Empty Session token - store sid');
+			$cookie_sid = $this->request->variable($this->config['cookie_name'] . '_sid', '', false, \phpbb\request\request_interface::COOKIE);
+			error_log('  cookie sid: ' . $cookie_sid);
+			error_log('  this sid:   ' . $phpbb_sid);
+
+			$sql = 'SELECT session_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($cookie_sid) . "'";
+			$this->db->sql_query($sql);
+			$row = $this->db->sql_fetchrow();
+			$this->session_token = $row['session_token'];
+
+			error_log('  Session Toke: ' . $this->session_token);
+		}
+		$data = array('sid' => $phpbb_sid, 'last_active' => time());
 		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
 			" WHERE session_token = '" . $this->session_token . "'";
+		$this->db->sql_query($sql);
+
+		$affected_rows = $this->db->sql_affectedrows();
+
+		if ($affected_rows == 0)
+		{
+			error_log('Failed to store SID');
+		}
+
+	}
+
+
+	/**
+	 * todo is this required?
+	 */
+	public function update_last_active()
+	{
+		$sid = $this->user->session_id;
+		$data = array('last_active' => time(),);
+		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
+			" WHERE sid = '" . $sid . "'";
 		$this->db->sql_query($sql);
 
 	}
@@ -775,104 +991,14 @@ class cognito
 
 	/**
 	 * @return int number of rows deleted
+	 *
+	 * todo this is not used, logic needs amending to delete when refresh token expires.
 	 */
 	public function delete_expired_sessions()
 	{
+		error_log('GC: delete_expired_sessions');
 		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE expires_at < " . time();
 		$this->db->sql_query($sql);
 		return $this->db->sql_affectedrows();
 	}
-
-	/**
-	 * @param array $attributes
-	 * @return array
-	 */
-	private function build_attributes_array(array $attributes)
-	{
-		$userAttributes = array();
-		foreach ($attributes as $key => $value) {
-			$userAttributes[] = array(
-				'Name' => (string)$key,
-				'Value' => (string)$value,
-			);
-		}
-		return $userAttributes;
-	}
-
-	/**
-	 * @param int $user_id phpBB user id
-	 * @return string
-	 */
-	public function cognito_username($user_id)
-	{
-		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
-	}
-
-
-	/**
-	 * @param string $username
-	 *
-	 * @return string
-	 */
-	public function cognito_secret_hash($username)
-	{
-		return $this->hash($username . $this->client_id);
-	}
-
-	/**
-	 * @param string $message
-	 *
-	 * @return string
-	 */
-	protected function hash($message)
-	{
-        $hash = hash_hmac(
-			'sha256',
-			$message,
-			$this->client_secret,
-			true
-		);
-		return base64_encode($hash);
-	}
-
-	/**
-	 * Removes the non-mutatable attributes from name value pair array.:
-	 * 	- sub
-	 * @param array() $attributes
-	 * @return array
-	 */
-	private function clean_attributes($attributes)
-	{
-		$result = array();
-		foreach ($attributes as $key => $value) {
-			if ($value['Name'] != 'sub')
-			{
-				$result[] = $value;
-			}
-		}
-		return $result;
-	}
-
-	/**
-	 * @param $length
-	 * @return string A unique Token
-	 * @throws \Exception
-	 */
-	private function get_unique_token($length = 32){
-		$token = "";
-		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
-		$code_alphabet.= "0123456789";
-		$max = strlen($code_alphabet);
-
-		for ($i=0; $i < $length; $i++) {
-			$token .= $code_alphabet[random_int(0, $max-1)];
-		}
-
-		return $token;
-	}
-
-
-
-
 }

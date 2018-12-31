@@ -397,8 +397,8 @@ class cogauth extends \phpbb\auth\provider\base
 
 	public function get_acp_template($new_config)
 	{
-		if ($new_config['auth_method'] == 'cogauth')
-		{
+		//if ($new_config['auth_method'] == 'cogauth')
+		//{
 
 			return array(
 				'TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
@@ -411,11 +411,11 @@ class cogauth extends \phpbb\auth\provider\base
 					'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
 				)
 			);
-		}
-		else
-		{
-			return array();
-		}
+//		}
+//		else
+//		{
+//			return array();
+//		}
 	}
 
 }

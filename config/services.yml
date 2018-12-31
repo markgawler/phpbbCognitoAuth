@@ -26,10 +26,22 @@ services:
             - '@dbal.conn'
             - '@config'
             - '@user'
+            - '@request'
             - '@log'
             - '@mrfg.cogauth.cognito_client_wrapper'
             - '@mrfg.cogauth.web_token_phpbb'
             - '%mrfg.cogauth.tables.cogauth_session%'
+
+    mrfg.cogauth.access_token_refresh:
+        class: mrfg\cogauth\cron\task\access_token_refresh
+        arguments:
+            - '@config'
+            - '@dbal.conn'
+            - '@mrfg.cogauth.cognito'
+        calls:
+            - [set_name, [cogauth.cron.access_token_refresh]]
+        tags:
+            - { name: cron.task }
 
 imports:
 - { resource: auth.yml }

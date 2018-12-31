@@ -30,7 +30,8 @@ class install_acp_module extends \phpbb\db\migration\migration
 			array('config.add', array('cogauth_aws_region', '')),
 			array('config.add', array('cogauth_aws_secret', '')),
 			array('config.add', array('cogauth_aws_key', '')),
-			array('config.add', array('cogauth_client_secret', '')),
+			array('config.add', array('cogauth_token_refresh_gc', 300)),
+			array('config.add', array('cogauth_token_refresh_last_gc', 0)),
 		);
 	}
 }

@@ -31,7 +31,8 @@ class main_listener implements EventSubscriberInterface
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.delete_user_after' 		=> 'delete_users',
 			'core.user_active_flip_after' 	=> 'user_active_flip',
-			'core.session_gc_after' 		=> 'session_gc_after',
+			//'core.session_gc_after' 		=> 'session_gc_after',
+			//'core.user_setup_after'			=> 'user_setup_after',
 		);
 	}
 
@@ -97,11 +98,10 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function session_create_after($event)
 	{
-		//error_log('session_create_after');
 		$data = $event['session_data'];
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
         {
-			// Now we have the SID we can stor it in the cogauth_session table..
+			// Now we have the SID we can store it in the cogauth_session table..
             $this->client->store_sid($data['session_id']);
 
 			/** @noinspection PhpUnusedLocalVariableInspection */
@@ -129,7 +129,6 @@ class main_listener implements EventSubscriberInterface
 		$session_token = $this->client->get_session_token();
 
 		$this->client->phpbb_session_killed($session);
-
 
 		/**
 		 * Cogauth session kill after event
@@ -251,5 +250,17 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 	}
+	/*
+	public function user_setup_after()
+	{
+		$last_active =  $this->client->get_last_active();
+		$diff = time() - $last_active;
+		if ($diff > 30)
+		{
+			error_log('update Last Active: ' );
+			$this->client->update_last_active();
+		}
+	}
+	*/
 }
 

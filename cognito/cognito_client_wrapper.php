@@ -136,4 +136,13 @@ class cognito_client_wrapper
         return $this->client->UpdateUserAttributes($args);
     }
 
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function initiate_auth($args)
+	{
+		return $this->client->adminInitiateAuth($args);
+	}
+
 }

@@ -39,6 +39,9 @@ class cognito_db_test extends \phpbb_database_test_case
 	/** @var $cognito \mrfg\cogauth\cognito\cognito */
 	protected $cognito;
 
+	/** @var $request \phpbb\request\request_interface */
+	protected $request;
+
 
 
 	/** @var $log \phpbb\log\log_interface |\PHPUnit_Framework_MockObject_MockObject */
@@ -86,6 +89,10 @@ class cognito_db_test extends \phpbb_database_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->request = $this->getMockBuilder('\phpbb\request\request_interface')
+			->disableOriginalConstructor()
+			->getMock();
+
         $map = array(
             array('cogauth_pool_id', 'eu-west-1_T0xxxxx1'),
             array('cogauth_client_id', 'faaaaaaaaaaaaaaaaaaaaaav7'),
@@ -97,7 +104,7 @@ class cognito_db_test extends \phpbb_database_test_case
         $this->config->method('offsetGet')->will($this->returnValueMap($map));
 
 		/** @var $cognito \mrfg\cogauth\cognito\cognito_client_wrapper */
-		$this->cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
+		$this->cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
 
 	}
 

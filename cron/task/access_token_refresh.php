@@ -56,7 +56,7 @@ class access_token_refresh extends \phpbb\cron\task\base
 	 */
 	public function is_runnable()
 	{
-		return true;
+		return false;
 	}
 
 	/**

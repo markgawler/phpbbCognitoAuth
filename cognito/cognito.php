@@ -77,6 +77,11 @@ class cognito
 	/** @var int Time in seconds */
 	protected $last_active;
 
+	/**	@var  int $user_id  The phpBB user ID associated with this cogauth_session */
+	protected $user_id = 0;
+
+	/**	@var string $username_clean Normalised form of the phpBB username for this session*/
+	protected $username_clean;
 
 	/**
 	 * Database Authentication Constructor
@@ -242,7 +247,7 @@ class cognito
 	 * @param int $user_id phpBB user id
 	 * @return string
 	 */
-	public function cognito_username($user_id)
+	protected function cognito_username($user_id)
 	{
 		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
 	}
@@ -252,7 +257,7 @@ class cognito
 	 *
 	 * @return string
 	 */
-	public function cognito_secret_hash($username)
+	protected function cognito_secret_hash($username)
 	{
 		return $this->hash($username . $this->client_id);
 	}
@@ -337,7 +342,7 @@ class cognito
 	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
 	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
 	 */
-	private function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
+	protected function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
 	{
 		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
 		{
@@ -779,16 +784,35 @@ class cognito
 
 	/**
 	 * Get the access token for the current SID
-	 * @return string Cognito Access Token
+	 * If the access token has expired atempt to refresh it
+	 * @return 	\Jose\Component\Signature\Serializer\string $access_token Cognito Access Token
 	 */
 	public function get_access_token()
 	{
 		$sid = $this->user->session_id;
-		$sql = 'SELECT access_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
-
+		$sql = 'SELECT access_token, refresh_token, expires_at, user_id FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
+
+		if ($row['expires_at'] > time() - 60)
+		{
+			error_log('Get Access Token - refresh_access_tokens');
+			$user_id = $row['user_id'];
+			try
+			{
+				$response = $this->refresh_access_token($row['refresh_token'], $user_id);
+				if (isset($response['AuthenticationResult']))
+				{
+					// Successful refresh of access token
+					$this->store_auth_result($response['AuthenticationResult'], $user_id, $row['username_clean'],true);
+				}
+			} catch (CognitoIdentityProviderException $e)
+			{
+				$this->handleCognitoIdentityProviderException($e, $user_id, 'refresh_access_tokens');
+			}
+		}
+
 		return $row['access_token'];
 	}
 
@@ -821,8 +845,8 @@ class cognito
 	 */
 	public function validate_session($session_token)
 	{
-		$access_data = $this->get_access_data($session_token);
-		$access_token = $access_data['access_token'];
+		$this->load_user_data($session_token);
+		$access_token = $this->get_access_token();
 		if (!$access_token)
 		{
 			// No token found in DB
@@ -834,9 +858,9 @@ class cognito
 
 			return array(
 				'active' => true,
-				'user_id' => $access_data['user_id'],
+				'user_id' => $this->user_id,
 				'username' => $username,
-				'username_clean' => $access_data['username_clean']);
+				'username_clean' => $this->username_clean);
 		} catch (TokenVerificationException $e)
 		{
 			if ($e->getMessage() == 'token expired')
@@ -889,19 +913,20 @@ class cognito
 
 
 	/**
-	 * @return array Cognito Access data stored for sesion
+	 * Loads the session user data ( user_id,username_clean,last_active)
 	 * @param string session_token to get the data for.
 	 */
-	public function get_access_data($session_token)
+	public function load_user_data($session_token)
 	{
-		$sql = 'SELECT access_token,user_id,username_clean,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
+		$sql = 'SELECT user_id,username_clean,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
 
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
 
 		$this->last_active = $row['last_active'];
-		return $row;
+		$this->username_clean = $row['username_clean'];
+		$this->user_id = $row['user_id'];
 	}
 
 	/**

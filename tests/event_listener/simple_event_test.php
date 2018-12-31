@@ -19,7 +19,8 @@ class simple_event_test extends \phpbb_test_case
     /** @var $user \phpbb\user*/
     protected $user;
 
-    /** @var $cognito_client \mrfg\cogauth\cognito\cognito | \PHPUnit_Framework_MockObject_MockObject */
+	/** @noinspection PhpUndefinedClassInspection */
+	/** @var $cognito_client \mrfg\cogauth\cognito\cognito | \PHPUnit_Framework_MockObject_MockObject */
     protected $cognito_client;
 
     /** @var \phpbb\request\request_interface $request */
@@ -28,8 +29,12 @@ class simple_event_test extends \phpbb_test_case
     /** @var array  */
     protected $config;
 
-    /** @var $listener \mrfg\cogauth\event\main_listener */
+    /** @var \mrfg\cogauth\event\main_listener $listener*/
     protected $listener ;
+
+	/** @noinspection PhpUndefinedClassInspection */
+	/** @var \phpbb\event\dispatcher_interface | \PHPUnit_Framework_MockObject_MockObject */
+    protected $dispatcher;
 
     public function setUp()
     {
@@ -48,16 +53,18 @@ class simple_event_test extends \phpbb_test_case
 			->getMock();
 
         $this->cognito_client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito')
-            ->setMethods(array('store_sid'))
+            ->setMethods(array('store_sid','get_session_token'))
             ->disableOriginalConstructor()
             ->getMock();
 
+		$this->dispatcher = $this->getMockBuilder('\phpbb\event\dispatcher_interface')
+			->disableOriginalConstructor()
+			->getMock();
+
         $this->listener = new \mrfg\cogauth\event\main_listener(
             $this->user,
-            $this->request,
-            $this->config,
             $this->cognito_client,
-            'cogauth_session');
+			$this->dispatcher);
     }
     
     
@@ -68,11 +75,18 @@ class simple_event_test extends \phpbb_test_case
             'session_user_id' => 1234567,
             'session_id' => '1f7efc7a5a163338f30bbdcc66001de5'));
 
+		$this->dispatcher->method('trigger_event')
+			->willReturn(array('session_token' => '1234567AAA'));
+
+		$this->cognito_client->method('get_session_token')
+			->willReturn('Hello_I_am_a_token');
+
+		$this->cognito_client->expects($this->once())
+			->method('get_session_token');
+
         $this->cognito_client->expects($this->once())
             ->method('store_sid')
             ->with('1f7efc7a5a163338f30bbdcc66001de5');
-
-        //todo test setting of cookie
 
         $this->listener->session_create_after($event);
     }
@@ -84,10 +98,11 @@ class simple_event_test extends \phpbb_test_case
             'session_user_id' => 1,
             'session_id' => '1f7efc7a5abbdcc66001de5163338f30'));
 
-        $this->cognito_client->expects($this->never())
-            ->method('store_auth_result');
+		$this->cognito_client->expects($this->never())
+			->method('get_session_token');
 
-		//todo test setting of cookie
+		$this->dispatcher->expects($this->never())
+		->method('trigger_event');
 
 		$this->listener->session_create_after($event);
     }

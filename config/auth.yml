@@ -5,15 +5,12 @@ services:
             - '@dbal.conn'
             - '@config'
             - '@passwords.manager'
-            - '@request'
             - '@user'
             - '@language'
             - '@service_container'
             - '@mrfg.cogauth.cognito'
             - '@mrfg.cogauth.web_token_phpbb'
             - '@log'
-            - '%core.root_path%'
-            - '%core.php_ext%'
             - '%mrfg.cogauth.tables.cogauth_session%'
 
         tags:

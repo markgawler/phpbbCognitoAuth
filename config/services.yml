@@ -6,7 +6,6 @@ services:
             - '@user'
             - '@mrfg.cogauth.cognito'
             - '@dispatcher'
-            - '%mrfg.cogauth.tables.cogauth_session%'
         tags:
             - { name: event.listener }
 

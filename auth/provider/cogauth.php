@@ -30,11 +30,6 @@ class cogauth extends \phpbb\auth\provider\base
 	protected $config;
 
 	/**
-	 * @var \phpbb\request\request $request Request object
-	 */
-	protected $request;
-
-	/**
 	 * @var \phpbb\user
 	 */
 	protected $user;
@@ -43,16 +38,6 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @var \phpbb\language\language
 	 */
 	protected $language;
-
-	/**
-	 * @var \phpbb\
-	 */
-	protected $php_ext;
-
-	/**
-	 * @var \phpbb\
-	 */
-	protected $phpbb_root_path;
 
 	/**
 	 * @var \phpbb\db\driver\driver_interface
@@ -76,37 +61,29 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @param	\phpbb\db\driver\driver_interface                         $db
 	 * @param	\phpbb\config\config                                      $config
 	 * @param	\phpbb\passwords\manager                                  $passwords_manager
-	 * @param	\phpbb\request\request                                    $request
 	 * @param	\phpbb\user                                               $user
 	 * @param	\phpbb\language\language                                  $language
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
 	 * @param 	\mrfg\cogauth\cognito\cognito                             $cognito_client
 	 * @param 	\mrfg\cogauth\cognito\web_token_phpbb                     $web_token
 	 * @param   \phpbb\log\log_interface                                   $log	Logger instance
-	 * @param	string                                                    $phpbb_root_path
-	 * @param	string                                                    $php_ext
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\passwords\manager $passwords_manager,
-		\phpbb\request\request $request,
 		\phpbb\user $user,
 		\phpbb\language\language $language,
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
 		\mrfg\cogauth\cognito\cognito $cognito_client,
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-		\phpbb\log\log_interface $log,
-		$phpbb_root_path, $php_ext)
+		\phpbb\log\log_interface $log)
 	{
 		$this->db = $db;
 		$this->config = $config;
 		$this->passwords_manager = $passwords_manager;
-		$this->request = $request;
 		$this->user = $user;
 		$this->language = $language;
-		$this->phpbb_root_path = $phpbb_root_path;
-		$this->php_ext = $php_ext;
 		$this->phpbb_container = $phpbb_container;
 		$this->cognito_client = $cognito_client;
 		$this->web_token = $web_token;

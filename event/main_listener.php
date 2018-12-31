@@ -45,27 +45,21 @@ class main_listener implements EventSubscriberInterface
 	/* @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
 
-	/* @var string */
-	protected $session_table;
-
 	/**
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
 	 * @param \mrfg\cogauth\cognito\cognito $client
 	 * @param \phpbb\event\dispatcher_interface	$dispatcher	Event dispatcher
-	 * @param string $session_table
 	 */
 	public function __construct(
 		\phpbb\user $user,
 		\mrfg\cogauth\cognito\cognito $client,
-		\phpbb\event\dispatcher_interface $dispatcher,
-		$session_table)
+		\phpbb\event\dispatcher_interface $dispatcher)
 	{
 		$this->user = $user;
 		$this->client = $client;
 		$this->dispatcher = $dispatcher;
-		$this->session_table = $session_table;
 	}
 
 

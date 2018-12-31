@@ -41,9 +41,6 @@ class cognito
 	/** @var \phpbb\user */
 	protected $user;
 
-	/**@var \Aws\Sdk */
-	protected $aws;
-
 	/**@var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient */
 	protected $client;
 
@@ -64,9 +61,6 @@ class cognito
 
 	/**@var string */
 	protected $cogauth_session;
-
-	/** @var \mrfg\cogauth\cognito\cognito_client_wrapper $aws_wrapper */
-	protected $aws_wrapper;
 
 	/**@var array $auth_result */
 	protected $auth_result;

@@ -81,7 +81,10 @@ class cognito
 	protected $user_id = 0;
 
 	/**	@var string $username_clean Normalised form of the phpBB username for this session*/
-	protected $username_clean;
+	protected $username_clean = '';
+
+	/** @var int $time_now  */
+	protected $time_now;
 
 	/**
 	 * Database Authentication Constructor
@@ -110,6 +113,8 @@ class cognito
 		$this->user = $user;
 		$this->request = $request;
 		$this->cogauth_session =$cogauth_session;
+
+		$this->time_now = time();
 
 		$this->user_pool_id = $config['cogauth_pool_id'];
 		$this->client_id = $config['cogauth_client_id'];
@@ -226,7 +231,7 @@ class cognito
 		return $response;
 	}
 
-	private function refresh_access_token($refresh_token, $user_id)
+	protected function refresh_access_token($refresh_token, $user_id)
 	{
 		error_log('refresh_access_token');
 		$username = $this->cognito_username($user_id);
@@ -309,7 +314,7 @@ class cognito
 		{
 			$data1 = array(
 				'access_token'  => $auth_result['AccessToken'],
-				'expires_at'    => $auth_result['ExpiresIn'] +time(),
+				'expires_at'    => $auth_result['ExpiresIn'] + $this->time_now,
 				'id_token'      => $auth_result['IdToken'],
 				'token_type'    => $auth_result['TokenType'],
 			);
@@ -338,7 +343,7 @@ class cognito
 	/**
 	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
 	 * @param int $user_id 			phpBB user ID
-	 * @param string $action		Action Message
+	 * @param string $action		Action Message inserted in to error log for debugging
 	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
 	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
 	 */
@@ -350,7 +355,7 @@ class cognito
 			return true;
 		}
 		$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
-		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', time(),
+		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', $this->time_now,
 			array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
 		return false;
 	}
@@ -494,7 +499,7 @@ class cognito
 
 			default:
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
-				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_CHALLENGE', time(),
+				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_CHALLENGE', $this->time_now,
 					array('admin_respond_to_auth_challenge', $response['ChallengeName']));
 
 				$response = null;
@@ -783,21 +788,32 @@ class cognito
 	}
 
 	/**
-	 * Get the access token for the current SID
-	 * If the access token has expired atempt to refresh it
-	 * @return 	\Jose\Component\Signature\Serializer\string $access_token Cognito Access Token
+	 * Get the access token for the current SID (or Session Token if suplied)
+	 * If the access token has expired attempt to refresh it
+	 * @param  string $session_token Can be used as an alternative to the SID, when the SID may not be set.
+	 * @return 	\Jose\Component\Signature\Serializer\string | false $access_token Cognito Access Token
 	 */
-	public function get_access_token()
+	public function get_access_token($session_token = null)
 	{
-		$sid = $this->user->session_id;
-		$sql = 'SELECT access_token, refresh_token, expires_at, user_id FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
+		$sql = 'SELECT access_token, refresh_token, expires_at, user_id FROM ' . $this->cogauth_session . ' WHERE ';
+		if ($session_token)
+		{
+			$sql .= "session_token = '" . $this->db->sql_escape($session_token) . "'";
+		}
+		else
+		{
+			$sql .= "sid = '" . $this->db->sql_escape($this->user->session_id) . "'";
+		}
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
 
-		if ($row['expires_at'] > time() - 60)
+		if (!$row)
 		{
-			error_log('Get Access Token - refresh_access_tokens');
+			return false;
+		}
+		if ($this->time_now  > ($row['expires_at'] - 300))
+		{
 			$user_id = $row['user_id'];
 			try
 			{
@@ -806,37 +822,16 @@ class cognito
 				{
 					// Successful refresh of access token
 					$this->store_auth_result($response['AuthenticationResult'], $user_id, $row['username_clean'],true);
+					return $response['AuthenticationResult']['AccessToken'];
 				}
 			} catch (CognitoIdentityProviderException $e)
 			{
 				$this->handleCognitoIdentityProviderException($e, $user_id, 'refresh_access_tokens');
+				return false;
 			}
 		}
 
 		return $row['access_token'];
-	}
-
-	//todo is this this used
-	public function get_last_active()
-	{
-		if ($this->last_active)
-		{
-			error_log('get_last_active - cache');
-			return $this->last_active;
-		}
-		else
-		{
-			$sid = $this->user->session_id;
-			$sql = 'SELECT last_active FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($sid) . "'";
-
-			$result = $this->db->sql_query($sql);
-			$row = $this->db->sql_fetchrow($result);
-			$this->db->sql_freeresult($result);
-			$this->last_active = $row['last_active'];
-			error_log('get_last_active - ' . $this->last_active);
-
-			return $this->last_active;
-		}
 	}
 
 	/**
@@ -846,10 +841,10 @@ class cognito
 	public function validate_session($session_token)
 	{
 		$this->load_user_data($session_token);
-		$access_token = $this->get_access_token();
+		$access_token = $this->get_access_token($session_token);
 		if (!$access_token)
 		{
-			// No token found in DB
+			// No valid token found in DB
 			return array('active' => false);
 		}
 		try
@@ -879,14 +874,14 @@ class cognito
 
 
 	/**
-	 * Attempt to refresh all access tokens that will expire in the next twn minutes
+	 * Attempt to refresh all access tokens that will expire in the next ten minutes
 	 *
 	 * @since 1.2
 	 */
 	public function refresh_access_tokens()
 	{
 		error_log('GC: refresh_access_tokens');
-		$refresh_time = time() + 600;  // refresh any access tokens that expire next 10 minutes
+		$refresh_time = $this->time_now + 600;  // refresh any access tokens that expire next 10 minutes
 		$sql = 'SELECT * FROM ' . $this->cogauth_session . " WHERE expires_at < " . $refresh_time;
 		$result = $this->db->sql_query($sql);
 
@@ -957,28 +952,23 @@ class cognito
 			// This will happen on auto login as authenticate is not called to start the session
 			// As this is an auto login the previous SID must be in the cookie, so we use this to find the
 			// session_token.
-			error_log('Empty Session token - store sid');
 			$cookie_sid = $this->request->variable($this->config['cookie_name'] . '_sid', '', false, \phpbb\request\request_interface::COOKIE);
-			error_log('  cookie sid: ' . $cookie_sid);
-			error_log('  this sid:   ' . $phpbb_sid);
 
 			$sql = 'SELECT session_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($cookie_sid) . "'";
 			$this->db->sql_query($sql);
 			$row = $this->db->sql_fetchrow();
 			$this->session_token = $row['session_token'];
-
-			error_log('  Session Toke: ' . $this->session_token);
 		}
-		$data = array('sid' => $phpbb_sid, 'last_active' => time());
+
+		$data = array('sid' => $phpbb_sid, 'last_active' => $this->time_now);
 		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
 			" WHERE session_token = '" . $this->session_token . "'";
 		$this->db->sql_query($sql);
-
 		$affected_rows = $this->db->sql_affectedrows();
 
 		if ($affected_rows == 0)
 		{
-			error_log('Failed to store SID');
+			error_log('store_sid - Failed to store SID');
 		}
 
 	}
@@ -990,7 +980,7 @@ class cognito
 	public function update_last_active()
 	{
 		$sid = $this->user->session_id;
-		$data = array('last_active' => time(),);
+		$data = array('last_active' => $this->time_now,);
 		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
 			" WHERE sid = '" . $sid . "'";
 		$this->db->sql_query($sql);
@@ -1016,7 +1006,7 @@ class cognito
 	public function delete_expired_sessions()
 	{
 		error_log('GC: delete_expired_sessions');
-		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE expires_at < " . time();
+		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE expires_at < " . $this->time_now;
 		$this->db->sql_query($sql);
 		return $this->db->sql_affectedrows();
 	}

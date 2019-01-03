@@ -11,8 +11,11 @@
  * Cognito interface test
  */
 
-namespace mrfg\cogauth\tests\event_listener;
+namespace mrfg\cogauth\tests\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+
+/** @noinspection PhpIncludeInspection */
+include_once __DIR__ . '/../../vendor/autoload.php';
 
 class cognito_test extends \phpbb_test_case
 {

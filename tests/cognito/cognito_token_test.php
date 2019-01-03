@@ -15,9 +15,11 @@ namespace mrfg\cogauth\tests\cognito;
 
 class cognito_token_test extends \phpbb_test_case
 {
+	/** @noinspection PhpUndefinedClassInspection */
 	/* @var $config \phpbb\config\config|\PHPUnit_Framework_MockObject_MockObject */
 	protected $config;
 
+	/** @noinspection PhpUndefinedClassInspection */
 	/* @var $cache \phpbb\cache\driver\driver_interface|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cache;
 

@@ -11,7 +11,7 @@
  * Cognito interface test
  */
 
-namespace mrfg\cogauth\tests\event_listener;
+namespace mrfg\cogauth\tests\dbal;
 
 class cognito_db_test extends \phpbb_database_test_case
 {
@@ -117,13 +117,7 @@ class cognito_db_test extends \phpbb_database_test_case
 		}
 	}
 
-	public function test_get_token()
-	{
-		$this->user->session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
-		$token = $this->cognito->get_access_token();
-		$this->assertEquals('eyJraWQiOiJndlwvcmNDQTBMWUhMd2piUlVmMUFweEJESVRlRlwvbHRrTUFzNXRjTUJJUzQ9IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJlZDgzYTkxMi04ZTUwLTRhOWYtYjVhNi1kOGJhNjVmMTYzZjciLCJldmVudF9pZCI6ImQ3YjgwOWNmLWI0NjEtMTFlOC05M2I2LTYzNThkYThlMTJiOSIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE1MzY1MTkyOTYsImlzcyI6Imh0dHBzOlwvXC9jb2duaXRvLWlkcC5ldS13ZXN0LTEuYW1hem9uYXdzLmNvbVwvZXUtd2VzdC0xX1Q3emptcXhhMSIsImV4cCI6MTUzNjUyMjg5NiwiaWF0IjoxNTM2NTE5Mjk2LCJqdGkiOiI0MjljNTY0OC05YTk4LTRmOGItOWRiMS1kMWFiYjZiZDM3NDEiLCJjbGllbnRfaWQiOiJmMjRhcXBkZjNhYnMyazFiMGc4bXRkdHY3IiwidXNlcm5hbWUiOiJ1MDAwMDQ5In0.i9BGWE3tgO7OjQM44cOrKK_uynq5r7vH_27IjZ747f5U7_iwQLUquxKMdU7NFg12dU264xbP3hbW_xXIPtC0IckEef1fM-V_9JQdr2iBEibugPXSME51-6KqUnzYidedFUswdZ_xvURDgZZehjD08e7V_0BNqFzmiCohBjV7i5JR-bJmhsE33bWOE1qBXFbR47x8iaI558O8ZG_06zvgQHFP08BRkwVSVyUqfv_hDkwObHGNES3eCvqLqzw0_yMr21_U52dNZE9oIWe7z01GFxiKcXB02TFHxiPFtG_Fkcv053OGBmNsY1ARVPafifSOIn6_pN-WU6aoCcaqjV63hg',
-			$token,'Asserting correct access token returned for SID');
-	}
+
 
 	public function test_phpbb_session_killed_01()
 	{

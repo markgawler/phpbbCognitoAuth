@@ -100,7 +100,7 @@ class main_listener implements EventSubscriberInterface
 
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			$session_token = $this->client->get_session_token();
-
+error_log('session_create_after');
 			/**
 			 * Cogauth session after create event
 			 *
@@ -121,6 +121,8 @@ class main_listener implements EventSubscriberInterface
 		$session = $event['session_id'];
 		/** @noinspection PhpUnusedLocalVariableInspection */
 		$session_token = $this->client->get_session_token();
+
+		error_log('session_kill_after');
 
 		$this->client->phpbb_session_killed($session);
 
@@ -168,6 +170,8 @@ class main_listener implements EventSubscriberInterface
 			else
 			{
 				//TODO this is not an error if the user has not been migrated, we should migrate the user and set the password.
+				// this may be because the SID was not found in the cogauth_session table
+				// or the access token was invalid and failed to refresh.
 				//error_log('No Access token found');
 				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 			}
@@ -244,17 +248,5 @@ class main_listener implements EventSubscriberInterface
 			}
 		}
 	}
-	/*
-	public function user_setup_after()
-	{
-		$last_active =  $this->client->get_last_active();
-		$diff = time() - $last_active;
-		if ($diff > 30)
-		{
-			error_log('update Last Active: ' );
-			$this->client->update_last_active();
-		}
-	}
-	*/
 }
 

@@ -19,7 +19,7 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
-	'ACP_COGAUTH_TOKEN_REFRESH'	=> 'Cognito Access Token refresh check frequency.',
+	'ACP_COGAUTH_TOKEN_CLEANUP'	=> 'Cognito Access Token cleanup check frequency (minutes).',
 	'ACP_COGAUTH_TITLE'			=> 'AWS Cognito Auth Module API',
 	'ACP_COGAUTH_TITLE_CFG'		=> 'API Settings',
 	'ACP_COGAUTH_CORE_SETTING_SAVED'	=> 'Settings have been saved successfully!',

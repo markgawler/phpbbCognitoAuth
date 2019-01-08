@@ -11,8 +11,6 @@ namespace mrfg\cogauth\acp;
 
 class main_module
 {
-	//  var $u_action;
-
 	/** @var string $page_title The page title */
 	public $page_title;
 
@@ -66,17 +64,16 @@ class main_module
 						trigger_error('FORM_INVALID');
 					} else {
 
-						$config->set('cogauth_token_refresh_gc', $request->variable('cogauth_token_refresh_gc', ''));
+						$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
 
-						trigger_error($language->lang('ACP_COGAUTH_TOKEN_REFRESH') . adm_back_link($this->u_action));
+						trigger_error($language->lang('ACP_COGAUTH_TOKEN_CLEANUP') . adm_back_link($this->u_action));
 					}
 				}
 
 				$template->assign_vars(array_merge($commonVars, array(
-					'COGAUTH_TOKEN_REFRESH' 	=> $config['cogauth_token_refresh_gc'],
+					'COGAUTH_TOKEN_CLEANUP' 	=> $config['cogauth_token_cleanup_gc'],
 				)));
 			break;
-			//end case
 		}
 	}
 }

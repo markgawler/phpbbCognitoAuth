@@ -9,7 +9,7 @@
 
 namespace mrfg\cogauth\cron\task;
 
-class access_token_refresh extends \phpbb\cron\task\base
+class access_token_cleanup extends \phpbb\cron\task\base
 {
 	/** @var \phpbb\config\config $config */
 	protected $config;
@@ -43,10 +43,10 @@ class access_token_refresh extends \phpbb\cron\task\base
 	 */
 	public function run()
 	{
-		error_log('Cron Run - token Refresh');
+		error_log('Cron Run - cogauth_token_cleanup');
 
-		$this->config->set('cogauth_token_refresh_last_gc', time());
-		$this->cognito->refresh_access_tokens();
+		$this->config->set('cogauth_token_cleanup_last_gc', time());
+		//$this->cognito->refresh_access_tokens();
 	}
 
 	/**
@@ -67,6 +67,6 @@ class access_token_refresh extends \phpbb\cron\task\base
 	 */
 	public function should_run()
 	{
-		return ((time() - $this->config['cogauth_token_refresh_last_gc']) >  $this->config['cogauth_token_refresh_gc']);
+		return ((time() - $this->config['cogauth_token_cleanup_last_gc']) >  $this->config['cogauth_token_cleanup_gc'] * 60);
 	}
 }

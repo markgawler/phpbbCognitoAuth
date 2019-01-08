@@ -31,14 +31,14 @@ services:
             - '@mrfg.cogauth.web_token_phpbb'
             - '%mrfg.cogauth.tables.cogauth_session%'
 
-    mrfg.cogauth.access_token_refresh:
-        class: mrfg\cogauth\cron\task\access_token_refresh
+    mrfg.cogauth.access_token_cleanup:
+        class: mrfg\cogauth\cron\task\access_token_cleanup
         arguments:
             - '@config'
             - '@dbal.conn'
             - '@mrfg.cogauth.cognito'
         calls:
-            - [set_name, [cogauth.cron.access_token_refresh]]
+            - [set_name, [cogauth.cron.access_token_cleanup]]
         tags:
             - { name: cron.task }
 

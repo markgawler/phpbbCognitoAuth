@@ -27,8 +27,6 @@ class install_acp_module_api extends \phpbb\db\migration\migration
 	{
 		return array(
 
-			array('config.add', array('cogauth_secret_key', '')),
-
 			array('module.add', array(
 				'acp',
 				'ACP_CAT_DOT_MODS',

@@ -26,6 +26,7 @@ class install_db_table extends \phpbb\db\migration\migration
 					'COLUMNS'	=> array(
 						'session_token' => array('CHAR:32', 0),
 						'last_active' => array('INT:11', 0),
+						'autologin' => array('TINT:1',0),
 						'juser_id' => array('INT:11'),
 						'user_id' => array('INT:11'),
 						'sid'		=> array('CHAR:32', ''),

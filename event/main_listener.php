@@ -31,6 +31,7 @@ class main_listener implements EventSubscriberInterface
 			'core.acp_users_overview_modify_data' => 'acp_profile_update',
 			'core.delete_user_after' 		=> 'delete_users',
 			'core.user_active_flip_after' 	=> 'user_active_flip',
+			'core.auth_login_session_create_before' => 'auth_login_session_create_before',
 			//'core.session_gc_after' 		=> 'session_gc_after',
 			//'core.user_setup_after'			=> 'user_setup_after',
 		);
@@ -44,6 +45,8 @@ class main_listener implements EventSubscriberInterface
 
 	/* @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
+
+
 
 	/**
 	 * Constructor
@@ -81,10 +84,14 @@ class main_listener implements EventSubscriberInterface
 
 	/**
 	 * @param \phpbb\event\data	$event	Event object
+	 *
+	 * @since 1.5
 	 */
-	public function session_gc_after(/** @noinspection PhpUnusedParameterInspection */ $event)
+	public function auth_login_session_create_before($event)
 	{
-		$this->client->delete_expired_sessions();
+		error_log('auth_login_session_create_before');
+
+		$this->client->set_autologin($event['autologin'] == true);
 	}
 
 	/**
@@ -121,8 +128,6 @@ error_log('session_create_after');
 		$session = $event['session_id'];
 		/** @noinspection PhpUnusedLocalVariableInspection */
 		$session_token = $this->client->get_session_token();
-
-		error_log('session_kill_after');
 
 		$this->client->phpbb_session_killed($session);
 

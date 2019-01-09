@@ -89,8 +89,6 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function auth_login_session_create_before($event)
 	{
-		error_log('auth_login_session_create_before');
-
 		$this->client->set_autologin($event['autologin'] == true);
 	}
 
@@ -107,7 +105,6 @@ class main_listener implements EventSubscriberInterface
 
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			$session_token = $this->client->get_session_token();
-error_log('session_create_after');
 			/**
 			 * Cogauth session after create event
 			 *

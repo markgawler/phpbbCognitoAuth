@@ -12,12 +12,7 @@
 
 namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
-
 use mrfg\cogauth\cognito\exception\TokenVerificationException;
-use phpbb\auth\auth;
-
-//use phpbb\request\request;
-//use phpbb\request\request_interface;
 
 define('COG_LOGIN_SUCCESS', 1);
 define('COG_LOGIN_NO_AUTH', 2);
@@ -30,7 +25,6 @@ define('COG_ERROR',99);
 
 define('COG_MIGRATE_SUCCESS',10);
 define('COG_MIGRATE_FAIL', 11);
-
 
 class cognito
 {
@@ -238,7 +232,6 @@ class cognito
 
 	protected function refresh_access_token($refresh_token, $user_id)
 	{
-		error_log('refresh_access_token');
 		$username = $this->cognito_username($user_id);
 		$response = $this->client->admin_initiate_auth(array(
 			'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
@@ -331,6 +324,7 @@ class cognito
 			else
 			{
 				$data2 = array(
+					'first_active'  => $this->time_now,
 					'user_id'		=> $user_id,
 					'username_clean' => $username_clean,
 					'sid'           => '',
@@ -643,15 +637,6 @@ class cognito
 			else{
 				$status = COG_ERROR;
 			}
-			/*switch ($e->getAwsErrorCode())
-			{
-				case 'UserNotFoundException':
-					$status = COG_USER_NOT_FOUND;
-				break;
-				default:
-					$status = COG_ERROR;
-					error_log($e->getAwsErrorMessage());
-			}*/
 		}
 
 		return array(
@@ -723,7 +708,6 @@ class cognito
 		} catch (CognitoIdentityProviderException $e)
 		{
 			$this->handleCognitoIdentityProviderException($e,$user_id,'update_user_attributes');
-			//throw $e;
 		}
 	}
 
@@ -878,39 +862,27 @@ class cognito
 	}
 
 
-//	/**
-//	 * Attempt to refresh all access tokens that will expire in the next ten minutes
-//	 *
-//	 * @since 1.2
-//	 */
-//	public function refresh_access_tokens()
-//	{
-//		error_log('GC: refresh_access_tokens');
-//		$refresh_time = $this->time_now + 600;  // refresh any access tokens that expire next 10 minutes
-//		$sql = 'SELECT * FROM ' . $this->cogauth_session . " WHERE expires_at < " . $refresh_time;
-//		$result = $this->db->sql_query($sql);
-//
-//		while ($row = $this->db->sql_fetchrow($result))
-//		{
-//			try
-//			{
-//				$user_id = $row['user_id'];
-//				$response = $this->refresh_access_token($row['refresh_token'],$user_id);
-//				$this->session_token = $row['session_token'];
-//				if (isset($response['AuthenticationResult']))
-//				{
-//					// Successful refresh of access token
-//					$this->store_auth_result($response['AuthenticationResult'], $user_id, $row['username_clean'],true);
-//
-//				}
-//			} catch (CognitoIdentityProviderException $e)
-//			{
-//				$this->handleCognitoIdentityProviderException($e, $user_id, 'refresh_access_tokens');
-//			}
-//		}
-//		$this->db->sql_freeresult($result);
-//	}
 
+	/**
+	* Clean up session tokens
+	*
+	* @since 1.5
+	*/
+	public function cleanup_session_tokens()
+	{
+		//expire non auto login
+		$expire_time = $this->time_now - ($this->config['session_length'] + 60); // Session length + one minutes
+
+		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE last_active < " . $expire_time . " AND autologin = 0";
+		$this->db->sql_query($sql);
+
+		//expire auto login
+		$expire_time = $this->time_now - ($this->config['cogauth_max_session_hours'] * 3600); // Max Session length in seconds
+
+		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE first_active < " . $expire_time;
+		$this->db->sql_query($sql);
+
+	}
 
 	/**
 	 * Loads the session user data ( user_id,username_clean,last_active)
@@ -950,7 +922,6 @@ class cognito
 	/**
 	 * @param bool $autologin
 	 *
-	 *
 	 * @since 1.5
 	 */
 	public function set_autologin($autologin)
@@ -963,11 +934,8 @@ class cognito
 	 */
 	public function store_sid($phpbb_sid)
 	{
-		error_log('store_sid');
-
 		if (!$this->session_token)
 		{
-
 			// This will happen on auto login as authenticate is not called to start the session
 			// As this is an auto login the previous SID must be in the cookie, so we use this to find the
 			// session_token.
@@ -989,7 +957,6 @@ class cognito
 		{
 			error_log('store_sid - Failed to store SID');
 		}
-
 	}
 
 
@@ -1017,16 +984,4 @@ class cognito
 		return $this->db->sql_affectedrows();
 	}
 
-//	/**
-//	 * @return int number of rows deleted
-//	 *
-//	 * todo this is not used, logic needs amending to delete when refresh token expires.
-//	 */
-//	public function delete_expired_sessions()
-//	{
-//		error_log('GC: delete_expired_sessions');
-//		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE expires_at < " . $this->time_now;
-//		$this->db->sql_query($sql);
-//		return $this->db->sql_affectedrows();
-//	}
 }

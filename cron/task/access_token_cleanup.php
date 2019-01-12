@@ -46,7 +46,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 		error_log('Cron Run - cogauth_token_cleanup');
 
 		$this->config->set('cogauth_token_cleanup_last_gc', time());
-		//$this->cognito->refresh_access_tokens();
+		$this->cognito->cleanup_session_tokens();
 	}
 
 	/**
@@ -56,7 +56,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	 */
 	public function is_runnable()
 	{
-		return false;
+		return true;
 	}
 
 	/**

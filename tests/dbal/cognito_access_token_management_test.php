@@ -109,8 +109,6 @@ class cognito_access_token_management_test extends \phpbb_database_test_case
 			->getMock()
 		;
 
-		//$this->cognito = new cognito_test_functions($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
-
 		$construct_args = array($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
 
 		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\tests\dbal\cognito_test_functions')

@@ -65,13 +65,15 @@ class main_module
 					} else {
 
 						$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
+						$config->set('cogauth_max_session_hours', $request->variable('cogauth_max_session_hours', ''));
 
-						trigger_error($language->lang('ACP_COGAUTH_TOKEN_CLEANUP') . adm_back_link($this->u_action));
+						trigger_error($language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 					}
 				}
 
 				$template->assign_vars(array_merge($commonVars, array(
 					'COGAUTH_TOKEN_CLEANUP' 	=> $config['cogauth_token_cleanup_gc'],
+					'COGAUTH_MAX_SESSION_HOURS' => $config['cogauth_max_session_hours'],
 				)));
 			break;
 		}

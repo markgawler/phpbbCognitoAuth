@@ -89,7 +89,15 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function auth_login_session_create_before($event)
 	{
-		$this->client->set_autologin($event['autologin'] == true);
+		if ($event['admin'])
+		{
+			// This is a login to the ACP so copy autologin from user session
+			$this->client->set_autologin($this->user->data['session_autologin'] == true);
+		}
+		else
+		{
+			$this->client->set_autologin($event['autologin'] == true);
+		}
 	}
 
 	/**

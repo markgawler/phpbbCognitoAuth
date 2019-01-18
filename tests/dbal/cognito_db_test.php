@@ -111,7 +111,7 @@ class cognito_db_test extends \phpbb_database_test_case
 
 	public function test_db_columns()
 	{
-		$columns = array('sid', 'access_token', 'expires_at', 'id_token', 'refresh_token', 'token_type');
+		$columns = array('sid', 'access_token', 'expires_at', 'id_token', 'refresh_token');
 		foreach ($columns as $c) {
 			$this->assertTrue($this->db_tools->sql_column_exists($this->table_prefix . 'cogauth_session', $c), 'Asserting that column "' . $c . '" exists');
 		}

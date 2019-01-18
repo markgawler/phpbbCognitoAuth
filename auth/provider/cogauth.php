@@ -236,7 +236,7 @@ class cogauth extends \phpbb\auth\provider\base
 
 		if ($cognito_user['status'] == COG_USER_FOUND &&  $cognito_user['user_status'] == 'CONFIRMED')
 		{
-			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password, $row['username_clean']);
+			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password);
 			switch ($auth_status['status'])
 			{
 				case COG_LOGIN_SUCCESS:

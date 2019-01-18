@@ -77,7 +77,7 @@ class cognito
 	protected $user_id = 0;
 
 	/**	@var string $username_clean Normalised form of the phpBB username for this session*/
-	protected $username_clean = '';
+	//protected $username_clean = '';
 
 	/** @var int $time_now  */
 	protected $time_now;
@@ -152,7 +152,7 @@ class cognito
 	 *      COG_LOGIN_ERROR_ATTEMPTS
 	 *
 	 */
-	public function authenticate($user_id, $password, $username_clean)
+	public function authenticate($user_id, $password)
 	{
 		try {
 			$response = $this->authenticate_user($user_id, $password);
@@ -164,7 +164,7 @@ class cognito
 				// session has started  (the SID changes so we cant store it in the DB yet).
 				$token = $this->get_unique_token();
 				$this->session_token = $token;
-				$this->store_auth_result($response['AuthenticationResult'],$user_id, $username_clean);
+				$this->store_auth_result($response['AuthenticationResult'],$user_id);
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult'],
@@ -303,10 +303,10 @@ class cognito
 	/**
 	 * @param array $auth_result
 	 * @param int $user_id
-	 * @param string $username_clean
+	 * //param string $username_clean
 	 * @param bool $update True is this is to update (i.e. result of refreshing access_token)
 	 */
-	private function store_auth_result($auth_result, $user_id, $username_clean, $update = false)
+	private function store_auth_result($auth_result, $user_id, $update = false)
 	{
 		if ($auth_result['AccessToken'])
 		{
@@ -314,7 +314,6 @@ class cognito
 				'access_token'  => $auth_result['AccessToken'],
 				'expires_at'    => $auth_result['ExpiresIn'] + $this->time_now,
 				'id_token'      => $auth_result['IdToken'],
-				'token_type'    => $auth_result['TokenType'],
 			);
 			if ($update)
 			{
@@ -326,7 +325,6 @@ class cognito
 				$data2 = array(
 					'first_active'  => $this->time_now,
 					'user_id'		=> $user_id,
-					'username_clean' => $username_clean,
 					'sid'           => '',
 					'session_token' => $this->session_token,
 					'refresh_token' => $auth_result['RefreshToken'],
@@ -810,7 +808,7 @@ class cognito
 				if (isset($response['AuthenticationResult']))
 				{
 					// Successful refresh of access token
-					$this->store_auth_result($response['AuthenticationResult'], $user_id, $row['username_clean'],true);
+					$this->store_auth_result($response['AuthenticationResult'], $user_id,true);
 					return $response['AuthenticationResult']['AccessToken'];
 				}
 			} catch (CognitoIdentityProviderException $e)
@@ -825,7 +823,7 @@ class cognito
 
 	/**
 	 * @param $session_token
-	 * @return array (active = bool, [username = cognito username])
+	 * @return array (active = bool, user_id, username = cognito username])
 	 */
 	public function validate_session($session_token)
 	{
@@ -843,8 +841,7 @@ class cognito
 			return array(
 				'active' => true,
 				'user_id' => $this->user_id,
-				'username' => $username,
-				'username_clean' => $this->username_clean);
+				'username' => $username);
 		} catch (TokenVerificationException $e)
 		{
 			if ($e->getMessage() == 'token expired')
@@ -890,14 +887,13 @@ class cognito
 	 */
 	public function load_user_data($session_token)
 	{
-		$sql = 'SELECT user_id,username_clean,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
+		$sql = 'SELECT user_id,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
 
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);
 
 		$this->last_active = $row['last_active'];
-		$this->username_clean = $row['username_clean'];
 		$this->user_id = $row['user_id'];
 	}
 
@@ -945,6 +941,10 @@ class cognito
 			$this->db->sql_query($sql);
 			$row = $this->db->sql_fetchrow();
 			$this->session_token = $row['session_token'];
+		}
+		if ($this->autologin === null)
+		{
+			$this->autologin = false;
 		}
 
 		$data = array('sid' => $phpbb_sid, 'last_active' => $this->time_now, 'autologin' => $this->autologin);

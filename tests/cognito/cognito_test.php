@@ -189,7 +189,7 @@ class cognito_test extends \phpbb_test_case
     public function test_update_user_email_fail01()
     {
         $this->web_token->method('verify_access_token')
-            ->willThrowException(new \mrfg\cogauth\cognito\exception\TokenVerificationException);
+            ->willThrowException(new \mrfg\cogauth\jwt\exception\TokenVerificationException);
 
         $this->web_token->expects($this->once())
             ->method('verify_access_token')
@@ -272,7 +272,7 @@ class cognito_test extends \phpbb_test_case
 	public function test_change_password_invalid_token()
 	{
 		$this->web_token->method('verify_access_token')
-			->willThrowException(new \mrfg\cogauth\cognito\exception\TokenVerificationException);
+			->willThrowException(new \mrfg\cogauth\jwt\exception\TokenVerificationException);
 
 		$this->web_token->expects($this->once())
 			->method('verify_access_token')

@@ -19,6 +19,13 @@ services:
             - '@cache.driver'
             - '%mrfg.cogauth.jwsk_url_template%'
 
+    mrfg.cogauth.authentication:
+        class: mrfg\cogauth\cognito\authentication
+        arguments:
+            - '@mrfg.cogauth.web_token_phpbb'
+            - '@dbal.conn'
+            - '%mrfg.cogauth.tables.cogauth_authentication%'
+
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
         arguments:
@@ -41,6 +48,15 @@ services:
             - [set_name, [cogauth.cron.access_token_cleanup]]
         tags:
             - { name: cron.task }
+
+    mrfg.cogauth.controller:
+        class: mrfg\cogauth\controller\main
+        arguments:
+            - '@config'
+            - '@request'
+            - '@mrfg.cogauth.cognito'
+            - '@mrfg.cogauth.web_token_phpbb'
+            - '@language'
 
 imports:
 - { resource: auth.yml }

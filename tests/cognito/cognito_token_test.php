@@ -39,6 +39,7 @@ class cognito_token_test extends \phpbb_test_case
             array('cogauth_aws_region','eu-west-1')
         );
         $this->config->method('offsetGet')->will($this->returnValueMap($map));
+
     }
 
     public function test_download_jwt_web_keys_cached()
@@ -94,15 +95,21 @@ class cognito_token_test extends \phpbb_test_case
 
 	public function test_decode_token_invalid_token_01()
 	{
+
+		$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+
 		$token = null;
 		$this->cache->expects($this->never())
 			->method('get');
 		$wt = new \mrfg\cogauth\cognito\web_token_phpbb($this->config, $this->cache, __DIR__ . '');
+
 		$this->assertTrue($wt->decode_token($token) === false, 'Asserting decoding invalid token returns False');
 	}
 
 	public function test_decode_token_invalid_token_02()
 	{
+		$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+
 		/** @var $token \Jose\Component\Signature\Serializer\string */
 		$token = 'invalid string';
 		$this->cache->expects($this->never())

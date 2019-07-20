@@ -12,7 +12,7 @@
 
 namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
-use mrfg\cogauth\cognito\exception\TokenVerificationException;
+use mrfg\cogauth\jwt\exception\TokenVerificationException;
 
 define('COG_LOGIN_SUCCESS', 1);
 define('COG_LOGIN_NO_AUTH', 2);
@@ -76,9 +76,6 @@ class cognito
 	/**	@var  int $user_id  The phpBB user ID associated with this cogauth_session */
 	protected $user_id = 0;
 
-	/**	@var string $username_clean Normalised form of the phpBB username for this session*/
-	//protected $username_clean = '';
-
 	/** @var int $time_now  */
 	protected $time_now;
 
@@ -94,7 +91,7 @@ class cognito
 	 * @param   \phpbb\request\request_interface  $request
 	 * @param   \phpbb\log\log_interface 		  $log
      * @param   cognito_client_wrapper            $client,
-     * @param   web_token_phpbb                   $web_token
+     * @param   \mrfg\cogauth\cognito\web_token_phpbb  $web_token
      * @param	string                            $cogauth_session - db table name
 	 */
 	public function __construct(
@@ -104,7 +101,7 @@ class cognito
 		\phpbb\request\request_interface $request,
 		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
-        web_token_phpbb $web_token,
+		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
         $cogauth_session)
 	{
 		$this->db = $db;
@@ -139,7 +136,6 @@ class cognito
 	/**
 	 * @param int $user_id phpBB User ID
 	 * @param string $password
-	 * @param string $username_clean - the cleaned version of the username to be stored
 	 * @throws \Exception
 	 * @return array
 	 *
@@ -285,6 +281,7 @@ class cognito
 	 * @param $length
 	 * @return string A unique Token
 	 * @throws \Exception
+	 * @deprecated
 	 */
 	private function get_unique_token($length = 32){
 		$token = "";
@@ -305,6 +302,7 @@ class cognito
 	 * @param int $user_id
 	 * //param string $username_clean
 	 * @param bool $update True is this is to update (i.e. result of refreshing access_token)
+	 * @deprecated Use Authentication class
 	 */
 	private function store_auth_result($auth_result, $user_id, $update = false)
 	{
@@ -750,8 +748,7 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			error_log('CognitoIdentityProviderException:' . $e->getAwsErrorCode());
-			//'UserNotFoundException': // No user to enable, do nothing
+			// 'UserNotFoundException': // No user to enable, do nothing
 			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_enable_user',true);
 		}
 	}
@@ -775,7 +772,7 @@ class cognito
 	}
 
 	/**
-	 * Get the access token for the current SID (or Session Token if suplied)
+	 * Get the access token for the current SID (or Session Token if supplied)
 	 * If the access token has expired attempt to refresh it
 	 * @param  string $session_token Can be used as an alternative to the SID, when the SID may not be set.
 	 * @return 	\Jose\Component\Signature\Serializer\string | false $access_token Cognito Access Token
@@ -846,8 +843,7 @@ class cognito
 		{
 			if ($e->getMessage() == 'token expired')
 			{
-				error_log('Expired fff');
-				//todo we should try refreshing the token here
+				// This shouldn't hapen
 				return array('active' => false);
 			}
 			else
@@ -970,7 +966,6 @@ class cognito
 		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
 			" WHERE sid = '" . $sid . "'";
 		$this->db->sql_query($sql);
-
 	}
 
 	/**

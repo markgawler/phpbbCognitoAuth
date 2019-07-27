@@ -33,6 +33,12 @@ class cognito_db_test extends \phpbb_database_test_case
     /** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
     protected $web_token;
 
+	/** @var $cognito_user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
+	protected $cognito_user;
+
+	/** @var $authentication \mrfg\cogauth\cognito\authentication|\PHPUnit_Framework_MockObject_MockObject */
+	protected $authentication;
+
     /** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
 	protected $client;
 
@@ -81,6 +87,19 @@ class cognito_db_test extends \phpbb_database_test_case
             ->setMethods(array('verify_access_token'))
             ->getMock();
 
+		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
+			->disableOriginalConstructor()
+			->setMethods(array('get_cognito_username'))
+			->getMock();
+
+		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\authentication')
+			->disableOriginalConstructor()
+			->setMethods(array(
+				'validate_and_store_auth_response',
+				'authenticated',
+				'get_session_token'))
+			->getMock();
+
 		$this->client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
 			->disableOriginalConstructor()
 			->getMock();
@@ -104,7 +123,10 @@ class cognito_db_test extends \phpbb_database_test_case
         $this->config->method('offsetGet')->will($this->returnValueMap($map));
 
 		/** @var $cognito \mrfg\cogauth\cognito\cognito_client_wrapper */
-		$this->cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
+		$this->cognito = new \mrfg\cogauth\cognito\cognito(
+			$this->db, $this->config, $this->user, $this->request, $this->log,
+			$this->client, $this->web_token, $this->cognito_user,
+			$this->authentication, $this->table_prefix . 'cogauth_session');
 
 	}
 

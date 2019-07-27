@@ -34,10 +34,16 @@ class cognito_test extends \phpbb_test_case
 	/** @var string */
 	protected $table_prefix;
 
-	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
-    protected $web_token;
+	/** @var $cognito_user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
+	protected $cognito_user;
 
-    /** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
+	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
+	protected $web_token;
+
+	/** @var $authentication \mrfg\cogauth\cognito\authentication|\PHPUnit_Framework_MockObject_MockObject */
+	protected $authentication;
+
+	/** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
 	protected $client;
 
 	/** @var $client \mrfg\cogauth\cognito\cognito */
@@ -70,6 +76,19 @@ class cognito_test extends \phpbb_test_case
             ->setMethods(array('verify_access_token'))
             ->getMock();
 
+		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
+			->disableOriginalConstructor()
+			->setMethods(array('get_cognito_username'))
+			->getMock();
+
+		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\authentication')
+			->disableOriginalConstructor()
+			->setMethods(array(
+				'validate_and_store_auth_response',
+				'authenticated',
+				'get_session_token'))
+			->getMock();
+
 		$this->client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
 			->disableOriginalConstructor()
 			->getMock();
@@ -93,7 +112,10 @@ class cognito_test extends \phpbb_test_case
         $this->config->method('offsetGet')->will($this->returnValueMap($map));
 
 		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
-		$this->cognito = new \mrfg\cogauth\cognito\cognito($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, '');
+		$this->cognito = new \mrfg\cogauth\cognito\cognito(
+			$this->db, $this->config, $this->user, $this->request,
+			$this->log, $this->client, $this->web_token, $this->cognito_user,
+			$this->authentication, '');
 
 	}
 
@@ -118,6 +140,11 @@ class cognito_test extends \phpbb_test_case
             ->with(array(
                 "Username" => 'u001234',
                 "UserPoolId" => 'eu-west-1_T0xxxxx1'));
+
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('1234')
+			->willReturn('u001234');
 
         $response = $this->cognito->get_user('1234');
         $this->assertTrue($response['status'] == COG_USER_FOUND, 'Asserting status is COG_USER_FOUND');
@@ -159,7 +186,12 @@ class cognito_test extends \phpbb_test_case
                 'UserPoolId' => 'eu-west-1_T0xxxxx1',
             ));
 
-        $response = $this->cognito->authenticate(1234, 'Str0n@-p@ssw0rd','some_user');
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('1234')
+			->willReturn('u001234');
+
+        $response = $this->cognito->authenticate(1234, 'Str0n@-p@ssw0rd');
         $this->assertTrue($response['status'] === COG_LOGIN_SUCCESS);
         $this->assertTrue($response['response'] == array('AccessToken' => 'token_string_1234'), 'Asserting AccessToken is returned');
     }
@@ -180,6 +212,11 @@ class cognito_test extends \phpbb_test_case
                     'Value' => 'fred@mail.com',
                 )),
             ));
+
+        $this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('123')
+			->willReturn('u000123');
 
         $response = $this->cognito->update_user_email(123,'fred@mail.com', '9876543210');
         $this->assertTrue($response, 'Asserting update_user_email');
@@ -222,6 +259,11 @@ class cognito_test extends \phpbb_test_case
 			->willThrowException(new CognitoIdentityProviderException('some message',
 				$command,array('code' => 'UserNotFoundException')));
 
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('135')
+			->willReturn('u000135');
+
 		$response = $this->cognito->update_user_email(
 			135,'fred@mail.com','4567890123');
 		$this->assertTrue($response, 'Asserting update_user_email fail access user not found');
@@ -243,6 +285,11 @@ class cognito_test extends \phpbb_test_case
 				'PreviousPassword' => 'sTr0NgPaSsWoD',
 				'ProposedPassword' => 'PaSsWoDsTr0Ng'
 			));
+
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('321')
+			->willReturn('u000321');
 
 		$response = $this->cognito->change_password(
 			321,'5678901234', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
@@ -310,6 +357,12 @@ class cognito_test extends \phpbb_test_case
 			->willThrowException(new CognitoIdentityProviderException('some message',
 				$command,array('code' => 'UserNotFoundException')));
 
+
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('132')
+			->willReturn('u000132');
+
 		$response = $this->cognito->change_password(
 			132,'4567890123', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
 		$this->assertTrue($response, 'Asserting change_password fail user not found');
@@ -339,6 +392,11 @@ class cognito_test extends \phpbb_test_case
 			->willThrowException(new CognitoIdentityProviderException('some message',
 				$command,array('code' => 'ResourceNotFoundException')));
 
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('132')
+			->willReturn('u000132');
+
 		$response = $this->cognito->change_password(
 			132,'4567890123', 'sTr0NgPaSsWoD', 'PaSsWoDsTr0Ng');
 		$this->assertFalse($response, 'Asserting change_password fail with ResourceNotFoundException');
@@ -350,6 +408,11 @@ class cognito_test extends \phpbb_test_case
 			->method('admin_disable_user')
 			->with(array('Username' => 'u000033', 'UserPoolId' => 'eu-west-1_T0xxxxx1'));
 
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('33')
+			->willReturn('u000033');
+
 		$this->cognito->admin_disable_user(33);
 	}
 
@@ -358,6 +421,11 @@ class cognito_test extends \phpbb_test_case
 		$this->client->expects($this->once())
 			->method('admin_enable_user')
 			->with(array('Username' => 'u000033', 'UserPoolId' => 'eu-west-1_T0xxxxx1'));
+
+		$this->cognito_user->expects($this->once())
+			->method('get_cognito_username')
+			->with('33')
+			->willReturn('u000033');
 
 		$this->cognito->admin_enable_user(33);
 	}

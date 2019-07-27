@@ -82,6 +82,11 @@ class cognito
 	/* @var bool */
 	protected $autologin;
 
+	/** @var \mrfg\cogauth\cognito\user $cognito_user */
+	protected $cognito_user;
+
+	/** @var \mrfg\cogauth\cognito\authentication $authentication */
+	protected $authentication;
 	/**
 	 * Database Authentication Constructor
 	 *
@@ -92,6 +97,8 @@ class cognito
 	 * @param   \phpbb\log\log_interface 		  $log
      * @param   cognito_client_wrapper            $client,
      * @param   \mrfg\cogauth\cognito\web_token_phpbb  $web_token
+	 * @param 	\mrfg\cogauth\cognito\user		  $cognito_user
+	 * @param	\mrfg\cogauth\cognito\authentication $authentication
      * @param	string                            $cogauth_session - db table name
 	 */
 	public function __construct(
@@ -102,13 +109,17 @@ class cognito
 		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-        $cogauth_session)
+		\mrfg\cogauth\cognito\user $cognito_user,
+		\mrfg\cogauth\cognito\authentication $authentication,
+		$cogauth_session)
 	{
 		$this->db = $db;
 		$this->config = $config;
 		$this->user = $user;
 		$this->request = $request;
 		$this->cogauth_session =$cogauth_session;
+		$this->cognito_user = $cognito_user;
+		$this->authentication = $authentication;
 
 		$this->time_now = time();
 
@@ -158,9 +169,9 @@ class cognito
 				// Successful login.
 				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
-				$token = $this->get_unique_token();
+				$token = $this->authentication->get_session_token();
 				$this->session_token = $token;
-				$this->store_auth_result($response['AuthenticationResult'],$user_id);
+				$this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult'],
@@ -196,7 +207,7 @@ class cognito
 
 				default;
 					$status = COG_LOGIN_NO_AUTH;
-					$this->handleCognitoIdentityProviderException($e, $user_id, 'authenticate');
+					$this->handle_cognito_identity_provider_exception($e, $user_id, 'authenticate');
 			}
 		}
 		return array(
@@ -212,7 +223,7 @@ class cognito
 	 */
 	private function authenticate_user($user_id, $password)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		$response = $this->client->admin_initiate_auth(array(
 			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 			'AuthParameters' => array(
@@ -228,7 +239,7 @@ class cognito
 
 	protected function refresh_access_token($refresh_token, $user_id)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		$response = $this->client->admin_initiate_auth(array(
 			'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
 			'AuthParameters' => array(
@@ -242,13 +253,42 @@ class cognito
 		return $response;
 	}
 
+
 	/**
-	 * @param int $user_id phpBB user id
-	 * @return string
+	 * @param $refresh_token
+	 * @param $cognito_username
+	 *
+	 * @return string Access Token
+	 *
+	 * @since version
 	 */
-	protected function cognito_username($user_id)
+	public function refresh_access_token_for_username($refresh_token, $cognito_username, $phpbb_user_id)
 	{
-		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
+		try
+		{
+			$response = $this->client->admin_initiate_auth(array(
+				'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
+				'AuthParameters' => array(
+					'REFRESH_TOKEN' => $refresh_token,
+					'SECRET_HASH'   => $this->cognito_secret_hash($cognito_username),
+				),
+				'ClientId'       => $this->client_id,
+				'UserPoolId'     => $this->user_pool_id,
+			));
+
+
+			if (isset($response['AuthenticationResult']))
+			{
+				// Successful refresh of access token
+				$this->validate_and_store_refreshed_access_token($response['AuthenticationResult']);
+				return $response['AuthenticationResult']['AccessToken'];
+			}
+			return false;
+		} catch (CognitoIdentityProviderException $e)
+		{
+			$this->handle_cognito_identity_provider_exception($e, $phpbb_user_id, 'refresh_access_tokens');
+			return false;
+		}
 	}
 
 	/**
@@ -342,7 +382,7 @@ class cognito
 	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
 	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
 	 */
-	protected function handleCognitoIdentityProviderException($e, $user_id, $action, $ignore_use_not_found = false)
+	protected function handle_cognito_identity_provider_exception($e, $user_id, $action, $ignore_use_not_found = false)
 	{
 		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
 		{
@@ -381,7 +421,7 @@ class cognito
 			}
 			catch (CognitoIdentityProviderException $e)
 			{
-				$this->handleCognitoIdentityProviderException($e, $user_id, 'migrate_user - authenticate_user');
+				$this->handle_cognito_identity_provider_exception($e, $user_id, 'migrate_user - authenticate_user');
 				return $result;
 			}
 			return $this->admin_respond_to_auth_challenge($response, $password, $user_id);
@@ -413,7 +453,7 @@ class cognito
 	 */
 	private function admin_create_user($user_id, $password, $user_attributes)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 
 		try {
 			$response = $this->client->admin_create_user(array(
@@ -437,7 +477,7 @@ class cognito
 				break;
 
 				default:
-					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_create_user');
+					$this->handle_cognito_identity_provider_exception($e, $user_id, 'admin_create_user');
 					return  array(
 						'status' => COG_MIGRATE_FAIL,
 						'error' => $e->getAwsErrorCode(),
@@ -459,7 +499,7 @@ class cognito
 	 */
 	private function admin_respond_to_auth_challenge($response, $password, $user_id)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		switch ($response['ChallengeName'])
 		{
 			case 'NEW_PASSWORD_REQUIRED':
@@ -483,7 +523,7 @@ class cognito
 				}
 				catch (CognitoIdentityProviderException $e)
 				{
-					$this->handleCognitoIdentityProviderException($e, $user_id, 'admin_respond_to_auth_challenge');
+					$this->handle_cognito_identity_provider_exception($e, $user_id, 'admin_respond_to_auth_challenge');
 
 					return array(
 						'status' => COG_MIGRATE_FAIL,
@@ -514,7 +554,7 @@ class cognito
 	 */
 	public function change_password($user_id, $access_token, $old_password, $new_password)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
 			/** @var $access_token \Jose\Component\Signature\Serializer\string */
 			if ($username !=  $this->web_token->verify_access_token($access_token))
@@ -534,7 +574,7 @@ class cognito
 			));
 			return true;
 		} catch (CognitoIdentityProviderException $e) {
-			return $this->handleCognitoIdentityProviderException($e,$user_id,'change_password', true);
+			return $this->handle_cognito_identity_provider_exception($e,$user_id,'change_password', true);
 		}
 	}
 
@@ -546,7 +586,7 @@ class cognito
 	 */
 	public function update_user_email($user_id, $email, $access_token)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
 			/** @var $access_token \Jose\Component\Signature\Serializer\string */
 			if ($username != $this->web_token->verify_access_token($access_token))
@@ -570,7 +610,7 @@ class cognito
 			return true;
 		} catch (CognitoIdentityProviderException $e)
 		{
-			return $this->handleCognitoIdentityProviderException($e,$user_id,'update_user_email', true);
+			return $this->handle_cognito_identity_provider_exception($e,$user_id,'update_user_email', true);
 		}
 	}
 
@@ -595,7 +635,7 @@ class cognito
 					$this->admin_respond_to_auth_challenge($response, $new_password, $user_id);
 				} catch (CognitoIdentityProviderException $e)
 				{
-					$this->handleCognitoIdentityProviderException($e,$user_id,'admin_change_password');
+					$this->handle_cognito_identity_provider_exception($e,$user_id,'admin_change_password');
 				}
 			}
 		}
@@ -611,7 +651,7 @@ class cognito
 	 */
 	public function get_user($user_id)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		try
 		{
 			$response = $this->client->admin_get_user(array(
@@ -625,7 +665,7 @@ class cognito
 			);
 
 		} catch (CognitoIdentityProviderException $e) {
-			$user_not_found = $this->handleCognitoIdentityProviderException($e,$user_id,'get_user', true);
+			$user_not_found = $this->handle_cognito_identity_provider_exception($e,$user_id,'get_user', true);
 			if ($user_not_found)
 			{
 				$status = COG_USER_NOT_FOUND;
@@ -650,7 +690,7 @@ class cognito
 	 */
 	private function admin_delete_user_internal($user_id)
 	{
-		$user_id = $this->cognito_username($user_id);
+		$user_id = $this->cognito_user->get_cognito_username($user_id);
 
 		$this->client->admin_delete_user(
 			array('Username' => $user_id,
@@ -696,14 +736,14 @@ class cognito
 	{
 		$data = array(
 			'UserAttributes' => $this->build_attributes_array($attributes),
-			'Username'       => $this->cognito_username($user_id),
+			'Username'       => $this->cognito_user->get_cognito_username($user_id),
 			'UserPoolId'     => $this->user_pool_id,
 		);
 		try {
 			$this->client->admin_update_user_attributes($data);
 		} catch (CognitoIdentityProviderException $e)
 		{
-			$this->handleCognitoIdentityProviderException($e,$user_id,'update_user_attributes');
+			$this->handle_cognito_identity_provider_exception($e,$user_id,'update_user_attributes');
 		}
 	}
 
@@ -731,7 +771,7 @@ class cognito
 		} catch (CognitoIdentityProviderException $e)
 		{
 			// 'UserNotFoundException'  No user to delete, do nothing
-			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_delete_user',true);
+			$this->handle_cognito_identity_provider_exception($e,$user_id,'admin_delete_user',true);
 		}
 	}
 
@@ -740,7 +780,7 @@ class cognito
 	 */
 	public function admin_enable_user($user_id)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
 			$this->client->admin_enable_user(array(
 				'Username' => $username,
@@ -749,7 +789,7 @@ class cognito
 		catch (CognitoIdentityProviderException $e)
 		{
 			// 'UserNotFoundException': // No user to enable, do nothing
-			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_enable_user',true);
+			$this->handle_cognito_identity_provider_exception($e,$user_id,'admin_enable_user',true);
 		}
 	}
 
@@ -758,7 +798,7 @@ class cognito
 	 */
 	public function admin_disable_user($user_id)
 	{
-		$username = $this->cognito_username($user_id);
+		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
 			$this->client->admin_disable_user(array(
 				'Username' => $username,
@@ -767,7 +807,7 @@ class cognito
 		catch (CognitoIdentityProviderException $e)
 		{
 			// 'UserNotFoundException': // No user to disable, do nothing
-			$this->handleCognitoIdentityProviderException($e,$user_id,'admin_disable_user',true);
+			$this->handle_cognito_identity_provider_exception($e,$user_id,'admin_disable_user',true);
 		}
 	}
 
@@ -776,6 +816,7 @@ class cognito
 	 * If the access token has expired attempt to refresh it
 	 * @param  string $session_token Can be used as an alternative to the SID, when the SID may not be set.
 	 * @return 	\Jose\Component\Signature\Serializer\string | false $access_token Cognito Access Token
+	 * @deprecated use authentication class
 	 */
 	public function get_access_token($session_token = null)
 	{
@@ -810,7 +851,7 @@ class cognito
 				}
 			} catch (CognitoIdentityProviderException $e)
 			{
-				$this->handleCognitoIdentityProviderException($e, $user_id, 'refresh_access_tokens');
+				$this->handle_cognito_identity_provider_exception($e, $user_id, 'refresh_access_tokens');
 				return false;
 			}
 		}
@@ -923,6 +964,7 @@ class cognito
 
 	/**
 	 * @param string $phpbb_sid        phpBB SID
+	 * @deprecated
 	 */
 	public function store_sid($phpbb_sid)
 	{

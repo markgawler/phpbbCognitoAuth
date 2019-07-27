@@ -9,20 +9,20 @@ services:
         tags:
             - { name: event.listener }
 
-    mrfg.cogauth.cognito_client_wrapper:
-        class: mrfg\cogauth\cognito\cognito_client_wrapper
-
-    mrfg.cogauth.web_token_phpbb:
-        class: mrfg\cogauth\cognito\web_token_phpbb
+    mrfg.cogauth.controller:
+        class: mrfg\cogauth\controller\main
         arguments:
             - '@config'
-            - '@cache.driver'
-            - '%mrfg.cogauth.jwsk_url_template%'
+            - '@request'
+            - '@mrfg.cogauth.cognito'
+            - '@mrfg.cogauth.web_token_phpbb'
+            - '@language'
 
     mrfg.cogauth.authentication:
         class: mrfg\cogauth\cognito\authentication
         arguments:
             - '@mrfg.cogauth.web_token_phpbb'
+            - '@mrfg.cogauth.cognito'
             - '@dbal.conn'
             - '%mrfg.cogauth.tables.cogauth_authentication%'
 
@@ -36,7 +36,24 @@ services:
             - '@log'
             - '@mrfg.cogauth.cognito_client_wrapper'
             - '@mrfg.cogauth.web_token_phpbb'
+            - '@mrfg.cogauth.user'
+            - '@mrfg.cogauth.authentication'
             - '%mrfg.cogauth.tables.cogauth_session%'
+
+    mrfg.cogauth.cognito_client_wrapper:
+        class: mrfg\cogauth\cognito\cognito_client_wrapper
+
+    mrfg.cogauth.user:
+        class: mrfg\cogauth\cognito\user
+        arguments:
+            - '@dbal.conn'
+
+    mrfg.cogauth.web_token_phpbb:
+        class: mrfg\cogauth\cognito\web_token_phpbb
+        arguments:
+            - '@config'
+            - '@cache.driver'
+            - '%mrfg.cogauth.jwsk_url_template%'
 
     mrfg.cogauth.access_token_cleanup:
         class: mrfg\cogauth\cron\task\access_token_cleanup
@@ -49,14 +66,7 @@ services:
         tags:
             - { name: cron.task }
 
-    mrfg.cogauth.controller:
-        class: mrfg\cogauth\controller\main
-        arguments:
-            - '@config'
-            - '@request'
-            - '@mrfg.cogauth.cognito'
-            - '@mrfg.cogauth.web_token_phpbb'
-            - '@language'
+
 
 imports:
 - { resource: auth.yml }

@@ -40,7 +40,7 @@ abstract class web_token
 	public  function __construct()
 	{
 		// The algorithm manager with the RS256 algorithm.
-		$this->algorithmManager = AlgorithmManager::create(array(
+		$this->algorithmManager = new AlgorithmManager(array(
 			new RS256(),
 		));
 
@@ -49,12 +49,14 @@ abstract class web_token
 			$this->algorithmManager
 		);
 
-		$jsonConverter = new StandardConverter();
+		//$jsonConverter = new StandardConverter();
 
-		$this->serializerManager = JWSSerializerManager::create(array(
-			new CompactSerializer($jsonConverter),
+		//$this->serializerManager = new JWSSerializerManager(array(
+		//	new CompactSerializer($jsonConverter),
+		//));
+		$this->serializerManager = new JWSSerializerManager(array(
+			new CompactSerializer(),
 		));
-
 	}
 
 	/**

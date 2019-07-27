@@ -27,6 +27,8 @@ class cognito_authentication_test extends \phpbb_database_test_case
 	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
 	protected $web_token;
 
+	/** @var $cognito  \mrfg\cogauth\cognito\cognito|\PHPUnit_Framework_MockObject_MockObject  */
+	protected $cognito;
 
 	static protected function setup_extensions()
 	{
@@ -56,6 +58,15 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			->setMethods(array('decode_token'))
 			->getMock();
 
+		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito')
+			->disableOriginalConstructor()
+			->setMethods(array('refresh_access_token_for_username'))
+			->getMock();
+
+		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito')
+			->disableOriginalConstructor()
+			->setMethods(array('refresh_access_token_for_username'))
+			->getMock();
 	}
 
 
@@ -95,10 +106,10 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			'preferred_username' => $preferred_username);
 		$access_token_decoded = 'decoded access token';
 
-		$encoded_response = json_encode((array(
+		$auth_response = array(
 			'id_token'=> $id_token,
 			'access_token' => $access_token,
-			'refresh_token' => $refresh_token)));
+			'refresh_token' => $refresh_token);
 
 		$map=array(
 			array($id_token, $id_token_decoded),
@@ -108,7 +119,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			->method('decode_token')->will($this->returnValueMap($map));
 
 		$auth = new \mrfg\cogauth\cognito\authentication(
-			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+			$this->web_token, $this->cognito, $this->db,$this->table_prefix . 'cogauth_authentication');
 
 		// Validate the Database Store
 		$session_token =  $auth->get_session_token();
@@ -122,13 +133,14 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			'email' 		=> $email,
 			'phpbb_user_id' => $phpbb_user_id,
 			'sid' 			=> $sid,
-			'access_token'  => $access_token_decoded,
+			'access_token'  => $access_token,
 			'refresh_token' => $refresh_token);
 
-		$result = $auth->validate_and_store_auth_response($encoded_response);
+		$result = $auth->validate_and_store_auth_response($auth_response);
 
 		$this->assertTrue($result,'Asserting validate_and_store_auth_response is True');
 
+		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated($phpbb_user_id, $sid);
 
 		$sql = 'SELECT * FROM ' . $this->table_prefix . "cogauth_authentication WHERE  session_token = '" . $session_token . "'";

@@ -42,6 +42,12 @@ class cognito_access_token_management_test extends \phpbb_database_test_case
 	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
 	protected $web_token;
 
+	/** @var $ \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
+	protected $cognito_user;
+
+	/** @var $authentication \mrfg\cogauth\cognito\authentication|\PHPUnit_Framework_MockObject_MockObject */
+	protected $authentication;
+
 	/** @noinspection PhpUndefinedClassInspection */
 	/** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
 	protected $client;
@@ -80,39 +86,49 @@ class cognito_access_token_management_test extends \phpbb_database_test_case
 
 		$this->user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
-			->getMock()
-		;
+			->getMock();
 
 		$this->config = $this->getMockBuilder('\phpbb\config\config')
 			->disableOriginalConstructor()
-			->getMock()
-		;
+			->getMock();
 
 		$this->web_token = $this->getMockBuilder('\mrfg\cogauth\cognito\web_token_phpbb')
 			->disableOriginalConstructor()
 			->setMethods(array('verify_access_token'))
-			->getMock()
-		;
+			->getMock();
+
+		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
+			->disableOriginalConstructor()
+			->setMethods(array('get_cognito_username'))
+			->getMock();
+
+		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\authentication')
+			->disableOriginalConstructor()
+			->setMethods(array(
+				'validate_and_store_auth_response',
+				'authenticated',
+				'get_session_token'))
+			->getMock();
 
 		$this->client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
 			->disableOriginalConstructor()
-			->getMock()
-		;
+			->getMock();
 
 		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
 			->disableOriginalConstructor()
-			->getMock()
-		;
+			->getMock();
 
 		$this->request = $this->getMockBuilder('\phpbb\request\request_interface')
 			->disableOriginalConstructor()
-			->getMock()
-		;
+			->getMock();
 
-		$construct_args = array($this->db, $this->config, $this->user, $this->request, $this->log, $this->client, $this->web_token, $this->table_prefix . 'cogauth_session');
+		$construct_args = array(
+			$this->db, $this->config, $this->user, $this->request,
+			$this->log, $this->client, $this->web_token, $this->cognito_user,
+			$this->authentication, $this->table_prefix . 'cogauth_session');
 
 		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\tests\dbal\cognito_test_functions')
-			->setMethods(array('refresh_access_token','handleCognitoIdentityProviderException'))
+			->setMethods(array('refresh_access_token','handle_cognito_identity_provider_exception'))
 			->setConstructorArgs($construct_args)
 			->getMock();
 	}
@@ -185,7 +201,7 @@ class cognito_access_token_management_test extends \phpbb_database_test_case
 		$this->user->session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
 
 		$this->cognito->expects($this->once())
-			->method('handleCognitoIdentityProviderException');
+			->method('handle_cognito_identity_provider_exception');
 
 		$token = $this->cognito->get_access_token();
 		$this->assertEquals(false,

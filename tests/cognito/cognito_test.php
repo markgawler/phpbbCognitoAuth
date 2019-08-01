@@ -40,7 +40,7 @@ class cognito_test extends \phpbb_test_case
 	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
 	protected $web_token;
 
-	/** @var $authentication \mrfg\cogauth\cognito\authentication|\PHPUnit_Framework_MockObject_MockObject */
+	/** @var $authentication \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
 	protected $authentication;
 
 	/** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
@@ -81,7 +81,7 @@ class cognito_test extends \phpbb_test_case
 			->setMethods(array('get_cognito_username'))
 			->getMock();
 
-		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\authentication')
+		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
 			->disableOriginalConstructor()
 			->setMethods(array(
 				'validate_and_store_auth_response',

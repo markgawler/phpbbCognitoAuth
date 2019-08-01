@@ -13,7 +13,6 @@ use Jose\Component\Signature\Algorithm\RS256;
 use Jose\Component\Signature\JWSVerifier;
 use Jose\Component\Signature\Serializer\JWSSerializerManager;
 use Jose\Component\Signature\Serializer\CompactSerializer;
-use Jose\Component\Core\Converter\StandardConverter;
 use mrfg\cogauth\jwt\exception\TokenVerificationException;
 
 abstract class web_token
@@ -49,11 +48,6 @@ abstract class web_token
 			$this->algorithmManager
 		);
 
-		//$jsonConverter = new StandardConverter();
-
-		//$this->serializerManager = new JWSSerializerManager(array(
-		//	new CompactSerializer($jsonConverter),
-		//));
 		$this->serializerManager = new JWSSerializerManager(array(
 			new CompactSerializer(),
 		));
@@ -65,7 +59,6 @@ abstract class web_token
 	 *
 	 * @since 1.0
 	 */
-
 	protected function deserialize($token)
 	{
 

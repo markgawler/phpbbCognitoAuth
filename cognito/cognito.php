@@ -85,21 +85,21 @@ class cognito
 	/** @var \mrfg\cogauth\cognito\user $cognito_user */
 	protected $cognito_user;
 
-	/** @var \mrfg\cogauth\cognito\authentication $authentication */
+	/** @var \mrfg\cogauth\cognito\auth_result $authentication */
 	protected $authentication;
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\db\driver\driver_interface $db
-	 * @param	\phpbb\config\config              $config
-	 * @param	\phpbb\user                       $user
-	 * @param   \phpbb\request\request_interface  $request
-	 * @param   \phpbb\log\log_interface 		  $log
-     * @param   cognito_client_wrapper            $client,
-     * @param   \mrfg\cogauth\cognito\web_token_phpbb  $web_token
-	 * @param 	\mrfg\cogauth\cognito\user		  $cognito_user
-	 * @param	\mrfg\cogauth\cognito\authentication $authentication
-     * @param	string                            $cogauth_session - db table name
+	 * @param	\phpbb\db\driver\driver_interface    $db
+	 * @param	\phpbb\config\config                 $config
+	 * @param	\phpbb\user                          $user
+	 * @param   \phpbb\request\request_interface      $request
+	 * @param   \phpbb\log\log_interface              $log
+     * @param   cognito_client_wrapper                $client,
+     * @param   \mrfg\cogauth\cognito\web_token_phpbb $web_token
+	 * @param 	\mrfg\cogauth\cognito\user           $cognito_user
+	 * @param	\mrfg\cogauth\cognito\auth_result    $authentication
+     * @param	string                               $cogauth_session - db table name
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -110,7 +110,7 @@ class cognito
         cognito_client_wrapper $client,
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
 		\mrfg\cogauth\cognito\user $cognito_user,
-		\mrfg\cogauth\cognito\authentication $authentication,
+		\mrfg\cogauth\cognito\auth_result $authentication,
 		$cogauth_session)
 	{
 		$this->db = $db;
@@ -169,9 +169,9 @@ class cognito
 				// Successful login.
 				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
-				$token = $this->authentication->get_session_token();
-				$this->session_token = $token;
-				$this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
+				//$token = $this->authentication->get_session_token();
+				//$this->session_token = $token;
+				$token =$this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult'],
@@ -237,7 +237,7 @@ class cognito
 		return $response;
 	}
 
-	protected function refresh_access_token($refresh_token, $user_id)
+	public function refresh_access_token($refresh_token, $user_id)
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		$response = $this->client->admin_initiate_auth(array(

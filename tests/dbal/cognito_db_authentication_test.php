@@ -101,15 +101,15 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			'sub' => $uuid,
 			'cognito:username' => $cognito_username,
 			'nickname' => $nickname,
-			'expires' => $expires,
+			'exp' => $expires,
 			'email' => $email,
 			'preferred_username' => $preferred_username);
 		$access_token_decoded = 'decoded access token';
 
 		$auth_response = array(
-			'id_token'=> $id_token,
-			'access_token' => $access_token,
-			'refresh_token' => $refresh_token);
+			'IdToken'=> $id_token,
+			'AccessToken' => $access_token,
+			'RefreshToken' => $refresh_token);
 
 		$map=array(
 			array($id_token, $id_token_decoded),
@@ -118,8 +118,8 @@ class cognito_authentication_test extends \phpbb_database_test_case
 		$this->web_token->expects($this->exactly(2))
 			->method('decode_token')->will($this->returnValueMap($map));
 
-		$auth = new \mrfg\cogauth\cognito\authentication(
-			$this->web_token, $this->cognito, $this->db,$this->table_prefix . 'cogauth_authentication');
+		$auth = new \mrfg\cogauth\cognito\auth_result(
+			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
 
 		// Validate the Database Store
 		$session_token =  $auth->get_session_token();
@@ -138,7 +138,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 
-		$this->assertTrue($result,'Asserting validate_and_store_auth_response is True');
+		$this->assertEquals($session_token, $result,'Asserting validate_and_store_auth_response is True');
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated($phpbb_user_id, $sid);

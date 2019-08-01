@@ -5,6 +5,7 @@ services:
         arguments:
             - '@user'
             - '@mrfg.cogauth.cognito'
+            - '@mrfg.cogauth.auth_result'
             - '@dispatcher'
         tags:
             - { name: event.listener }
@@ -18,11 +19,17 @@ services:
             - '@mrfg.cogauth.web_token_phpbb'
             - '@language'
 
-    mrfg.cogauth.authentication:
-        class: mrfg\cogauth\cognito\authentication
+    mrfg.cogauth.cognito_controller:
+        class: mrfg\cogauth\cognito\controler
+        arguments:
+            - '@user'
+            - '@mrfg.cogauth.auth_result'
+            - '@mrfg.cogauth.cognito'
+
+    mrfg.cogauth.auth_result:
+        class: mrfg\cogauth\cognito\auth_result
         arguments:
             - '@mrfg.cogauth.web_token_phpbb'
-            - '@mrfg.cogauth.cognito'
             - '@dbal.conn'
             - '%mrfg.cogauth.tables.cogauth_authentication%'
 
@@ -37,7 +44,7 @@ services:
             - '@mrfg.cogauth.cognito_client_wrapper'
             - '@mrfg.cogauth.web_token_phpbb'
             - '@mrfg.cogauth.user'
-            - '@mrfg.cogauth.authentication'
+            - '@mrfg.cogauth.auth_result'
             - '%mrfg.cogauth.tables.cogauth_session%'
 
     mrfg.cogauth.cognito_client_wrapper:

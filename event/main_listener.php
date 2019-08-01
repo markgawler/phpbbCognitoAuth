@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * AWS Cognito Authentication. An extension for the phpBB Forum Software package.
@@ -7,15 +8,11 @@
  * @license GNU General Public License, version 2 (GPL-2.0)
  *
  */
+/** @noinspection PhpUnused */
 
 namespace mrfg\cogauth\event;
 
-/**
- * @ignore
- */
-
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
+/** @noinspection PhpUndefinedClassInspection */
 /**
  * AWS Cognito Authentication Event listener.
  */
@@ -46,20 +43,24 @@ class main_listener implements EventSubscriberInterface
 	/* @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
 
-
+	/* @var \mrfg\cogauth\cognito\auth_result $auth_result */
+	protected $auth_result;
 
 	/**
 	 * Constructor
 	 *
 	 * @param \phpbb\user               $user       User object
 	 * @param \mrfg\cogauth\cognito\cognito $client
+	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
 	 * @param \phpbb\event\dispatcher_interface	$dispatcher	Event dispatcher
 	 */
 	public function __construct(
 		\phpbb\user $user,
 		\mrfg\cogauth\cognito\cognito $client,
+		\mrfg\cogauth\cognito\auth_result $auth_result,
 		\phpbb\event\dispatcher_interface $dispatcher)
 	{
+		$this->auth_result = $auth_result;
 		$this->user = $user;
 		$this->client = $client;
 		$this->dispatcher = $dispatcher;
@@ -71,6 +72,7 @@ class main_listener implements EventSubscriberInterface
 	 *
 	 * @param \phpbb\event\data	$event	Event object
 	 */
+
 	public function load_language_on_setup($event)
 	{
 		$lang_set_ext = $event['lang_set_ext'];
@@ -101,7 +103,8 @@ class main_listener implements EventSubscriberInterface
 	}
 
 	/**
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
+	 * @throws \mrfg\cogauth\cognito\exception\cogauth_authentication_exception
 	 */
 	public function session_create_after($event)
 	{
@@ -109,10 +112,9 @@ class main_listener implements EventSubscriberInterface
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
         {
 			// Now we have the SID we can store it in the cogauth_session table..
-            $this->client->store_sid($data['session_id']);
-
 			/** @noinspection PhpUnusedLocalVariableInspection */
-			$session_token = $this->client->get_session_token();
+			$session_token = $this->auth_result->authenticated(
+				$this->user->data['user_id'], $data['session_id']);
 			/**
 			 * Cogauth session after create event
 			 *

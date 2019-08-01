@@ -13,16 +13,13 @@ namespace mrfg\cogauth\cognito;
 use mrfg\cogauth\jwt\exception\TokenVerificationException;
 use mrfg\cogauth\cognito\exception\cogauth_authentication_exception;
 
-class authentication
+class auth_result
 {
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
 	/** @var \mrfg\cogauth\cognito\web_token_phpbb  */
 	protected $web_token;
-
-	/** @var \mrfg\cogauth\cognito\cognito */
-	protected $cognito;
 
 	/** @var int $time_now  */
 	protected $time_now;
@@ -33,7 +30,7 @@ class authentication
 	/** @var string $refresh_token */
 	protected $refresh_token;
 
-	/** @var string $uuid cogneto sub, UUID for the user */
+	/** @var string $uuid cognito sub, UUID for the user */
 	protected $uuid;
 
 	/** @var string $cognito_username */
@@ -51,9 +48,6 @@ class authentication
 	/** @var string $email */
 	protected $email;
 
-	/** @var boolean $authenticated */
-	protected $authenticated;
-
 	/** @var string $sid phpBB sid */
 	protected $sid;
 
@@ -70,80 +64,57 @@ class authentication
 	 * Database Authentication Constructor
 	 *
 	 * @param \mrfg\cogauth\cognito\web_token_phpbb $web_token
-	 * @param \mrfg\cogauth\cognito\cognito $cognito
 	 * @param \phpbb\db\driver\driver_interface $db
      * @param	string      $cogauth_authentication - db table name
 	 */
 	public function __construct(
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-		\mrfg\cogauth\cognito\cognito $cognito,
 		\phpbb\db\driver\driver_interface $db,
 		$cogauth_authentication)
 	{
 		$this->web_token = $web_token;
-		$this->cognito =$cognito;
 		$this->db = $db;
 		$this->cogauth_authentication = $cogauth_authentication;  //DB Table name
 
 		$this->time_now = time();
 
-		$this->authenticated = False;
-		$this->access_token = null;
-		$this->refresh_token = null;
-
 	}
 
 	/**
-	 *
+	 * Store or update the Authentication result
 	 * @param array $response - AWS Authentication Result
+	 * @param bool	$refreshed - true is the storing a refreshed Access token
 	 *
-	 * @return boolean False if validation fails.
-	 *
-	 * @since 1.0
-	 */
-	public function validate_and_store_auth_response($response){
-		try
-		{
-			$id_token = $this->web_token->decode_token($response['id_token']);
-			$this->web_token->decode_token($response['access_token']);
-		} catch  (TokenVerificationException $e)
-		{
-			return false;
-		}
-
-		$this->store_access_token($response['access_token']);
-		$this->store_id_token($id_token);
-		$this->store_refresh_token($response['refresh_token']);
-
-
-		return true;
-
-	}
-
-	/**
-	 * Update the stored the Access and Refres token
-	 * @param string|\Jose\Component\Signature\Serializer\string $access_token AWS Cognito Access Token
-	 * @param string $refresh_token AWS Cognito Refresh token
-	 *
-	 * @return bool True if Acess token is valid
+	 * @return boolean | string False if validation fails otherwise a session_token.
 	 *
 	 * @since 1.0
 	 */
-	public function store_refreshed_access_token($access_token, $refresh_token)
+	public function validate_and_store_auth_response($response, $refreshed = false)
 	{
 		try
 		{
-			$decoded_token = $this->web_token->decode_token($access_token);
+			$id_token = $this->web_token->decode_token($response['IdToken']);
+			$this->web_token->decode_token($response['AccessToken']);
 		} catch  (TokenVerificationException $e)
 		{
 			return false;
 		}
-		$this->expires = $decoded_token['expires']; //todo is this exp or expires
 
-		$this->store_access_token($access_token);
-		$this->store_refresh_token($refresh_token);
-		$this->update_auth_data();
-		return true;
+		$this->store_access_token($response['AccessToken']);
+
+		# If this is a refreshed Access Token do not decode and store the parameters.
+		if (! $refreshed)
+		{
+			$this->store_id_token($id_token);
+		}
+		$this->store_refresh_token($response['RefreshToken']);
+
+		# Only commit the data to DB if the session_token has been set previously and this is a token refresh.
+		# The data cannot be committed until after the login as the user id is unknown and the SID will change at login.
+		if ($this->session_token && $refreshed){
+			$this->update_auth_data();
+		}
+		return $this->get_session_token();
 	}
 
 
@@ -160,7 +131,7 @@ class authentication
 		$this->cognito_username =  $token['cognito:username'];
 		$this->preferred_username = $token['preferred_username'];
 		$this->nickname = $token['nickname'];
-		$this->expires = $token['expires'];  //todo is this exp ore expires
+		$this->expires = $token['exp'];
 		$this->email = $token['email'];
 	}
 
@@ -201,11 +172,11 @@ class authentication
 	public function authenticated($phpbb_user_id, $sid){
 		if ($sid == ""){
 			throw new \mrfg\cogauth\cognito\exception\cogauth_authentication_exception(
-				'Atempt to set authenticated failed, Invalid SID');
+				'Attempt to set authenticated failed, Invalid SID');
 		}
 		if ($this->access_token == ""){
 			throw new \mrfg\cogauth\cognito\exception\cogauth_authentication_exception(
-				'Atempt to set authenticated failed, No Access Token');
+				'Attempt to set authenticated failed, No Access Token');
 		}
 		$this->sid = $sid;
 		$this->store_auth_data($phpbb_user_id, $sid);
@@ -261,12 +232,10 @@ class authentication
 		$this->db->sql_query($sql);
 	}
 
-
-
 	/**
 	 * @param string $selector - SQL fragment to select auth data
 	 *
-	 * @return bool True if data loaded, False if no authentication data for selsctor
+	 * @return bool True if data loaded, False if no authentication data for selector
 	 *
 	 * @since 1.0
 	 */
@@ -313,8 +282,10 @@ class authentication
 	 * Get the access token for the SID
 	 * If the access token has expired attempt to refresh it
 	 * @param  string $sid
-	 * @return 	string | bool false or Cognito Access Token
-	 */
+	 * @return    bool | array
+	 *        False if fails to get access token from store,
+	 *        Array [mode = access_token] [token = access token string]
+	 *              [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]	 */
 	public function get_access_token_from_sid($sid)
 	{
 		if ($this->sid !== $sid || $this->access_token == null)
@@ -332,7 +303,10 @@ class authentication
 	 * If the access token has expired attempt to refresh it
 	 *
 	 * @param string $session_token
-	 * @return 	string | bool  false or Cognito Access Token
+	 * @return    bool | array
+	 *        False if fails to get access token from store,
+	 *        Array [mode = access_token] [token = access token string]
+	 *              [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]
 	 */
 	public function get_access_token_from_session_token($session_token)
 	{
@@ -348,27 +322,27 @@ class authentication
 
 	/**
 	 *
-	 * @return bool|string|null
-	 *
+	 * @return  array [mode = access_token] [token = access token string]
+	 *                [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]
 	 * @since version
 	 */
 	private function get_access_token()
 	{
-		// refresh if the token expires in less than 300 seconds (5 min)
+		// refresh if the access_token expires in less than 300 seconds (5 min)
 		if ($this->time_now  > ($this->expires - 300))
 		{
 			# Refresh the access token
-			$access_token = $this->cognito->refresh_access_token_for_username(
-				$this->refresh_token, $this->cognito_username, $this->phpbb_user_id);
-			if ($access_token)
-			{
-				$this->access_token = $access_token;
-			}
-			else {
-				return false;
-			}
+			return array(
+				'mode'    => 'refresh',
+				'token'   => $this->refresh_token,
+				'user_id' => $this->phpbb_user_id);
 		}
-		return $this->access_token;
+		else
+		{
+			return array(
+				'mode' => 'access_token',
+				'token' => $this->access_token);
+		}
 	}
 
 

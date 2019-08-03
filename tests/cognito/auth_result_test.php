@@ -22,7 +22,7 @@ class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 }
 
 
-class authentication_test extends \phpbb_test_case
+class auth_result_test extends \phpbb_test_case
 {
 	/** @var $web_token \mrfg\cogauth\cognito\web_token_phpbb|\PHPUnit_Framework_MockObject_MockObject */
 	protected $web_token;
@@ -59,6 +59,24 @@ class authentication_test extends \phpbb_test_case
 		//	->setMethods(array('authenticated'));
 
     }
+
+    public function test_get_session_token()
+	{
+		$auth = new \mrfg\cogauth\cognito\auth_result(
+			$this->web_token, $this->db,'cogauth_authentication');
+
+		// Get the session token but dont create a token if one dosn't exist.
+		$token = $auth->get_session_token(false);
+		$this->assertNull($token, 'Validating token not initialized ');
+
+		// Get the session token this time create one
+		$token = $auth->get_session_token();
+		$this->assertNotNull($token, 'Validating creation of token');
+
+		// fetch the session token
+		$this->assertEquals($token, $auth->get_session_token(false), 'validating correct retrieval');
+		$this->assertEquals($token, $auth->get_session_token(), 'validating correct retrieval');
+	}
 
     public function test_validate_and_store_auth_response_happy_day()
     {
@@ -375,7 +393,6 @@ class authentication_test extends \phpbb_test_case
 
 		$auth = new \mrfg\cogauth\tests\cognito\auth_result_test_functions(
 			$this->web_token, $this->db,'cogauth_authentication');
-		$time_now = time();
 		$auth->set_time_now($time_now);
 
 		// Is he SQL query formed correctly

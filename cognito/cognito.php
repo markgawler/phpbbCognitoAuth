@@ -70,9 +70,6 @@ class cognito
     /** @var string  The key to the cogauth_session table */
 	protected $session_token;
 
-	/** @var int Time in seconds */
-	protected $last_active;
-
 	/**	@var  int $user_id  The phpBB user ID associated with this cogauth_session */
 	protected $user_id = 0;
 
@@ -253,44 +250,6 @@ class cognito
 		return $response;
 	}
 
-
-	/**
-	 * @param $refresh_token
-	 * @param $cognito_username
-	 *
-	 * @return string Access Token
-	 *
-	 * @since version
-	 */
-	public function refresh_access_token_for_username($refresh_token, $cognito_username, $phpbb_user_id)
-	{
-		try
-		{
-			$response = $this->client->admin_initiate_auth(array(
-				'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
-				'AuthParameters' => array(
-					'REFRESH_TOKEN' => $refresh_token,
-					'SECRET_HASH'   => $this->cognito_secret_hash($cognito_username),
-				),
-				'ClientId'       => $this->client_id,
-				'UserPoolId'     => $this->user_pool_id,
-			));
-
-
-			if (isset($response['AuthenticationResult']))
-			{
-				// Successful refresh of access token
-				$this->validate_and_store_refreshed_access_token($response['AuthenticationResult']);
-				return $response['AuthenticationResult']['AccessToken'];
-			}
-			return false;
-		} catch (CognitoIdentityProviderException $e)
-		{
-			$this->handle_cognito_identity_provider_exception($e, $phpbb_user_id, 'refresh_access_tokens');
-			return false;
-		}
-	}
-
 	/**
 	 * @param string $username
 	 *
@@ -317,63 +276,6 @@ class cognito
 		return base64_encode($hash);
 	}
 
-	/**
-	 * @param $length
-	 * @return string A unique Token
-	 * @throws \Exception
-	 * @deprecated
-	 */
-	private function get_unique_token($length = 32){
-		$token = "";
-		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
-		$code_alphabet.= "0123456789";
-		$max = strlen($code_alphabet);
-
-		for ($i=0; $i < $length; $i++) {
-			$token .= $code_alphabet[random_int(0, $max-1)];
-		}
-
-		return $token;
-	}
-
-	/**
-	 * @param array $auth_result
-	 * @param int $user_id
-	 * //param string $username_clean
-	 * @param bool $update True is this is to update (i.e. result of refreshing access_token)
-	 * @deprecated Use Authentication class
-	 */
-	private function store_auth_result($auth_result, $user_id, $update = false)
-	{
-		if ($auth_result['AccessToken'])
-		{
-			$data1 = array(
-				'access_token'  => $auth_result['AccessToken'],
-				'expires_at'    => $auth_result['ExpiresIn'] + $this->time_now,
-				'id_token'      => $auth_result['IdToken'],
-			);
-			if ($update)
-			{
-				$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data1) .
-					" WHERE session_token = '" . $this->session_token . "'";
-			}
-			else
-			{
-				$data2 = array(
-					'first_active'  => $this->time_now,
-					'user_id'		=> $user_id,
-					'sid'           => '',
-					'session_token' => $this->session_token,
-					'refresh_token' => $auth_result['RefreshToken'],
-				);
-				$fields = array_merge($data1, $data2);
-				$sql = 'INSERT INTO ' . $this->cogauth_session . ' ' . $this->db->sql_build_array('INSERT', $fields);
-			}
-
-			$this->db->sql_query($sql);
-		}
-	}
 
 	/**
 	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
@@ -812,96 +714,13 @@ class cognito
 	}
 
 	/**
-	 * Get the access token for the current SID (or Session Token if supplied)
-	 * If the access token has expired attempt to refresh it
-	 * @param  string $session_token Can be used as an alternative to the SID, when the SID may not be set.
-	 * @return 	\Jose\Component\Signature\Serializer\string | false $access_token Cognito Access Token
-	 * @deprecated use authentication class
-	 */
-	public function get_access_token($session_token = null)
-	{
-		$sql = 'SELECT access_token, refresh_token, expires_at, user_id FROM ' . $this->cogauth_session . ' WHERE ';
-		if ($session_token)
-		{
-			$sql .= "session_token = '" . $this->db->sql_escape($session_token) . "'";
-		}
-		else
-		{
-			$sql .= "sid = '" . $this->db->sql_escape($this->user->session_id) . "'";
-		}
-		$result = $this->db->sql_query($sql);
-		$row = $this->db->sql_fetchrow($result);
-		$this->db->sql_freeresult($result);
-
-		if (!$row)
-		{
-			return false;
-		}
-		if ($this->time_now  > ($row['expires_at'] - 300))
-		{
-			$user_id = $row['user_id'];
-			try
-			{
-				$response = $this->refresh_access_token($row['refresh_token'], $user_id);
-				if (isset($response['AuthenticationResult']))
-				{
-					// Successful refresh of access token
-					$this->store_auth_result($response['AuthenticationResult'], $user_id,true);
-					return $response['AuthenticationResult']['AccessToken'];
-				}
-			} catch (CognitoIdentityProviderException $e)
-			{
-				$this->handle_cognito_identity_provider_exception($e, $user_id, 'refresh_access_tokens');
-				return false;
-			}
-		}
-
-		return $row['access_token'];
-	}
-
-	/**
-	 * @param $session_token
-	 * @return array (active = bool, user_id, username = cognito username])
-	 */
-	public function validate_session($session_token)
-	{
-		$this->load_user_data($session_token);
-		$access_token = $this->get_access_token($session_token);
-		if (!$access_token)
-		{
-			// No valid token found in DB
-			return array('active' => false);
-		}
-		try
-		{
-			$username = $this->web_token->verify_access_token($access_token);
-
-			return array(
-				'active' => true,
-				'user_id' => $this->user_id,
-				'username' => $username);
-		} catch (TokenVerificationException $e)
-		{
-			if ($e->getMessage() == 'token expired')
-			{
-				// This shouldn't hapen
-				return array('active' => false);
-			}
-			else
-			{
-				error_log($e->getMessage());
-				return array('active' => false);
-			}
-		}
-	}
-
-
-
-	/**
 	* Clean up session tokens
 	*
+	 * @deprecated
+	 *
 	* @since 1.5
 	*/
+	//todo Move to auth_result
 	public function cleanup_session_tokens()
 	{
 		//expire non auto login
@@ -919,106 +738,14 @@ class cognito
 	}
 
 	/**
-	 * Loads the session user data ( user_id,username_clean,last_active)
-	 * @param string session_token to get the data for.
-	 */
-	public function load_user_data($session_token)
-	{
-		$sql = 'SELECT user_id,last_active  FROM ' . $this->cogauth_session . " WHERE session_token = '" . $this->db->sql_escape($session_token) . "'";
-
-		$result = $this->db->sql_query($sql);
-		$row = $this->db->sql_fetchrow($result);
-		$this->db->sql_freeresult($result);
-
-		$this->last_active = $row['last_active'];
-		$this->user_id = $row['user_id'];
-	}
-
-	/**
-	 * Get the cognito_session table key
-	 * @return string
-	 */
-	public function get_session_token()
-	{
-		return $this->session_token;
-	}
-
-	/**
-	 * Store the cognito_session table key
-	 * @param string $token;
-	 */
-	public function store_session_token($token)
-	{
-		$this->session_token = $token;
-	}
-
-	/**
 	 * @param bool $autologin
 	 *
 	 * @since 1.5
 	 */
+	//todo Move to auth_result
 	public function set_autologin($autologin)
 	{
 		$this->autologin = $autologin;
-	}
-
-	/**
-	 * @param string $phpbb_sid        phpBB SID
-	 * @deprecated
-	 */
-	public function store_sid($phpbb_sid)
-	{
-		if (!$this->session_token)
-		{
-			// This will happen on auto login as authenticate is not called to start the session
-			// As this is an auto login the previous SID must be in the cookie, so we use this to find the
-			// session_token.
-			$cookie_sid = $this->request->variable($this->config['cookie_name'] . '_sid', '', false, \phpbb\request\request_interface::COOKIE);
-
-			$sql = 'SELECT session_token FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($cookie_sid) . "'";
-			$this->db->sql_query($sql);
-			$row = $this->db->sql_fetchrow();
-			$this->session_token = $row['session_token'];
-		}
-		if ($this->autologin === null)
-		{
-			$this->autologin = false;
-		}
-
-		$data = array('sid' => $phpbb_sid, 'last_active' => $this->time_now, 'autologin' => $this->autologin);
-		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
-			" WHERE session_token = '" . $this->session_token . "'";
-		$this->db->sql_query($sql);
-		$affected_rows = $this->db->sql_affectedrows();
-
-		if ($affected_rows == 0)
-		{
-			error_log('store_sid - Failed to store SID');
-		}
-	}
-
-
-	/**
-	 * todo is this required?
-	 */
-	public function update_last_active()
-	{
-		$sid = $this->user->session_id;
-		$data = array('last_active' => $this->time_now,);
-		$sql = 'UPDATE ' . $this->cogauth_session . ' SET ' . $this->db->sql_build_array('UPDATE', $data) .
-			" WHERE sid = '" . $sid . "'";
-		$this->db->sql_query($sql);
-	}
-
-	/**
-	 * @param string $session_id phpBB Session id
-	 * @return int number of rows deleted
-	 */
-	public function phpbb_session_killed($session_id)
-	{
-		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE sid = '" . $this->db->sql_escape($session_id) ."'";
-		$this->db->sql_query($sql);
-		return $this->db->sql_affectedrows();
 	}
 
 }

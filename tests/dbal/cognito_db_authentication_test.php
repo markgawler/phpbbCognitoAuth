@@ -150,4 +150,27 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 		$this->assertEquals($fields, $rows,'Database values match');
 	}
+
+
+	public function test_phpbb_session_killed_01()
+	{
+		$auth = new \mrfg\cogauth\cognito\auth_result(
+			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+
+		$session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
+		$rows = $auth->kill_session($session_id);
+		$this->assertEquals(1,$rows, 'Asserting one row is effected.');
+	}
+
+	public function test_phpbb_session_killed_02()
+	{
+		$auth = new \mrfg\cogauth\cognito\auth_result(
+			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+
+		$session_id = '12';
+		$rows = $auth->kill_session($session_id);
+		$this->assertEquals(0,$rows, 'Asserting no rows effected.');
+	}
+
+
 }

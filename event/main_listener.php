@@ -12,7 +12,8 @@
 
 namespace mrfg\cogauth\event;
 
-/** @noinspection PhpUndefinedClassInspection */
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
 /**
  * AWS Cognito Authentication Event listener.
  */
@@ -34,17 +35,20 @@ class main_listener implements EventSubscriberInterface
 		);
 	}
 
-	/* @var \phpbb\user */
+	/** @var \phpbb\user */
 	protected $user;
 
-	/* @var \mrfg\cogauth\cognito\cognito */
+	/** @var \mrfg\cogauth\cognito\cognito */
 	protected $client;
 
-	/* @var \phpbb\event\dispatcher_interface */
+	/** @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
 
-	/* @var \mrfg\cogauth\cognito\auth_result $auth_result */
+	/** @var \mrfg\cogauth\cognito\auth_result $auth_result */
 	protected $auth_result;
+
+	/** @var \mrfg\cogauth\cognito\controller $controller */
+	protected $controller;
 
 	/**
 	 * Constructor
@@ -52,17 +56,20 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\user               $user       User object
 	 * @param \mrfg\cogauth\cognito\cognito $client
 	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
+	 * @param \mrfg\cogauth\cognito\controller $controller
 	 * @param \phpbb\event\dispatcher_interface	$dispatcher	Event dispatcher
 	 */
 	public function __construct(
 		\phpbb\user $user,
 		\mrfg\cogauth\cognito\cognito $client,
 		\mrfg\cogauth\cognito\auth_result $auth_result,
+		\mrfg\cogauth\cognito\controller $controller,
 		\phpbb\event\dispatcher_interface $dispatcher)
 	{
 		$this->auth_result = $auth_result;
 		$this->user = $user;
 		$this->client = $client;
+		$this->controller = $controller;
 		$this->dispatcher = $dispatcher;
 	}
 
@@ -114,7 +121,8 @@ class main_listener implements EventSubscriberInterface
 			// Now we have the SID we can store it in the cogauth_session table..
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			$session_token = $this->auth_result->authenticated(
-				$this->user->data['user_id'], $data['session_id']);
+				$data['session_user_id'], $data['session_id']);
+
 			/**
 			 * Cogauth session after create event
 			 *
@@ -132,25 +140,35 @@ class main_listener implements EventSubscriberInterface
 	 */
 	public function session_kill_after($event)
 	{
+		/*
+		 * 'user_id' => int 2
+		 * 'session_id' => string '3ba5603a695a1bd1b32ab5a698e65468' (length=32)
+		 * 'new_session' => boolean true
+		 */
+
 		$session = $event['session_id'];
 		/** @noinspection PhpUnusedLocalVariableInspection */
-		$session_token = $this->client->get_session_token();
+		$session_token = $this->auth_result->get_session_token(false);
 
-		$this->client->phpbb_session_killed($session);
+		$this->auth_result->kill_session($session);
 
-		/**
-		 * Cogauth session kill after event
-		 *
-		 * @event mrfg.cogauth.session_kill_after
-		 * @var  string  session_token
-		 * @since 1.1
-		 */
-		$vars = array('session_token',);
-		extract($this->dispatcher->trigger_event('mrfg.cogauth.session_kill_after', compact($vars)));
+		if ($session_token)
+		{
+			/**
+			 * Cogauth session kill after event
+			 *
+			 * @event mrfg.cogauth.session_kill_after
+			 * @var  string  session_token
+			 * @since 1.1
+			 */
+			$vars = array('session_token',);
+			extract($this->dispatcher->trigger_event('mrfg.cogauth.session_kill_after', compact($vars)));
+		}
 	}
 
 	/**
-   	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
+	 * @throws \mrfg\cogauth\cognito\exception\cogauth_internal_exception
 	 */
 	public function ucp_profile_update($event)
 	{
@@ -159,7 +177,7 @@ class main_listener implements EventSubscriberInterface
 		{
 			$data = $event['data'];
 
-			$access_token = $this->client->get_access_token();
+			$access_token = $this->controller->get_access_token();
 			if (isset($access_token))
 			{
 				$user_id = $this->user->data['user_id'];

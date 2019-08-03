@@ -6,6 +6,7 @@ services:
             - '@user'
             - '@mrfg.cogauth.cognito'
             - '@mrfg.cogauth.auth_result'
+            - '@mrfg.cogauth.cognito_controller'
             - '@dispatcher'
         tags:
             - { name: event.listener }
@@ -20,7 +21,7 @@ services:
             - '@language'
 
     mrfg.cogauth.cognito_controller:
-        class: mrfg\cogauth\cognito\controler
+        class: mrfg\cogauth\cognito\controller
         arguments:
             - '@user'
             - '@mrfg.cogauth.auth_result'
@@ -66,8 +67,7 @@ services:
         class: mrfg\cogauth\cron\task\access_token_cleanup
         arguments:
             - '@config'
-            - '@dbal.conn'
-            - '@mrfg.cogauth.cognito'
+            - '@mrfg.cogauth.auth_result'
         calls:
             - [set_name, [cogauth.cron.access_token_cleanup]]
         tags:

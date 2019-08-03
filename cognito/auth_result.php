@@ -349,13 +349,14 @@ class auth_result
 	/**
 	 * Returns the unique session token for this cognito session
 	 *
+	 * @param  bool $initialise if true create a session token when the token is null
 	 * @return string session_token
 	 *
 	 * @since 1,0
 	 */
-	public function get_session_token()
+	public function get_session_token($initialise = true)
 	{
-		if (! $this->session_token ){
+		if (! $this->session_token && $initialise){
 			$this->session_token = $this->get_unique_token();
 		}
 		return $this->session_token;
@@ -384,4 +385,44 @@ class auth_result
 		}
 		return $token;
 	}
+
+
+	/**
+	 * Delete the Session token for a session token
+	 *
+	 * @param string $session_id phpbb session_id
+	 * @return int number of rows deleted
+	 *
+	 * @since 1.0
+	 */
+	public function kill_session($session_id)
+	{
+		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE sid = '" . $this->db->sql_escape($session_id) ."'";
+		$this->db->sql_query($sql);
+		return $this->db->sql_affectedrows();
+	}
+
+	/**
+	 * Clean up session tokens
+	 *
+	 * @param int $session_length The session length in seconds
+	 * @since 1.5
+	 */
+	//todo Move to auth_result
+	public function cleanup_session_tokens($session_length)
+	{
+		//expire non auto login
+		$expire_time = $this->time_now - ($session_length + 60); // Session length + one minutes
+
+		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE last_active < " . $expire_time . " AND autologin = 0";
+		$this->db->sql_query($sql);
+
+		//expire auto login
+		$expire_time = $this->time_now - ($this->config['cogauth_max_session_hours'] * 3600); // Max Session length in seconds
+
+		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE first_active < " . $expire_time;
+		$this->db->sql_query($sql);
+
+	}
+
 }

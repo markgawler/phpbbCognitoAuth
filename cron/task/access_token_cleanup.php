@@ -9,6 +9,8 @@
 
 namespace mrfg\cogauth\cron\task;
 
+/** @noinspection PhpUnused */
+
 class access_token_cleanup extends \phpbb\cron\task\base
 {
 	/** @var \phpbb\config\config $config */
@@ -17,24 +19,21 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	/** @var \phpbb\db\driver\driver_interface $db */
 	protected $db;
 
-	/* @var \mrfg\cogauth\cognito\cognito */
-	protected $cognito;
+	/* @var \mrfg\cogauth\cognito\auth_result */
+	protected $auth_result;
 
 	/**
 	 * Constructor - cleanup
 	 *
 	 * @param \phpbb\config\config              $config              The config
-	 * @param \phpbb\db\driver\driver_interface $db     The db connection
-	 * @param \mrfg\cogauth\cognito\cognito     $cognito
+	 * @param \mrfg\cogauth\cognito\auth_result     $auth_result
  */
 	public function __construct(
 		\phpbb\config\config $config,
-		\phpbb\db\driver\driver_interface $db,
-		\mrfg\cogauth\cognito\cognito $cognito)
+		\mrfg\cogauth\cognito\auth_result $auth_result)
 	{
 		$this->config = $config;
-		$this->db = $db;
-		$this->cognito = $cognito;
+		$this->auth_result = $auth_result;
 	}
 
 	/**
@@ -44,9 +43,8 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	public function run()
 	{
 		error_log('Cron Run - cogauth_token_cleanup');
-
 		$this->config->set('cogauth_token_cleanup_last_gc', time());
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->cleanup_session_tokens( $this->config['session_length']);
 	}
 
 	/**

@@ -36,8 +36,8 @@ class cognito_db_test extends \phpbb_database_test_case
 	/** @var $cognito_user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cognito_user;
 
-	/** @var $authentication \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
-	protected $authentication;
+	/** @var $auth_result \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
+	protected $auth_result;
 
     /** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
 	protected $client;
@@ -92,7 +92,7 @@ class cognito_db_test extends \phpbb_database_test_case
 			->setMethods(array('get_cognito_username'))
 			->getMock();
 
-		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
+		$this->auth_result = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
 			->disableOriginalConstructor()
 			->setMethods(array(
 				'validate_and_store_auth_response',
@@ -126,7 +126,7 @@ class cognito_db_test extends \phpbb_database_test_case
 		$this->cognito = new \mrfg\cogauth\cognito\cognito(
 			$this->db, $this->config, $this->user, $this->request, $this->log,
 			$this->client, $this->web_token, $this->cognito_user,
-			$this->authentication, $this->table_prefix . 'cogauth_session');
+			$this->auth_result, $this->table_prefix . 'cogauth_session');
 
 	}
 
@@ -140,19 +140,5 @@ class cognito_db_test extends \phpbb_database_test_case
 	}
 
 
-
-	public function test_phpbb_session_killed_01()
-	{
-		$session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
-		$rows = $this->cognito->phpbb_session_killed($session_id);
-		$this->assertEquals(1,$rows, 'Asserting one row is effected.');
-	}
-
-	public function test_phpbb_session_killed_02()
-	{
-		$session_id = '1';
-		$rows = $this->cognito->phpbb_session_killed($session_id);
-		$this->assertEquals(0,$rows, 'Asserting no rows effected.');
-	}
 
 }

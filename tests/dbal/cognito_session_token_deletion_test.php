@@ -13,7 +13,7 @@ namespace mrfg\cogauth\tests\dbal;
 /** @noinspection PhpIncludeInspection */
 include_once __DIR__ . '/../../vendor/autoload.php';
 
-/*
+
 class cognito_test_functions extends \mrfg\cogauth\cognito\cognito
 {
 	public function set_time_now($time_now)
@@ -21,7 +21,7 @@ class cognito_test_functions extends \mrfg\cogauth\cognito\cognito
 		$this->time_now = $time_now;
 	}
 }
-*/
+
 class cognito_session_token_deletion_test extends \phpbb_database_test_case
 {
 	/** @var $user \phpbb\user */
@@ -45,8 +45,8 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 	/** @var $ \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cognito_user;
 
-	/** @var $authentication \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
-	protected $authentication;
+	/** @var $auth_result \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
+	protected $auth_result;
 
 	/** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
 	protected $client;
@@ -108,7 +108,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 			->setMethods(array('get_cognito_username'))
 			->getMock();
 
-		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
+		$this->auth_result = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
 			->disableOriginalConstructor()
 			->setMethods(array(
 				'validate_and_store_auth_response',
@@ -131,7 +131,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 		$construct_args = array(
 			$this->db, $this->config, $this->user, $this->request, $this->log,
 			$this->client, $this->web_token, $this->cognito_user,
-			$this->authentication, $this->table_prefix . 'cogauth_session');
+			$this->auth_result, $this->table_prefix . 'cogauth_session');
 
 		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\tests\dbal\cognito_test_functions')
 			->setMethods(array('refresh_access_token','handleCognitoIdentityProviderException'))

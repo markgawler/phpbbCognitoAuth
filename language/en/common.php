@@ -45,9 +45,11 @@ $lang = array_merge($lang, array(
 
 	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region',
 
-	'COGAUTH_UNEXPECTED_ERROR'		=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',
+	'COGAUTH_CONFIGURATION_ERROR'	=> '<strong>CogAuth, Configuration error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',
+	'COGAUTH_UNEXPECTED_ERROR'	 	=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',
 	'COGAUTH_UNEXPECTED_CHALLENGE'	=> '<strong>CogAuth, Unexpected result:</strong><br>»Action: "%1$s", <br>Result: "%2$s"',
 	'COGAUTH_AUTO_PASSWD_RESET'		=> '<strong>Cognito password mismatch, automatically reset</strong><br>» %1$s',
 	'COGAUTH_MIGRATE_USER'			=> '<strong>User Migrated to Cognito User Pool</strong><br>» %1$s',
+	'COGAUTH_NO_ACCESS_TOKEN'		=> '<strong>AWS Cognito login error, phpBB login only, see error log.</strong>'
 
 ));

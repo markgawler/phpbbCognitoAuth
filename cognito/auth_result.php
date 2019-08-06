@@ -60,16 +60,21 @@ class auth_result
 	/** @var integer $phpbb_user_id */
 	protected $phpbb_user_id;
 
+	/** @var \phpbb\log\log_interface $log */
+	protected $log;
+
 	/**
 	 * Database Authentication Constructor
 	 *
 	 * @param \mrfg\cogauth\cognito\web_token_phpbb $web_token
-	 * @param \phpbb\db\driver\driver_interface $db
-     * @param	string      $cogauth_authentication - db table name
+	 * @param \phpbb\db\driver\driver_interface $db *
+	 * @param \phpbb\log\log_interface          $log
+	 * @param	string      $cogauth_authentication - db table name
 	 */
 	public function __construct(
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
 		\phpbb\db\driver\driver_interface $db,
+		\phpbb\log\log_interface $log,
 		$cogauth_authentication)
 	{
 		$this->web_token = $web_token;
@@ -77,7 +82,7 @@ class auth_result
 		$this->cogauth_authentication = $cogauth_authentication;  //DB Table name
 
 		$this->time_now = time();
-
+		$this->log = $log;
 	}
 
 	/**
@@ -174,13 +179,23 @@ class auth_result
 			throw new \mrfg\cogauth\cognito\exception\cogauth_authentication_exception(
 				'Attempt to set authenticated failed, Invalid SID');
 		}
+
 		if ($this->access_token == ""){
-			throw new \mrfg\cogauth\cognito\exception\cogauth_authentication_exception(
-				'Attempt to set authenticated failed, No Access Token');
+			// This can happen when the cognito user exists but fails to authenticate after
+			// phpbb has successfully authenticated (due to a configuration error). If the
+			// error is not trapped at the authentication stage an auto password change will
+			// be initiated which also fails and the user ends in the "FORCE_CHANGE_PASSWORD" state.
+			//todo: Trap configuration errors earlier in the auth flow (known cases are now trapped)
+			$this->log->add('user', $phpbb_user_id, 0,
+				'COGAUTH_NO_ACCESS_TOKEN', $this->time_now);
 		}
-		$this->sid = $sid;
-		$this->store_auth_data($phpbb_user_id, $sid);
-		return $this->session_token;
+		else
+		{
+			$this->sid = $sid;
+			$this->store_auth_data($phpbb_user_id, $sid);
+			return $this->session_token;
+		}
+		return false;
 	}
 
 	/**
@@ -194,7 +209,7 @@ class auth_result
 			'expires'  		=> $this->expires,
 			'uuid'			=> $this->uuid,
 			'username' 		=> $this->cognito_username,
-			'prefered_username' => $this->preferred_username,
+			'preferred_username' => $this->preferred_username,
 			'nickname' 		=> $this->nickname,
 			'email' 		=> $this->email,
 			'phpbb_user_id' => $phpbb_user_id,
@@ -217,7 +232,7 @@ class auth_result
 			'expires'  		=> $this->expires,
 			'uuid'			=> $this->uuid,
 			'username' 		=> $this->cognito_username,
-			'prefered_username' => $this->preferred_username,
+			'preferred_username' => $this->preferred_username,
 			'nickname' 		=> $this->nickname,
 			'email' 		=> $this->email,
 			'phpbb_user_id' => $this->phpbb_user_id,
@@ -251,7 +266,7 @@ class auth_result
         	$this->expires = $row['expires'];
 			$this->uuid = $row['uuid'];
 			$this->cognito_username = $row['username'];
-			$this->preferred_username = $row['prefered_username'];
+			$this->preferred_username = $row['preferred_username'];
 			$this->nickname = $row['nickname'];
 			$this->email = $row['email'];
 			$this->phpbb_user_id = $row['phpbb_user_id'];

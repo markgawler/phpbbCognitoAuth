@@ -1,40 +1,48 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <dataset>
-    <table name="phpbb_cogauth_session">
-        <column>session_token</column>
-        <column>autologin</column>
-        <column>sid</column>
-        <column>last_active</column>
-        <column>first_active</column>
-        <column>user_id</column>
+    <table name="phpbb_cogauth_authentication">
+		<column>session_token</column>
+		<column>expires</column>
+		<column>uuid</column>
+		<column>username</column>
+		<column>preferred_username</column>
+		<column>nickname</column>
+		<column>email</column>
+		<column>phpbb_user_id</column>
+		<column>sid</column>
+		<column>access_token</column>
+		<column>refresh_token</column>
+		<column>autologin</column>
+		<column>last_active</column>
+		<column>first_active</column>
         <row>
             <value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1</value>
-            <value>0</value>
             <value>a652e8fe432c7b6d6e42eb134ae9054a</value>
-            <value>1546345800</value>
+			<value>0</value>
+			<value>1546345800</value>
             <value>1546345700</value>
             <value>99</value>
         </row>
         <row>
             <value>NtMQHz2q89Bjc4HEjq82brEJ6dgdgdf1</value>
-            <value>1</value>
             <value>a652e8fe432c7b6d6e42eb1gdgdgdg4a</value>
+			<value>1</value>
             <value>1546345800</value>
             <value>1546345700</value>
             <value>99</value>
         </row>
         <row>
             <value>54MQHz2q89Bjc4HEjq82bhgfdzmXD6u1</value>
-            <value>0</value>
             <value>a654e8fe432chgfd6e42eb134ae9054a</value>
+			<value>0</value>
             <value>1546345700</value>
             <value>1546345700</value>
             <value>99</value>
         </row>
         <row>
             <value>ddddddddddddc4HEjq82bhgfdzmXD6u1</value>
-            <value>1</value>
             <value>aasdfghjkssshgfd6e42eb134ae9054a</value>
+			<value>1</value>
             <value>1546345900</value>
             <value>1546345900</value>
             <value>99</value>

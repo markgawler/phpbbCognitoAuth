@@ -5,14 +5,17 @@
         <column>expires</column>
         <column>uuid</column>
         <column>username</column>
-        <column>prefered_username</column>
+        <column>preferred_username</column>
         <column>nickname</column>
         <column>email</column>
         <column>phpbb_user_id</column>
         <column>sid</column>
         <column>access_token</column>
         <column>refresh_token</column>
-        <row>
+		<column>autologin</column>
+		<column>last_active</column>
+		<column>first_active</column>
+		<row>
             <value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1</value>
             <value>1546345800</value>
             <value>aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee</value>
@@ -24,6 +27,9 @@
             <value>a652e8fe432c7b6d6e42eb134ae9054a</value>
             <value>eyJraWQiOiJndlwvcmNDQTBMWUhMd2-piUlVmMU.Fwe</value>
             <value>eyJjdHkiOiJKV1QiLCJlbmMiOiJBMj.U2R0NNIiwi-</value>
-        </row>
+			<value>0</value>
+			<value>1546345800</value>
+			<value>1546345700</value>
+		</row>
     </table>
 </dataset>

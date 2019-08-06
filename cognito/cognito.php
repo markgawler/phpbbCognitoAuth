@@ -21,10 +21,12 @@ define('COG_LOGIN_ERROR_PASSWORD',4);
 define('COG_USER_FOUND',7);
 define('COG_LOGIN_DISABLED', 8);
 define('COG_LOGIN_ERROR_ATTEMPTS', 9);
+
+define('COG_CONFIGURATION_ERROR',98);
 define('COG_ERROR',99);
 
-define('COG_MIGRATE_SUCCESS',10);
-define('COG_MIGRATE_FAIL', 11);
+define('COG_MIGRATE_SUCCESS',20);
+define('COG_MIGRATE_FAIL', 21);
 
 class cognito
 {
@@ -66,9 +68,6 @@ class cognito
 
     /** @var \phpbb\log\log_interface $log */
     protected $log;
-
-    /** @var string  The key to the cogauth_session table */
-	protected $session_token;
 
 	/**	@var  int $user_id  The phpBB user ID associated with this cogauth_session */
 	protected $user_id = 0;
@@ -154,6 +153,7 @@ class cognito
 	 *		COG_LOGIN_ERROR_PASSWORD
 	 *      COG_LOGIN_DISABLED
 	 *      COG_LOGIN_ERROR_ATTEMPTS
+	 *      COG_CONFIGURATION_ERROR
 	 *
 	 */
 	public function authenticate($user_id, $password)
@@ -197,6 +197,14 @@ class cognito
 						case 'User is disabled':
 							$status = COG_LOGIN_DISABLED;
 						break;
+
+						case 'Unable to verify secret hash for client ' . $this->client_id:
+							$status = COG_CONFIGURATION_ERROR;
+							$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+							$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_CONFIGURATION_ERROR', $this->time_now,
+								array('Authenticate', $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
+						break;
+
 						default:
 							$status = COG_LOGIN_ERROR_PASSWORD;
 					}

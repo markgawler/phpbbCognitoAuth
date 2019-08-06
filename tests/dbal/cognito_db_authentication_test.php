@@ -72,7 +72,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 	public function test_db_columns()
 	{
-		$columns = array('session_token', 'expires', 'uuid', 'username', 'prefered_username', 'nickname', 'email',
+		$columns = array('session_token', 'expires', 'uuid', 'username', 'preferred_username', 'nickname', 'email',
 						 'phpbb_user_id', 	'sid', 'access_token', 'refresh_token');
 
 		foreach ($columns as $c) {
@@ -128,7 +128,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			'expires'  		=> $expires,
 			'uuid'			=> $uuid,
 			'username' 		=> $cognito_username,
-			'prefered_username' => $preferred_username,
+			'preferred_username' => $preferred_username,
 			'nickname' 		=> $nickname,
 			'email' 		=> $email,
 			'phpbb_user_id' => $phpbb_user_id,

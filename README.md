@@ -20,10 +20,10 @@ The attribute mapping is:
 | phpBB  | Cognito           |
 |----------------|-------------------|
 | user_id        | usename*          |
-| username_clean | prefered_username |
+| username_clean | preferred_username |
 | username       | nickname          |
 
-[*] The username is a modifiws from of the phpBB user_id.
+[*] The username is a modified from of the phpBB user_id.
 
 ## Installation
 

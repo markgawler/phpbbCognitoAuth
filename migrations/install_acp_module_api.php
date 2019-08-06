@@ -19,7 +19,7 @@ class install_acp_module_api extends \phpbb\db\migration\migration
 
 	static public function depends_on()
 	{
-		return array('\mrfg\cogauth\migrations\install_db_table');
+		return array('\mrfg\cogauth\migrations\install_acp_module');
 
 	}
 

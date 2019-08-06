@@ -116,6 +116,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function login($username, $password)
 	{
+		error_log('CogAuth Provider');
 		$authenticated_phpbb = false;
 		$authenticated_cognito = false;
 		// Auth plugins get the password untrimmed.
@@ -259,10 +260,11 @@ class cogauth extends \phpbb\auth\provider\base
 				break;
 
 				default:
+					// COG_CONFIGURATION_ERROR - Can happen trapped later
 					// COG_LOGIN_NO_AUTH
 					// COG_USER_NOT_FOUND - can't happen here
 					// COG_LOGIN_ERROR_PASSWORD
-					error_log('Unauthenticated');
+					error_log('Unauthenticated, status: ' . $auth_status['status']);
 			}
 
 		}
@@ -324,10 +326,13 @@ class cogauth extends \phpbb\auth\provider\base
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_MIGRATE_USER', time(), array($row['username']));
 			}
-			elseif ($authenticated_cognito == false && $cognito_user['status'] == COG_USER_FOUND)
+			elseif ($authenticated_cognito == false && $cognito_user['status'] == COG_USER_FOUND &&
+				($auth_status['status'] == COG_LOGIN_ERROR_PASSWORD ||  $cognito_user['user_status'] == 'FORCE_CHANGE_PASSWORD'))
 			{
+
 				// Cognito user exists, but failed to authenticate password (other failures dont get this far).
 				// automatic password reset
+				// todo this should be configurable
 				$this->cognito_client->admin_change_password($row['user_id'],$password);
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_AUTO_PASSWD_RESET', time(),array($row['username']));

@@ -32,6 +32,7 @@ services:
         arguments:
             - '@mrfg.cogauth.web_token_phpbb'
             - '@dbal.conn'
+            - '@log'
             - '%mrfg.cogauth.tables.cogauth_authentication%'
 
     mrfg.cogauth.cognito:

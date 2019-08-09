@@ -745,15 +745,6 @@ class cognito
 
 	}
 
-	/**
-	 * @param bool $autologin
-	 *
-	 * @since 1.5
-	 */
-	//todo Move to auth_result
-	public function set_autologin($autologin)
-	{
-		$this->autologin = $autologin;
-	}
+
 
 }

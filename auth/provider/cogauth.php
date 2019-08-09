@@ -332,7 +332,8 @@ class cogauth extends \phpbb\auth\provider\base
 
 				// Cognito user exists, but failed to authenticate password (other failures dont get this far).
 				// automatic password reset
-				// todo this should be configurable
+				// todo: this should be configurable.
+				// todo: log different error if FORCE_CHANGE_PASSWORD
 				$this->cognito_client->admin_change_password($row['user_id'],$password);
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_AUTO_PASSWD_RESET', time(),array($row['username']));

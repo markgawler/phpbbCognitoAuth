@@ -13,6 +13,15 @@
 
 namespace mrfg\cogauth\tests\dbal;
 
+/*
+class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
+{
+	public function set_time_now($time_now)
+	{
+		$this->time_now = $time_now;
+	}
+}
+*/
 class cognito_authentication_test extends \phpbb_database_test_case
 {
 	/* @var $db \phpbb\db\driver\driver_interface */
@@ -29,6 +38,9 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 	/** @var $cognito  \mrfg\cogauth\cognito\cognito|\PHPUnit_Framework_MockObject_MockObject  */
 	protected $cognito;
+
+	/** @var $log \phpbb\log\log_interface |\PHPUnit_Framework_MockObject_MockObject */
+	protected $log;
 
 	static protected function setup_extensions()
 	{
@@ -67,6 +79,10 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			->disableOriginalConstructor()
 			->setMethods(array('refresh_access_token_for_username'))
 			->getMock();
+
+		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
+			->disableOriginalConstructor()
+			->getMock();
 	}
 
 
@@ -84,6 +100,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 	public function test_validate_and_store_auth_response_happy_day()
 	{
+		$time_now = time();
 		$id_token = 'A simple ID Token';
 		$access_token = 'A simple Acces Token';
 		$refresh_token = 'A Simple Refresh Token';
@@ -118,8 +135,9 @@ class cognito_authentication_test extends \phpbb_database_test_case
 		$this->web_token->expects($this->exactly(2))
 			->method('decode_token')->will($this->returnValueMap($map));
 
-		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+		$auth = new auth_result_test_functions(
+			$this->web_token, $this->db, $this->log, $this->table_prefix . 'cogauth_authentication');
+		$auth->set_time_now($time_now);
 
 		// Validate the Database Store
 		$session_token =  $auth->get_session_token();
@@ -134,7 +152,10 @@ class cognito_authentication_test extends \phpbb_database_test_case
 			'phpbb_user_id' => $phpbb_user_id,
 			'sid' 			=> $sid,
 			'access_token'  => $access_token,
-			'refresh_token' => $refresh_token);
+			'refresh_token' => $refresh_token,
+			'autologin'		=> false,
+			'last_active'	=> $time_now,
+			'first_active'	=> $time_now);
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 
@@ -155,7 +176,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 	public function test_phpbb_session_killed_01()
 	{
 		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+			$this->web_token, $this->db,$this->log, $this->table_prefix . 'cogauth_authentication');
 
 		$session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
 		$rows = $auth->kill_session($session_id);
@@ -165,7 +186,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 	public function test_phpbb_session_killed_02()
 	{
 		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,$this->table_prefix . 'cogauth_authentication');
+			$this->web_token, $this->db, $this->log,$this->table_prefix . 'cogauth_authentication');
 
 		$session_id = '12';
 		$rows = $auth->kill_session($session_id);

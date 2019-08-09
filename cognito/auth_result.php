@@ -63,6 +63,14 @@ class auth_result
 	/** @var \phpbb\log\log_interface $log */
 	protected $log;
 
+	/** @var boolean $autologin */
+	protected $autologin;
+
+	/** @var integer $last_active */
+	protected $last_active;
+
+	/** @var integer $first_active */
+	protected $first_active;
 	/**
 	 * Database Authentication Constructor
 	 *
@@ -182,15 +190,19 @@ class auth_result
 
 		if ($this->access_token == ""){
 			// This can happen when the cognito user exists but fails to authenticate after
-			// phpbb has successfully authenticated (due to a configuration error). If the
+			// phpbb has successfully authenticated (due to a configuration error?). If the
 			// error is not trapped at the authentication stage an auto password change will
 			// be initiated which also fails and the user ends in the "FORCE_CHANGE_PASSWORD" state.
-			//todo: Trap configuration errors earlier in the auth flow (known cases are now trapped)
+			// This should not occur as known cases are now trapped.
 			$this->log->add('user', $phpbb_user_id, 0,
 				'COGAUTH_NO_ACCESS_TOKEN', $this->time_now);
 		}
 		else
 		{
+			$this->last_active = $this->time_now;
+			if ($this->first_active == null) {
+				$this->first_active = $this->time_now;
+			}
 			$this->sid = $sid;
 			$this->store_auth_data($phpbb_user_id, $sid);
 			return $this->session_token;
@@ -215,7 +227,10 @@ class auth_result
 			'phpbb_user_id' => $phpbb_user_id,
 			'sid' 			=> $sid,
 			'access_token'  => $this->access_token,
-			'refresh_token' => $this->refresh_token);
+			'refresh_token' => $this->refresh_token,
+			'autologin'		=> $this->autologin ?? false,
+			'last_active'	=> $this->last_active,
+			'first_active'	=> $this->first_active);
 
 		$sql = 'INSERT INTO ' . $this->cogauth_authentication . ' ' . $this->db->sql_build_array('INSERT', $fields);
 
@@ -238,7 +253,10 @@ class auth_result
 			'phpbb_user_id' => $this->phpbb_user_id,
 			'sid' 			=> $this->sid,
 			'access_token'  => $this->access_token,
-			'refresh_token' => $this->refresh_token);
+			'refresh_token' => $this->refresh_token,
+			'autologin'		=> $this->autologin ?? false,
+			'last_active'	=> $this->last_active,
+			'first_active'	=> $this->first_active);
 
 		$sql = 'UPDATE ' . $this->cogauth_authentication . ' SET ' .
 			$this->db->sql_build_array('UPDATE', $data) .
@@ -421,10 +439,10 @@ class auth_result
 	 * Clean up session tokens
 	 *
 	 * @param int $session_length The session length in seconds
-	 * @since 1.5
+	 * @param int $max_session_length The maximum length of a session in seconds
+	 * @since 1.0
 	 */
-	//todo Move to auth_result
-	public function cleanup_session_tokens($session_length)
+	public function cleanup_session_tokens($session_length, $max_session_length)
 	{
 		//expire non auto login
 		$expire_time = $this->time_now - ($session_length + 60); // Session length + one minutes
@@ -433,11 +451,20 @@ class auth_result
 		$this->db->sql_query($sql);
 
 		//expire auto login
-		$expire_time = $this->time_now - ($this->config['cogauth_max_session_hours'] * 3600); // Max Session length in seconds
+		$expire_time = $this->time_now - ($max_session_length * 3600); // Max Session length in seconds
 
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE first_active < " . $expire_time;
 		$this->db->sql_query($sql);
 
 	}
 
+	/**
+	 * @param bool $autologin
+	 *
+	 * @since 1.0
+	 */
+	public function set_autologin($autologin)
+	{
+		$this->autologin = $autologin;
+	}
 }

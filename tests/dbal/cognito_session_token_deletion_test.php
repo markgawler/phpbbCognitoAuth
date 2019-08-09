@@ -14,7 +14,7 @@ namespace mrfg\cogauth\tests\dbal;
 include_once __DIR__ . '/../../vendor/autoload.php';
 
 
-class cognito_test_functions extends \mrfg\cogauth\cognito\cognito
+class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 {
 	public function set_time_now($time_now)
 	{
@@ -26,9 +26,6 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 {
 	/** @var $user \phpbb\user */
 	protected $user;
-
-	/** @var $cognito_client \phpbb\config\config */
-	protected $config;
 
 	/** @var $db \phpbb\db\driver\driver_interface */
 	protected $db;
@@ -45,19 +42,10 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 	/** @var $ \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cognito_user;
 
-	/** @var $auth_result \mrfg\cogauth\cognito\auth_result|\PHPUnit_Framework_MockObject_MockObject */
+	/** @var $auth_result auth_result_test_functions|\PHPUnit_Framework_MockObject_MockObject */
 	protected $auth_result;
 
-	/** @var $client  \mrfg\cogauth\cognito\cognito_client_wrapper| \PHPUnit_Framework_MockObject_MockObject */
-	protected $client;
-
-	/** @noinspection PhpUndefinedClassInspection */
-	/** @var $cognito \mrfg\cogauth\tests\dbal\cognito_test_functions | \PHPUnit_Framework_MockObject_MockObject  */
-	protected $cognito;
-
-	/** @var $request \phpbb\request\request_interface */
-	protected $request;
-
+	/** @var  $log \phpbb\log\log_interface|\PHPUnit_Framework_MockObject_MockObject  */
 	protected $log;
 
 	protected $initial_row_count;
@@ -85,19 +73,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 		$this->user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
-			->getMock()
-		;
-
-		// Config
-		$this->config = $this->getMockBuilder('\phpbb\config\config')
-			->disableOriginalConstructor()
-			->getMock()
-		;
-		$map = array(
-			array('session_length', '100'),
-			array('cogauth_max_session_hours', 3),
-		);
-		$this->config->method('offsetGet')->will($this->returnValueMap($map));
+			->getMock();
 
 		$this->web_token = $this->getMockBuilder('\mrfg\cogauth\cognito\web_token_phpbb')
 			->disableOriginalConstructor()
@@ -108,35 +84,12 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 			->setMethods(array('get_cognito_username'))
 			->getMock();
 
-		$this->auth_result = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
-			->disableOriginalConstructor()
-			->setMethods(array(
-				'validate_and_store_auth_response',
-				'authenticated',
-				'get_session_token'))
-			->getMock();
-
-		$this->client = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito_client_wrapper')
-			->disableOriginalConstructor()
-			->getMock();
-
 		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->request = $this->getMockBuilder('\phpbb\request\request_interface')
-			->disableOriginalConstructor()
-			->getMock();
-
-		$construct_args = array(
-			$this->db, $this->config, $this->user, $this->request, $this->log,
-			$this->client, $this->web_token, $this->cognito_user,
-			$this->auth_result, $this->table_prefix . 'cogauth_session');
-
-		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\tests\dbal\cognito_test_functions')
-			->setMethods(array('refresh_access_token','handleCognitoIdentityProviderException'))
-			->setConstructorArgs($construct_args)
-			->getMock();
+		$this->auth_result = new auth_result_test_functions($this->web_token, $this->db, $this->log,
+			$this->table_prefix . 'cogauth_authentication' );
 
 		$this->initial_row_count = $this->count_rows();
 
@@ -152,7 +105,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 		{
 			$where = '';
 		}
-		$sql = 'SELECT COUNT(*) AS session_rows FROM ' . $this->table_prefix . 'cogauth_session' . $where;
+		$sql = 'SELECT COUNT(*) AS session_rows FROM ' . $this->table_prefix . 'cogauth_authentication' . $where;
 		$result = $this->db->sql_query($sql);
 		$rows = (int) $this->db->sql_fetchfield('session_rows');
 		$this->db->sql_freeresult($result);
@@ -161,24 +114,24 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	public function test_expire_token_none()
 	{
-		$this->cognito->set_time_now(1546345800);
+		$this->auth_result->set_time_now(1546345800);
 
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->cleanup_session_tokens(100,3);
 		$this->assertEquals($this->initial_row_count, $this->count_rows(),'Asserting no rows deleted from cogauth_session table');
 
 	}
 	public function test_expire_token_one()
 	{
-		$this->cognito->set_time_now(1546345800+100);
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->set_time_now(1546345800+100);
+		$this->auth_result->cleanup_session_tokens(100,3);
 		$this->assertEquals(0, $this->count_rows('54MQHz2q89Bjc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
 		$this->assertEquals($this->initial_row_count - 1, $this->count_rows(),'Asserting one row deleted from cogauth_session table');
 	}
 
 	public function test_expire_token_two()
 	{
-		$this->cognito->set_time_now(1546345800+200);
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->set_time_now(1546345800+200);
+		$this->auth_result->cleanup_session_tokens(100,3);
 
 		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
 		$this->assertEquals(0, $this->count_rows('54MQHz2q89Bjc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
@@ -187,15 +140,15 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	public function test_expire_token_autologin()
 	{
-		$this->cognito->set_time_now(1546345700 + 10800 ); //Time now = First active  + 3 hours and 1 second
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->set_time_now(1546345700 + 10800 ); //Time now = First active  + 3 hours and 1 second
+		$this->auth_result->cleanup_session_tokens(100,3);
 
 		$this->assertEquals($this->initial_row_count - 2, $this->count_rows(),'Asserting no auto login rows deleted (At 3 hours)');
 	}
 	public function test_expire_token_autologin_expired()
 	{
-		$this->cognito->set_time_now(1546345700 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->set_time_now(1546345700 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
+		$this->auth_result->cleanup_session_tokens(100,3);
 
 		$this->assertEquals(1, $this->count_rows(),'Asserting all bar one rows deleted');
 		$this->assertEquals(1, $this->count_rows('ddddddddddddc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row remains');
@@ -203,8 +156,8 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	public function test_expire_token_autologin_expired_all()
 	{
-		$this->cognito->set_time_now(1546345900 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
-		$this->cognito->cleanup_session_tokens();
+		$this->auth_result->set_time_now(1546345900 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
+		$this->auth_result->cleanup_session_tokens(100,3);
 		$this->assertEquals(0, $this->count_rows(),'Asserting all rows deleted');
 	}
 

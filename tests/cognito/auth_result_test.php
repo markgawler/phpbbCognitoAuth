@@ -30,12 +30,11 @@ class auth_result_test extends \phpbb_test_case
 	/** @var $db \phpbb\db\driver\driver_interface|\PHPUnit_Framework_MockObject_MockObject */
 	protected $db;
 
-	/** @var $web_token \mrfg\cogauth\cognito\auth_result */
-	protected $auth;
-
 	/** @var $cognito  \mrfg\cogauth\cognito\cognito|\PHPUnit_Framework_MockObject_MockObject  */
 	protected $cognito;
 
+	/** @var $log \phpbb\log\log_interface |\PHPUnit_Framework_MockObject_MockObject */
+	protected $log;
 
 	public function setUp()
     {
@@ -55,15 +54,15 @@ class auth_result_test extends \phpbb_test_case
 			->setMethods(array('refresh_access_token_for_username'))
 			->getMock();
 
-		//$this->auth = $this->getMockBuilder('\mrfg\cogauth\cognito\authentication')
-		//	->setMethods(array('authenticated'));
-
+		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
+			->disableOriginalConstructor()
+			->getMock();
     }
 
     public function test_get_session_token()
 	{
 		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,'cogauth_authentication');
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 
 		// Get the session token but dont create a token if one dosn't exist.
 		$token = $auth->get_session_token(false);
@@ -80,6 +79,7 @@ class auth_result_test extends \phpbb_test_case
 
     public function test_validate_and_store_auth_response_happy_day()
     {
+    	$time_now = time();
 		$id_token = 'A simple ID Token';
 		$access_token = 'A simple Acces Token';
 		$refresh_token = 'A Simple Refresh Token';
@@ -115,9 +115,9 @@ class auth_result_test extends \phpbb_test_case
 		$this->web_token->expects($this->exactly(2))
 			->method('decode_token')->will($this->returnValueMap($map));
 
-
-		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,'cogauth_authentication');
+		$auth = new auth_result_test_functions(
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
+		$auth->set_time_now($time_now);
 
 		$session_token =$auth->get_session_token();
 		// Validate the Database Store
@@ -132,7 +132,10 @@ class auth_result_test extends \phpbb_test_case
 			'phpbb_user_id' => $phpbb_user_id,
 			'sid' 			=> $sid,
 			'access_token'  => $access_token,
-			'refresh_token' => $refresh_token);
+			'refresh_token' => $refresh_token,
+			'autologin' 	=> 0,
+			'last_active'	=> $time_now,
+			'first_active'	=> $time_now);
 
 		$this->db->expects($this->once())
 			->method('sql_build_array')
@@ -154,13 +157,19 @@ class auth_result_test extends \phpbb_test_case
 
 	public function test_authenticated_no_access_token()
 	{
+		$time_now = time();
 		$this->db->expects($this->never())
 			->method('sql_build_array');
 
-		$this->setExpectedException('\mrfg\cogauth\cognito\exception\cogauth_authentication_exception');
 
-		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,'cogauth_authentication');
+
+		$this->log->expects($this->once())
+			->method('add')
+			->with('user', '1234', 0,'COGAUTH_NO_ACCESS_TOKEN',$time_now);
+
+		$auth = new auth_result_test_functions(
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
+		$auth->set_time_now($time_now);
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated('1234', 'dddd');
@@ -198,7 +207,7 @@ class auth_result_test extends \phpbb_test_case
 		$this->setExpectedException('\mrfg\cogauth\cognito\exception\cogauth_authentication_exception');
 
 		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db,'cogauth_authentication');
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 		$this->assertEquals(strlen($result),32,'Validating response');
@@ -211,7 +220,7 @@ class auth_result_test extends \phpbb_test_case
 	public function test_get_access_token_from_sid_no_data(){
 
 		$auth = new \mrfg\cogauth\tests\cognito\auth_result_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 		$time_now = time();
 		$auth->set_time_now($time_now);
 
@@ -234,7 +243,7 @@ class auth_result_test extends \phpbb_test_case
 	public function test_get_access_token_from_session_token_no_data(){
 
 		$auth = new \mrfg\cogauth\tests\cognito\auth_result_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
+			$this->web_token, $this->db,$this->log, 'cogauth_authentication');
 		$time_now = time();
 		$auth->set_time_now($time_now);
 
@@ -392,7 +401,7 @@ class auth_result_test extends \phpbb_test_case
 		$row = array ();
 
 		$auth = new \mrfg\cogauth\tests\cognito\auth_result_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 		$auth->set_time_now($time_now);
 
 		// Is he SQL query formed correctly

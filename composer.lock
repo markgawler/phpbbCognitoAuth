@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5d0fb3fbced6ffd658d3bdfd02b419b8",
+    "content-hash": "e3af8ac65f1109190bc60a3e923eccdf",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.108.2",
+            "version": "3.109.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "1bb860e0ef548355bd97e22549b378c62c7af6ad"
+                "reference": "f0c2725d146c4c7d5386e3e9765e68e316ab9acb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/1bb860e0ef548355bd97e22549b378c62c7af6ad",
-                "reference": "1bb860e0ef548355bd97e22549b378c62c7af6ad",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/f0c2725d146c4c7d5386e3e9765e68e316ab9acb",
+                "reference": "f0c2725d146c4c7d5386e3e9765e68e316ab9acb",
                 "shasum": ""
             },
             "require": {
@@ -87,7 +87,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2019-07-30T19:02:39+00:00"
+            "time": "2019-08-08T18:37:53+00:00"
         },
         {
             "name": "beberlei/assert",
@@ -1011,7 +1011,7 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=5.3.3",
+        "php": ">=7.1",
         "ext-json": "*",
         "ext-curl": "*"
     },

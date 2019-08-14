@@ -721,30 +721,4 @@ class cognito
 		}
 	}
 
-	/**
-	* Clean up session tokens
-	*
-	 * @deprecated
-	 *
-	* @since 1.5
-	*/
-	//todo Move to auth_result
-	public function cleanup_session_tokens()
-	{
-		//expire non auto login
-		$expire_time = $this->time_now - ($this->config['session_length'] + 60); // Session length + one minutes
-
-		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE last_active < " . $expire_time . " AND autologin = 0";
-		$this->db->sql_query($sql);
-
-		//expire auto login
-		$expire_time = $this->time_now - ($this->config['cogauth_max_session_hours'] * 3600); // Max Session length in seconds
-
-		$sql = 'DELETE FROM ' . $this->cogauth_session . " WHERE first_active < " . $expire_time;
-		$this->db->sql_query($sql);
-
-	}
-
-
-
 }

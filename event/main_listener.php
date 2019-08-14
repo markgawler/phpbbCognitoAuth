@@ -202,7 +202,6 @@ class main_listener implements EventSubscriberInterface
 				//TODO this is not an error if the user has not been migrated, we should migrate the user and set the password.
 				// this may be because the SID was not found in the cogauth_session table
 				// or the access token was invalid and failed to refresh.
-				//error_log('No Access token found');
 				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 			}
 		}

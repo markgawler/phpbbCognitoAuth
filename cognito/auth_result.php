@@ -438,16 +438,23 @@ class auth_result
 	/**
 	 * Clean up session tokens
 	 *
-	 * @param int $session_length The session length in seconds
-	 * @param int $max_session_length The maximum length of a session in seconds
+	 * @param integer $max_session_length the maximum session length in hours.
 	 * @since 1.0
 	 */
-	public function cleanup_session_tokens($session_length, $max_session_length)
+	public function cleanup_session_tokens($max_session_length)
 	{
-		//expire non auto login
-		$expire_time = $this->time_now - ($session_length + 60); // Session length + one minutes
+		// Expire non auto login sessions
+		// The rule for deleting rows for phpbb_cogauth_authentication is that for non auto login rows once the sid is
+		// deleted from the phpbb_sessions table it is safe to delete the row.
+		// DELETE phpbb_cogauth_authentication FROM phpbb_cogauth_authentication
+		// 		LEFT JOIN phpbb_sessions ON phpbb_cogauth_authentication.sid = phpbb_sessions.session_id
+		// 		WHERE phpbb_sessions.session_id is NULL and phpbb_cogauth_authentication.autologin is False;
+		//todo: investigate optimising by adding "phpbb_sessions.session_user_id != 1"
+		$table = $this->cogauth_authentication;
 
-		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE last_active < " . $expire_time . " AND autologin = 0";
+		$sql = "DELETE " . $table. " FROM " . $table .
+				" LEFT JOIN phpbb_sessions ON " . $table . ".sid = phpbb_sessions.session_id" .
+				" WHERE phpbb_sessions.session_id is NULL and " . $table . ".autologin is False;";
 		$this->db->sql_query($sql);
 
 		//expire auto login

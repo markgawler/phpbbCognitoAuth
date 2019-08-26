@@ -438,7 +438,7 @@ class auth_result
 	/**
 	 * Clean up session tokens
 	 *
-	 * @param integer $max_session_length the maximum session length in hours.
+	 * @param integer $max_session_length the maximum session length in days.
 	 * @since 1.0
 	 */
 	public function cleanup_session_tokens($max_session_length)
@@ -457,7 +457,7 @@ class auth_result
 		$this->db->sql_query($sql);
 
 		//expire auto login
-		$expire_time = $this->time_now - ($max_session_length * 3600); // Max Session length in seconds
+		$expire_time = $this->time_now - ($max_session_length * 86400); // Max Session length in seconds (from days)
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE first_active < " . $expire_time;
 		$this->db->sql_query($sql);
 

@@ -116,7 +116,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 	{
 		$this->auth_result->set_time_now(1500000000);
 
-		$this->auth_result->cleanup_session_tokens(100);
+		$this->auth_result->cleanup_session_tokens(30);  //30 Days
 		$this->assertEquals(1, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1'), 'Token retained when phpBB and Cogauth sessions both valid');
 		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u2'), 'Token deleted when phpBB not valid and Cogauth sessions valid (not auto login)');
 		$this->assertEquals(1, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u3'), 'Token retained when phpBB  not valid and Cogauth sessions both valid (auto Login)');

@@ -64,16 +64,22 @@ class main_module
 						trigger_error('FORM_INVALID');
 					} else {
 
+						$config->set('cogauth_aws_region', $request->variable('cogauth_aws_region', ''));
+						$config->set('cogauth_aws_key', $request->variable('cogauth_aws_key', ''));
+						$config->set('cogauth_aws_secret', $request->variable('cogauth_aws_secret', ''));
+						$config->set('cogauth_pool_id', $request->variable('cogauth_pool_id', ''));
 						$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
-						$config->set('cogauth_max_session_hours', $request->variable('cogauth_max_session_hours', ''));
 
 						trigger_error($language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 					}
 				}
 
 				$template->assign_vars(array_merge($commonVars, array(
-					'COGAUTH_TOKEN_CLEANUP' 	=> $config['cogauth_token_cleanup_gc'],
-					'COGAUTH_MAX_SESSION_HOURS' => $config['cogauth_max_session_hours'],
+					'COGAUTH_AWS_REGION' => $config['cogauth_aws_region'],
+					'COGAUTH_AWS_KEY' => $config['cogauth_aws_key'],
+					'COGAUTH_AWS_SECRET' => $config['cogauth_aws_secret'],
+					'COGAUTH_POOL_ID' => $config['cogauth_pool_id'],
+					'COGAUTH_TOKEN_CLEANUP' => $config['cogauth_token_cleanup_gc'],
 				)));
 			break;
 		}

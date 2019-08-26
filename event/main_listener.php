@@ -30,8 +30,6 @@ class main_listener implements EventSubscriberInterface
 			'core.delete_user_after' 		=> 'delete_users',
 			'core.user_active_flip_after' 	=> 'user_active_flip',
 			'core.auth_login_session_create_before' => 'auth_login_session_create_before',
-			//'core.session_gc_after' 		=> 'session_gc_after',
-			//'core.user_setup_after'			=> 'user_setup_after',
 		);
 	}
 

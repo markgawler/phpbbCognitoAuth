@@ -58,7 +58,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	public function getDataSet()
 	{
-		return $this->createXMLDataSet(dirname(__FILE__) . '/fixtures/token_deletion.xml');
+		return $this->createXMLDataSet(dirname(__FILE__) . '/fixtures/token_deletion_t01.xml');
 	}
 
 	public function setUp()
@@ -114,51 +114,14 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	public function test_expire_token_none()
 	{
-		$this->auth_result->set_time_now(1546345800);
+		$this->auth_result->set_time_now(1500000000);
 
-		$this->auth_result->cleanup_session_tokens(100,3);
-		$this->assertEquals($this->initial_row_count, $this->count_rows(),'Asserting no rows deleted from cogauth_session table');
+		$this->auth_result->cleanup_session_tokens(100);
+		$this->assertEquals(1, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1'), 'Token retained when phpBB and Cogauth sessions both valid');
+		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u2'), 'Token deleted when phpBB not valid and Cogauth sessions valid (not auto login)');
+		$this->assertEquals(1, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u3'), 'Token retained when phpBB  not valid and Cogauth sessions both valid (auto Login)');
+		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u4'), 'Token deleted when phpBB not valid and Cogauth sessions expired (auto login)');
+		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u5'), 'Token deleted when phpBB not valid and Cogauth sessions expired (no auto login)');
 
 	}
-	public function test_expire_token_one()
-	{
-		$this->auth_result->set_time_now(1546345800+100);
-		$this->auth_result->cleanup_session_tokens(100,3);
-		$this->assertEquals(0, $this->count_rows('54MQHz2q89Bjc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
-		$this->assertEquals($this->initial_row_count - 1, $this->count_rows(),'Asserting one row deleted from cogauth_session table');
-	}
-
-	public function test_expire_token_two()
-	{
-		$this->auth_result->set_time_now(1546345800+200);
-		$this->auth_result->cleanup_session_tokens(100,3);
-
-		$this->assertEquals(0, $this->count_rows('NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
-		$this->assertEquals(0, $this->count_rows('54MQHz2q89Bjc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row deleted from cogauth_session table');
-		$this->assertEquals($this->initial_row_count - 2, $this->count_rows(),'Asserting two rows deleted from cogauth_session table');
-	}
-
-	public function test_expire_token_autologin()
-	{
-		$this->auth_result->set_time_now(1546345700 + 10800 ); //Time now = First active  + 3 hours and 1 second
-		$this->auth_result->cleanup_session_tokens(100,3);
-
-		$this->assertEquals($this->initial_row_count - 2, $this->count_rows(),'Asserting no auto login rows deleted (At 3 hours)');
-	}
-	public function test_expire_token_autologin_expired()
-	{
-		$this->auth_result->set_time_now(1546345700 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
-		$this->auth_result->cleanup_session_tokens(100,3);
-
-		$this->assertEquals(1, $this->count_rows(),'Asserting all bar one rows deleted');
-		$this->assertEquals(1, $this->count_rows('ddddddddddddc4HEjq82bhgfdzmXD6u1'), 'Asserting correct row remains');
-	}
-
-	public function test_expire_token_autologin_expired_all()
-	{
-		$this->auth_result->set_time_now(1546345900 + 10800 + 1); //Time now = First active  + 3 hours and 1 second
-		$this->auth_result->cleanup_session_tokens(100,3);
-		$this->assertEquals(0, $this->count_rows(),'Asserting all rows deleted');
-	}
-
 }

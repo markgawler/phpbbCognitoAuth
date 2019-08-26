@@ -446,20 +446,18 @@ class auth_result
 		// Expire non auto login sessions
 		// The rule for deleting rows for phpbb_cogauth_authentication is that for non auto login rows once the sid is
 		// deleted from the phpbb_sessions table it is safe to delete the row.
-		// DELETE phpbb_cogauth_authentication FROM phpbb_cogauth_authentication
-		// 		LEFT JOIN phpbb_sessions ON phpbb_cogauth_authentication.sid = phpbb_sessions.session_id
-		// 		WHERE phpbb_sessions.session_id is NULL and phpbb_cogauth_authentication.autologin is False;
 		//todo: investigate optimising by adding "phpbb_sessions.session_user_id != 1"
-		$table = $this->cogauth_authentication;
+		$cogauth_table = $this->cogauth_authentication;
 
-		$sql = "DELETE " . $table. " FROM " . $table .
-				" LEFT JOIN phpbb_sessions ON " . $table . ".sid = phpbb_sessions.session_id" .
-				" WHERE phpbb_sessions.session_id is NULL and " . $table . ".autologin is False;";
+		$sql = "DELETE FROM " . $cogauth_table . " WHERE sid IN "
+			. "(SELECT " .$cogauth_table. ".sid FROM $cogauth_table LEFT JOIN "
+			. SESSIONS_TABLE. " ON " . $cogauth_table . ".sid = " .SESSIONS_TABLE . ".session_id WHERE "
+			. SESSIONS_TABLE . ".session_id is NULL and " . $cogauth_table . ".autologin is '0')";
+
 		$this->db->sql_query($sql);
 
 		//expire auto login
 		$expire_time = $this->time_now - ($max_session_length * 3600); // Max Session length in seconds
-
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE first_active < " . $expire_time;
 		$this->db->sql_query($sql);
 

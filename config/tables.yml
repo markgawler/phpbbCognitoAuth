@@ -1,3 +1,2 @@
 parameters:
-    mrfg.cogauth.tables.cogauth_session:        '%core.table_prefix%cogauth_session'
     mrfg.cogauth.tables.cogauth_authentication: '%core.table_prefix%cogauth_authentication'

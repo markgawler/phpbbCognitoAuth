@@ -13,7 +13,6 @@
 namespace mrfg\cogauth\cognito;
 
 class web_token_phpbb extends \mrfg\cogauth\jwt\web_token
-#class web_token_phpbb extends web_token
 {
 	/** @var \phpbb\config\config */
 	protected $config;

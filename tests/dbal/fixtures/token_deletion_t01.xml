@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<dataset>
+	<table name="phpbb_sessions">
+		<column>session_id</column>
+		<row>
+			<value>a652e8fe432c7b6d6e42eb134ae90t01</value>
+		</row>
+		<row>
+			<value>a652e8fe432c7b6d6e42eb134ae90t05</value>
+		</row>
+	</table>
+
+
+    <table name="phpbb_cogauth_authentication">
+
+
+		<column>session_token</column>
+		<column>sid</column>
+		<column>autologin</column>
+		<column>first_active</column>
+		<column>phpbb_user_id</column>
+
+		<row>
+            <value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u1</value>
+            <value>a652e8fe432c7b6d6e42eb134ae90t01</value>
+			<value>0</value>
+            <value>1546345700</value>
+            <value>99</value>
+        </row>
+		<row>
+			<value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u2</value>
+			<value>a652e8fe49324b6d6e42eb134ae90t02</value>
+			<value>0</value>
+			<value>1546345700</value>
+			<value>99</value>
+		</row>
+		<row>
+			<value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u3</value>
+			<value>a652e8fe49324b6d6e42eb134ae90t03</value>
+			<value>1</value>
+			<value>1499913600</value>
+			<value>99</value>
+		</row>
+		<row>
+			<value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u4</value>
+			<value>a652e8fe49324b6d6e42eb134ae90t04</value>
+			<value>1</value>
+			<value>1499636400</value>
+			<value>99</value>
+		</row>
+		<row>
+			<value>NtMQHz2q89Bjc4HEjq82brEJ6zmXD6u5</value>
+			<value>a652e8fe49324b6d6e42eb134ae90t05</value>
+			<value>0</value>
+			<value>1499636400</value>
+			<value>99</value>
+		</row>
+	</table>
+
+</dataset>

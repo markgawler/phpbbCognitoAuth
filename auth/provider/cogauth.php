@@ -368,8 +368,7 @@ class cogauth extends \phpbb\auth\provider\base
 	{
 		// These are fields required in the config table
 		return array(
-			'cogauth_refresh_token_expiration_days',
-			'cogauth_pool_id',
+			'cogauth_client_id',
 			'cogauth_client_secret'
 		);
 	}
@@ -379,7 +378,6 @@ class cogauth extends \phpbb\auth\provider\base
 		return array(
 			'TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
 			'TEMPLATE_VARS' => array(
-				'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $new_config['cogauth_refresh_token_expiration_days'],
 				'COGAUTH_CLIENT_ID' => $new_config['cogauth_client_id'],
 				'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
 			)

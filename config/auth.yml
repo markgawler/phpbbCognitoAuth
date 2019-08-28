@@ -11,7 +11,6 @@ services:
             - '@mrfg.cogauth.cognito'
             - '@mrfg.cogauth.web_token_phpbb'
             - '@log'
-            - '%mrfg.cogauth.tables.cogauth_session%'
 
         tags:
             - { name: auth.provider }

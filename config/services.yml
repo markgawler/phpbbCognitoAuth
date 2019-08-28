@@ -47,7 +47,6 @@ services:
             - '@mrfg.cogauth.web_token_phpbb'
             - '@mrfg.cogauth.user'
             - '@mrfg.cogauth.auth_result'
-            - '%mrfg.cogauth.tables.cogauth_session%'
 
     mrfg.cogauth.cognito_client_wrapper:
         class: mrfg\cogauth\cognito\cognito_client_wrapper

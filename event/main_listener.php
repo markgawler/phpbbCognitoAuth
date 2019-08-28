@@ -116,7 +116,7 @@ class main_listener implements EventSubscriberInterface
 		$data = $event['session_data'];
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
         {
-			// Now we have the SID we can store it in the cogauth_session table..
+			// Now we have the SID we can store it in the cogauth_authentication table..
 			/** @noinspection PhpUnusedLocalVariableInspection */
 			$session_token = $this->auth_result->authenticated(
 				$data['session_user_id'], $data['session_id']);
@@ -198,7 +198,7 @@ class main_listener implements EventSubscriberInterface
 			else
 			{
 				//TODO this is not an error if the user has not been migrated, we should migrate the user and set the password.
-				// this may be because the SID was not found in the cogauth_session table
+				// this may be because the SID was not found in the cogauth_authentication table
 				// or the access token was invalid and failed to refresh.
 				$event['error'] = array('COGAUTH_PASSWORD_ERROR');
 			}

@@ -57,8 +57,6 @@ class cognito
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-	/**@var string */
-	protected $cogauth_session;
 
 	/**@var array $auth_result */
 	protected $auth_result;
@@ -69,7 +67,7 @@ class cognito
     /** @var \phpbb\log\log_interface $log */
     protected $log;
 
-	/**	@var  int $user_id  The phpBB user ID associated with this cogauth_session */
+	/**	@var  int $user_id  The phpBB user ID */
 	protected $user_id = 0;
 
 	/** @var int $time_now  */
@@ -95,7 +93,6 @@ class cognito
      * @param   \mrfg\cogauth\cognito\web_token_phpbb $web_token
 	 * @param 	\mrfg\cogauth\cognito\user           $cognito_user
 	 * @param	\mrfg\cogauth\cognito\auth_result    $authentication
-     * @param	string                               $cogauth_session - db table name
 	 */
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -106,14 +103,12 @@ class cognito
         cognito_client_wrapper $client,
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
 		\mrfg\cogauth\cognito\user $cognito_user,
-		\mrfg\cogauth\cognito\auth_result $authentication,
-		$cogauth_session)
+		\mrfg\cogauth\cognito\auth_result $authentication)
 	{
 		$this->db = $db;
 		$this->config = $config;
 		$this->user = $user;
 		$this->request = $request;
-		$this->cogauth_session =$cogauth_session;
 		$this->cognito_user = $cognito_user;
 		$this->authentication = $authentication;
 

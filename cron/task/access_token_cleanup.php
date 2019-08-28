@@ -44,7 +44,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	{
 		error_log('Cron Run - cogauth_token_cleanup');
 		$this->config->set('cogauth_token_cleanup_last_gc', time());
-		$this->auth_result->cleanup_session_tokens($this->config['cogauth_refresh_token_expiration_days'] );
+		$this->auth_result->cleanup_session_tokens($this->config['max_autologin_time'] );
 	}
 
 	/**

@@ -69,7 +69,7 @@ class main_module
 						$config->set('cogauth_aws_secret', $request->variable('cogauth_aws_secret', ''));
 						$config->set('cogauth_pool_id', $request->variable('cogauth_pool_id', ''));
 						$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
-
+						$config->set('max_autologin_time', $request->variable('cogauth_refresh_token_expiration_days', ''));
 						trigger_error($language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 					}
 				}
@@ -80,6 +80,8 @@ class main_module
 					'COGAUTH_AWS_SECRET' => $config['cogauth_aws_secret'],
 					'COGAUTH_POOL_ID' => $config['cogauth_pool_id'],
 					'COGAUTH_TOKEN_CLEANUP' => $config['cogauth_token_cleanup_gc'],
+					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $config['max_autologin_time'],
+
 				)));
 			break;
 		}

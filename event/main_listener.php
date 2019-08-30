@@ -30,6 +30,7 @@ class main_listener implements EventSubscriberInterface
 			'core.delete_user_after' 		=> 'delete_users',
 			'core.user_active_flip_after' 	=> 'user_active_flip',
 			'core.auth_login_session_create_before' => 'auth_login_session_create_before',
+			'core.acp_board_config_edit_add' => 'acp_board_config_edit_add'
 		);
 	}
 
@@ -273,6 +274,20 @@ class main_listener implements EventSubscriberInterface
 					$this->client->admin_disable_user($user_id);
 				break;
 			}
+		}
+	}
+
+	public function acp_board_config_edit_add($event)
+	{
+		// Ensure the APC  max_autologin_time is within the valid range for Cognito refresh token validity,
+		if ($event['mode'] == 'security' )
+		{
+			// this seems long hand, but didn't work until the local $display_vars was used.
+			$display_vars =  $event['display_vars'];
+			$display_vars['vars']['max_autologin_time']['validate'] = 'int:1:3650';
+			$display_vars['vars']['max_autologin_time']['type'] = 'number:1:3650';
+			$display_vars['vars']['max_autologin_time']['lang'] = 'CA_AUTOLOGIN_LENGTH';
+			$event['display_vars'] = $display_vars;
 		}
 	}
 }

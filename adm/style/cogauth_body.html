@@ -23,14 +23,16 @@
 			<dd><input type="text" id="cogauth_pool_id" size="40" name="cogauth_pool_id" value="{COGAUTH_POOL_ID}" /></dd>
 		</dl>
 		<dl>
-			<dt><label for="cogauth_token_cleanup_gc">{L_ACP_COGAUTH_TOKEN_CLEANUP}{L_COLON}</label></dt>
-			<dd><input type="number" id="cogauth_token_cleanup_gc" name="cogauth_token_cleanup_gc" value="{COGAUTH_TOKEN_CLEANUP}"/></dd>
+			<dt><label for="cogauth_token_cleanup_gc">{L_ACP_COGAUTH_TOKEN_CLEANUP}{L_COLON}</label><br>
+				<span>{L_ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN}</span></dt>
+			<dd><input type="number" min="1" max="1440" id="cogauth_token_cleanup_gc" name="cogauth_token_cleanup_gc" value="{COGAUTH_TOKEN_CLEANUP}"/> {LMINUTES}</dd>
 		</dl>
 		<dl>
-			<dt><label for="cogauth_refresh_token_expiration_days">{L_ACP_COGAUTH_REFRESH_TOKEN_EXP_DAYS}{L_COLON}</label></dt>
-			<dd><input type="number" id="cogauth_refresh_token_expiration_days" name="cogauth_refresh_token_expiration_days" value="{COGAUTH_REFRESH_TOKEN_EXP_DAYS}"/></dd>
+			<dt><label for="cogauth_refresh_token_expiration_days">{L_CA_AUTOLOGIN_LENGTH}{L_COLON}</label><br>
+				<span>{L_CA_AUTOLOGIN_LENGTH_EXPLAIN}</span></dt>
+			<dd><input type="number" min="1" max="3650"  id="cogauth_refresh_token_expiration_days" name="cogauth_refresh_token_expiration_days"
+					   value="{COGAUTH_REFRESH_TOKEN_EXP_DAYS}"/> {L_DAYS}</dd>
 		</dl>
-
 		<p class="submit-buttons">
 			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;
 			<input class="button2" type="reset" id="reset" name="reset" value="{L_RESET}" />

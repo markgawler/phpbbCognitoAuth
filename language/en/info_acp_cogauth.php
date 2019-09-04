@@ -29,4 +29,5 @@ $lang = array_merge($lang, array(
 	'CA_AUTOLOGIN_LENGTH_EXPLAIN' => 'Number of days after which "Remember Me" login keys are removed (1 to 3650, the AWS Cognito Refresh Token validity range).',
 	'CA_AUTOLOGIN_LENGTH' => '"Remember Me" login key expiration length (in days)',
 	'ACP_COGAUTH_AWS_ERROR' => 'AWS Returned the following Error'
+
 ));

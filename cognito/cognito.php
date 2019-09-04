@@ -57,7 +57,6 @@ class cognito
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-
 	/**@var array $auth_result */
 	protected $auth_result;
 
@@ -81,12 +80,17 @@ class cognito
 
 	/** @var \mrfg\cogauth\cognito\auth_result $authentication */
 	protected $authentication;
+
+	/** @var \phpbb\language\language  */
+	protected $language;
+
 	/**
 	 * Database Authentication Constructor
 	 *
 	 * @param	\phpbb\db\driver\driver_interface    $db
 	 * @param	\phpbb\config\config                 $config
 	 * @param	\phpbb\user                          $user
+	 * @param	\phpbb\language\language             $language
 	 * @param   \phpbb\request\request_interface      $request
 	 * @param   \phpbb\log\log_interface              $log
      * @param   cognito_client_wrapper                $client,
@@ -98,6 +102,7 @@ class cognito
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\user $user,
+		\phpbb\language\language $language,
 		\phpbb\request\request_interface $request,
 		\phpbb\log\log_interface $log,
         cognito_client_wrapper $client,
@@ -108,6 +113,7 @@ class cognito
 		$this->db = $db;
 		$this->config = $config;
 		$this->user = $user;
+		$this->language = $language;
 		$this->request = $request;
 		$this->cognito_user = $cognito_user;
 		$this->authentication = $authentication;
@@ -797,17 +803,7 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			$message = $e->getAwsErrorMessage();
-			if ( empty($message)) {
-				$message = $e->getMessage();
-			}
-			return $message;
-			/*if ($e->getAwsErrorCode() == 'ResourceNotFoundException')
-			{
-				return $e->getAwsErrorMessage();
-			}
-			$this->handle_cognito_identity_provider_exception($e, 0, 'set_refresh_token_expiration');
-			*/
+			return $this->handle_identity_provider_exception_for_acp($e);
 		}
 
 	}
@@ -826,11 +822,7 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			$message = $e->getAwsErrorMessage();
-			if ( empty($message)) {
-				$message = $e->getMessage();
-			}
-			return $message;
+			return $this->handle_identity_provider_exception_for_acp($e);
 		}
 	}
 
@@ -847,11 +839,23 @@ class cognito
 		}
 		catch (CognitoIdentityProviderException $e)
 		{
-			$message = $e->getAwsErrorMessage();
-			if ( empty($message)) {
-				$message = $e->getMessage();
-			}
-			return $message;
+			return $this->handle_identity_provider_exception_for_acp($e);
 		}
+	}
+
+	/**
+	 * @param $e CognitoIdentityProviderException
+	 *
+	 * @return string Error message to display in ACP
+	 *
+	 * @since 1.0
+	 */
+	protected function handle_identity_provider_exception_for_acp($e)
+	{
+		$message = $e->getAwsErrorMessage();
+		if ( empty($message)) {
+			$message = $e->getMessage() . '<br>' . $this->language->lang('COGAUTH_ACP_CHECK_REGION');
+		}
+		return $message;
 	}
 }

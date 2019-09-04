@@ -44,6 +44,7 @@ services:
             - '@dbal.conn'
             - '@config'
             - '@user'
+            - '@language'
             - '@request'
             - '@log'
             - '@mrfg.cogauth.cognito_client_wrapper'

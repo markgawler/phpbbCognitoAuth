@@ -8,6 +8,9 @@ services:
             - '@mrfg.cogauth.auth_result'
             - '@mrfg.cogauth.cognito_controller'
             - '@dispatcher'
+            - '@request'
+            - '@config'
+
         tags:
             - { name: event.listener }
 

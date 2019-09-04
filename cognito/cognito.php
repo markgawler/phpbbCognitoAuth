@@ -120,20 +120,53 @@ class cognito
         $this->region = $config['cogauth_aws_region'];
 
         $this->auth_result = array();
-
-        $args = array(
-            'credentials' => array(
-                'key' => $config['cogauth_aws_key'],
-                'secret' => $config['cogauth_aws_secret'],
-            ),
-            'version' => '2016-04-18',
-            'region' =>  $this->region,
-        );
-        $this->client = $client;
-        $client->create_client($args);
-        $this->web_token = $web_token;
+		$this->client = $client;
+		$this->create_identity_provider($this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
+		$this->web_token = $web_token;
         $this->log = $log;
     }
+
+    public function update_credentials($region, $key, $secret)
+	{
+		$this->region = $region;
+		$this->config->set('cogauth_aws_region', $region);
+		$this->config->set('cogauth_aws_key', $key);
+		$this->config->set('cogauth_aws_secret', $secret);
+		$this->create_identity_provider($region, $key, $secret);
+	}
+
+	private function create_identity_provider($region, $key, $secret)
+	{
+		$args = array(
+			'credentials' => array(
+				'key' => $key,
+				'secret' => $secret,
+			),
+			'version' => '2016-04-18',
+			'region' =>  $region,
+		);
+		$this->client->create_client($args);
+	}
+
+	/** Update client_id
+	 * @param string $client_id
+	 */
+	public function update_client_id($client_id)
+	{
+		$this->client_id = $client_id;
+		$this->config->set('cogauth_client_id', $client_id);
+	}
+
+	/**
+	 * Update client_id
+	 * @param string $user_pool_id
+	 */
+	public function update_user_pool_id($user_pool_id)
+	{
+		$this->user_pool_id = $user_pool_id;
+		$this->config->set('cogauth_pool_id', $user_pool_id);
+	}
+
 
 	/**
 	 * @param int $user_id phpBB User ID
@@ -523,6 +556,8 @@ class cognito
 	 * Admin only Change user password function. This is a hack as the user is deleted and recreated
 	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
+	 *
+	 *                     todo: uae AdminSetUserPassword
 	 */
 	public function admin_change_password($user_id, $new_password)
 	{
@@ -716,4 +751,107 @@ class cognito
 		}
 	}
 
+
+
+	/**
+	 * Set the Refresh Token Expiration for the App Client
+	 * @param integer $days
+	 * @return \Aws\Result | string  Array containing Aws/Result or String containing error message
+	 *
+	 * @since version
+	 */
+	public function set_refresh_token_expiration($days)
+	{
+		if ( $days > 0)
+		{
+			$this->config->set('max_autologin_time', $days);
+			return $this->update_user_pool_client();
+		}
+		return null;
+	}
+
+	/**
+	 * Set the Refresh Token Expiration for the App Client
+	 * @return array | string  Array containing Aws/Result or String containing error message
+	 *
+	 * @since version
+	 */
+	public function update_user_pool_client()
+	{
+		try
+		{
+			$home_url = $this->config['site_home_url'];
+			$script = $this->config['script_path'];
+			return $this->client->update_user_pool_client(array(
+				'ClientId'             => $this->client_id,
+				'UserPoolId'           => $this->user_pool_id,
+				'RefreshTokenValidity' => (int) $this->config['max_autologin_time'],
+				'ExplicitAuthFlows'    => array('ADMIN_NO_SRP_AUTH'),
+				'CallbackURLs'		   => array($home_url . $script . '/app.php/cogauth/auth/callback'),
+				'LogoutURLs' 		   => array($home_url . $script . '/app.php/cogauth/auth/signout'),
+				'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
+				'AllowedOAuthFlows'	   => array('code', 'implicit'),		// code | implicit | client_credentials
+				'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
+				'AllowedOAuthFlowsUserPoolClient' => true
+			));
+		}
+		catch (CognitoIdentityProviderException $e)
+		{
+			$message = $e->getAwsErrorMessage();
+			if ( empty($message)) {
+				$message = $e->getMessage();
+			}
+			return $message;
+			/*if ($e->getAwsErrorCode() == 'ResourceNotFoundException')
+			{
+				return $e->getAwsErrorMessage();
+			}
+			$this->handle_cognito_identity_provider_exception($e, 0, 'set_refresh_token_expiration');
+			*/
+		}
+
+	}
+
+	/**
+	 * @return \Aws\Result | string Array containing Aws/Result or String containing error message
+	 */
+	public function describe_user_pool_client()
+	{
+		try
+		{
+			$result = $this->client->update_user_pool_client(array(
+				'ClientId'   => $this->client_id,
+				'UserPoolId' => $this->user_pool_id));
+			return $result;
+		}
+		catch (CognitoIdentityProviderException $e)
+		{
+			$message = $e->getAwsErrorMessage();
+			if ( empty($message)) {
+				$message = $e->getMessage();
+			}
+			return $message;
+		}
+	}
+
+	/**
+	 * @return \Aws\Result | string  Array containing Aws/Result or String containing error message
+	 */
+	public function describe_user_pool()
+	{
+		try{
+			$result = $this->client->describe_user_pool(array(
+				'UserPoolId' => $this->user_pool_id
+			));
+			return $result;
+		}
+		catch (CognitoIdentityProviderException $e)
+		{
+			$message = $e->getAwsErrorMessage();
+			if ( empty($message)) {
+				$message = $e->getMessage();
+			}
+			return $message;
+		}
+	}
 }

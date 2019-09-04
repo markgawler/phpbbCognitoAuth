@@ -33,7 +33,7 @@ class cognito_client_wrapper
     }
 
     /**
-     * Create Cognito Identity Providerby client using an array of constructor options.
+     * Create Cognito Identity Provider client using an array of constructor options.
      *
      * @param array  $args Arguments to configure the client.
      *
@@ -144,5 +144,33 @@ class cognito_client_wrapper
 	{
 		return $this->client->adminInitiateAuth($args);
 	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function update_user_pool_client($args)
+	{
+		return $this->client->updateUserPoolClient($args);
+	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function describe_user_pool_client($args)
+	{
+		return $this->client->DescribeUserPoolClient($args);
+	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function describe_user_pool($args)
+	{
+		return $this->client->describeUserPool($args);
+	}
+
 
 }

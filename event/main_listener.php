@@ -49,27 +49,40 @@ class main_listener implements EventSubscriberInterface
 	/** @var \mrfg\cogauth\cognito\controller $controller */
 	protected $controller;
 
+	/* @var \phpbb\request\request 	phpBB request object */
+	protected $request;
+
+	/**@var \phpbb\config\config $config Config object */
+	protected $config;
+
 	/**
 	 * Constructor
 	 *
-	 * @param \phpbb\user               $user       User object
-	 * @param \mrfg\cogauth\cognito\cognito $client
+	 * @param \phpbb\user                       $user       User object
+	 * @param \mrfg\cogauth\cognito\cognito     $client
 	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
-	 * @param \mrfg\cogauth\cognito\controller $controller
-	 * @param \phpbb\event\dispatcher_interface	$dispatcher	Event dispatcher
+	 * @param \mrfg\cogauth\cognito\controller  $controller
+	 * @param \phpbb\event\dispatcher_interface $dispatcher Event dispatcher
+	 * @param \phpbb\request\request            $request
+	 * @param \phpbb\config\config              $config
 	 */
 	public function __construct(
 		\phpbb\user $user,
 		\mrfg\cogauth\cognito\cognito $client,
 		\mrfg\cogauth\cognito\auth_result $auth_result,
 		\mrfg\cogauth\cognito\controller $controller,
-		\phpbb\event\dispatcher_interface $dispatcher)
+		\phpbb\event\dispatcher_interface $dispatcher,
+		\phpbb\request\request $request,
+		\phpbb\config\config $config)
 	{
 		$this->auth_result = $auth_result;
 		$this->user = $user;
 		$this->client = $client;
 		$this->controller = $controller;
 		$this->dispatcher = $dispatcher;
+		$this->request = $request;
+		$this->config   = $config;
+
 	}
 
 
@@ -282,13 +295,25 @@ class main_listener implements EventSubscriberInterface
 		// Ensure the APC  max_autologin_time is within the valid range for Cognito refresh token validity,
 		if ($event['mode'] == 'security' )
 		{
-			// this seems long hand, but didn't work until the local $display_vars was used.
-			$display_vars =  $event['display_vars'];
-			$display_vars['vars']['max_autologin_time']['validate'] = 'int:1:3650';
-			$display_vars['vars']['max_autologin_time']['type'] = 'number:1:3650';
-			$display_vars['vars']['max_autologin_time']['lang'] = 'CA_AUTOLOGIN_LENGTH';
-			$event['display_vars'] = $display_vars;
+			if ($event['submit'] == true)
+			{
+				// todo: is there a better way of triggering an action when the config changes?
+				$new_config = $this->request->variable('config', array('' => ''), true);
+				$max_autologin_time = $new_config['max_autologin_time'];
+				if ($max_autologin_time >= 1 && $max_autologin_time <= 3560 && $max_autologin_time != $this->config['max_autologin_time'])
+				{
+					$this->client->set_refresh_token_expiration($max_autologin_time);
+				}
+			}
+			else
+			{
+				// this seems long hand, but didn't work until the local $display_vars was used.
+				$display_vars = $event['display_vars'];
+				$display_vars['vars']['max_autologin_time']['validate'] = 'int:1:3650';
+				$display_vars['vars']['max_autologin_time']['type'] = 'number:1:3650';
+				$display_vars['vars']['max_autologin_time']['lang'] = 'CA_AUTOLOGIN_LENGTH';
+				$event['display_vars'] = $display_vars;
+			}
 		}
 	}
 }
-

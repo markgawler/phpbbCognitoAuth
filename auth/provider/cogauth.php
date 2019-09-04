@@ -103,6 +103,7 @@ class cogauth extends \phpbb\auth\provider\base
 			$message = $this->language->lang('COGAUTH_AWS_KEY_SET_ERROR') . adm_back_link($this->u_action);
 			trigger_error($message,E_USER_WARNING);
 		}
+		$this->cognito_client->update_user_pool_client();
 	}
 
 	/**
@@ -375,11 +376,13 @@ class cogauth extends \phpbb\auth\provider\base
 
 	public function get_acp_template($new_config)
 	{
+		$user_pool_client = $this->cognito_client->describe_user_pool_client()['UserPoolClient'];
+		$this->config['cogauth_client_secret'] =  $user_pool_client['ClientSecret'];
 		return array(
 			'TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
 			'TEMPLATE_VARS' => array(
+				'COGAUTH_CLIENT_NAME' =>  $user_pool_client['ClientName'],
 				'COGAUTH_CLIENT_ID' => $new_config['cogauth_client_id'],
-				'COGAUTH_CLIENT_SECRET' => $new_config['cogauth_client_secret'],
 			)
 		);
 	}

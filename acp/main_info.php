@@ -23,6 +23,11 @@ class main_info
 					'auth' => 'ext_mrfg/cogauth && acl_a_board',
 					'cat' => array('ACP_COGAUTH_TITLE')
 				),
+				'app_client'	=> array(
+					'title' => 'ACP_COGAUTH_TITLE_APP',
+					'auth' => 'ext_mrfg/cogauth && acl_a_board',
+					'cat' => array('ACP_COGAUTH_APP_TITLE')
+				),
 			),
 		);
 	}

@@ -4,6 +4,7 @@
 
 <form id="acp_board" method="post" action="{U_ACTION}">
 	<fieldset>
+	{% if COGAUTH_ACP_MODE == 'settings' %}
 		<dl>
 			<dt><label for="cogauth_aws_region">{L_COGAUTH_AWS_REGION}{L_COLON}</label><br /><span>{COGAUTH_AWS_REGION_EXPLAIN}</span></dt>
 			<dd><input type="text" id="cogauth_aws_region" size="40" name="cogauth_aws_region" value="{COGAUTH_AWS_REGION}" /></dd>
@@ -23,6 +24,20 @@
 			<dd><input type="text" id="cogauth_pool_id" size="40" name="cogauth_pool_id" value="{COGAUTH_POOL_ID}" /></dd>
 		</dl>
 		<dl>
+			<dt><label for="cogauth_pool_name">{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
+			<dd><input type="text" id="cogauth_pool_name" size="40" name="cogauth_pool_name" value="{COGAUTH_POOL_NAME}" /></dd>
+		</dl>
+
+		{% else %}
+		<dl>
+			<dt><label>{L_COGAUTH_CLIENT_NAME}{L_COLON}</label></dt>
+			<dd><strong>{COGAUTH_CLIENT_NAME}</strong></dd>
+		</dl>
+		<dl>
+			<dt><label for="cogauth_client_id">{L_COGAUTH_CLIENT_ID}{L_COLON}</label><br /><span>{COGAUTH_CLIENT_ID_EXPLAIN}</span></dt>
+			<dd><input type="text" id="cogauth_client_id" size="40" name="cogauth_client_id" value="{COGAUTH_CLIENT_ID}" /></dd>
+		</dl>
+		<dl>
 			<dt><label for="cogauth_token_cleanup_gc">{L_ACP_COGAUTH_TOKEN_CLEANUP}{L_COLON}</label><br>
 				<span>{L_ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN}</span></dt>
 			<dd><input type="number" min="1" max="1440" id="cogauth_token_cleanup_gc" name="cogauth_token_cleanup_gc" value="{COGAUTH_TOKEN_CLEANUP}"/> {LMINUTES}</dd>
@@ -33,11 +48,11 @@
 			<dd><input type="number" min="1" max="3650"  id="cogauth_refresh_token_expiration_days" name="cogauth_refresh_token_expiration_days"
 					   value="{COGAUTH_REFRESH_TOKEN_EXP_DAYS}"/> {L_DAYS}</dd>
 		</dl>
+		{% endif %}
 		<p class="submit-buttons">
 			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;
 			<input class="button2" type="reset" id="reset" name="reset" value="{L_RESET}" />
 		</p>
-
 		{S_FORM_TOKEN}
 	</fieldset>
 </form>

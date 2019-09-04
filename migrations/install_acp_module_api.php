@@ -38,7 +38,7 @@ class install_acp_module_api extends \phpbb\db\migration\migration
 				'ACP_COGAUTH_TITLE',
 				array(
 					'module_basename'	=> '\mrfg\cogauth\acp\main_module',
-					'modes'				=> array('settings'),
+					'modes'				=> array('settings','app_client'),
 				),
 			)),
 		);

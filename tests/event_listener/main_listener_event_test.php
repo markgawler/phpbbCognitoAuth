@@ -23,10 +23,10 @@ class main_listener_event_test extends \phpbb_test_case
 	/** @var $cognito_client \mrfg\cogauth\cognito\cognito | \PHPUnit_Framework_MockObject_MockObject */
     protected $cognito_client;
 
-    /** @var \phpbb\request\request_interface $request */
+    /** @var $request \phpbb\request\request | \PHPUnit_Framework_MockObject_MockObject  */
     protected $request;
 
-    /** @var array  */
+    /** @var $config \phpbb\config\config  */
     protected $config;
 
     /** @var \mrfg\cogauth\event\main_listener $listener*/
@@ -50,7 +50,7 @@ class main_listener_event_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->request = $this->getMockBuilder('\phpbb\request\request_interface')
+		$this->request = $this->getMockBuilder('\phpbb\request\request')
 			->disableOriginalConstructor()
 			->getMock();
 
@@ -82,7 +82,9 @@ class main_listener_event_test extends \phpbb_test_case
             $this->cognito_client,
 			$this->auth_result,
 			$this->controller,
-			$this->dispatcher);
+			$this->dispatcher,
+			$this->request,
+			$this->config);
     }
 
 

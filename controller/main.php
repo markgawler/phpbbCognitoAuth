@@ -58,12 +58,13 @@ class main
 	 */
 	public function handle($command)
 	{
-		//$client_id = $this->config['cogauth_client_id'];
-		$client_id  = '13h3u2ie5tvvf4ot20p316n822';
-		//$client_secret = $this->config['cogauth_client_secret'];
-		$client_secret = 'o2d9423m32aijr63l83t38rl9hga55hq82nq5r747onmikrnips';
+		$client_id = $this->config['cogauth_client_id'];
+		//$client_id  = '13h3u2ie5tvvf4ot20p316n822';
+		$client_secret = $this->config['cogauth_client_secret'];
+		//$client_secret = 'o2d9423m32aijr63l83t38rl9hga55hq82nq5r747onmikrnips';
 		$code = $this->request->variable('code','');
 		$result_text = '';
+		error_log('handle ' . $code);
 
 		if ($code != '')
 		{

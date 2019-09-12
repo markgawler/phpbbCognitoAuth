@@ -302,7 +302,7 @@ class main_listener implements EventSubscriberInterface
 				$max_autologin_time = $new_config['max_autologin_time'];
 				if ($max_autologin_time >= 1 && $max_autologin_time <= 3560 && $max_autologin_time != $this->config['max_autologin_time'])
 				{
-					$this->client->set_refresh_token_expiration($max_autologin_time);
+					$this->client->update_user_pool_client($max_autologin_time);
 				}
 			}
 			else

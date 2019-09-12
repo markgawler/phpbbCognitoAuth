@@ -50,11 +50,12 @@ class main_module
 		$cognito = $phpbb_container->get('mrfg.cogauth.cognito');
 
 		$this->tpl_name = 'cogauth_body';
-
 		$this->page_title = $language->lang('ACP_COGAUTH_TITLE');
 
 		$submit = $request->is_set_post('submit');
-
+		$submit_create_user_pool = $request->is_set_post('create_user_pool');
+		$submit_use_user_pool = $request->is_set_post('use_user_pool');
+		$submit_use_app_client = $request->is_set_post('use_app_client');
 
 		add_form_key('mrfg/cogauth');
 
@@ -62,76 +63,114 @@ class main_module
 			'COGAUTH_ACP_MODE'	=> $mode,
 			'U_ACTION'			=> $this->u_action,
 		);
+		if ($submit && !check_form_key('mrfg/cogauth')) {
+				trigger_error('FORM_INVALID');
+			}
 		switch ($mode)
 		{
-			case 'settings':
-				$pool_name = '';
+			case 'aws_access':
 				if ($submit)
 				{
-					if (!check_form_key('mrfg/cogauth'))
+					$region = $request->variable('cogauth_aws_region', '');
+					$cognito->update_credentials(
+						$request->variable('cogauth_aws_region', ''),
+						$request->variable('cogauth_aws_key', ''),
+						$request->variable('cogauth_aws_secret', '')
+					);
+					if (strlen($region) <1 )
 					{
-						trigger_error('FORM_INVALID');
-					}
-					else
-					{
-						$cognito->update_user_pool_id($request->variable('cogauth_pool_id', ''));
-						$cognito->update_credentials(
-							$request->variable('cogauth_aws_region', ''),
-							$request->variable('cogauth_aws_key', ''),
-							$request->variable('cogauth_aws_secret', '')
-						);
-						$result = $cognito->describe_user_pool();
+						trigger_error($this->language->lang('COGAUTH_ACP_CHECK_REGION') . ': ' .
+							adm_back_link($this->u_action), E_USER_WARNING);
+					} else {
+						$result = $cognito->list_user_pools();
 						$this->submit_result_handler($result);
 					}
 				}
-				else
-				{
-					$result = $cognito->describe_user_pool();
-				}
 
-				if  ($result instanceof \Aws\Result)
-				{
-					//todo:  collect other data password policies etc.
-					$pool_name = $result['UserPool']['Name'];
-				}
 				$template->assign_vars(array_merge($commonVars, array(
 					'COGAUTH_AWS_REGION' => $config['cogauth_aws_region'],
 					'COGAUTH_AWS_KEY' => $config['cogauth_aws_key'],
 					'COGAUTH_AWS_SECRET' => $config['cogauth_aws_secret'],
-					'COGAUTH_POOL_ID' => $config['cogauth_pool_id'],
-					'COGAUTH_POOL_NAME' => $pool_name,
-					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $config['max_autologin_time'],
 				)));
 			break;
-			case 'app_client':
+			case 'user_pool':
+				$pool_name = '';
+				$new_name = '';
+				$client_name = '';
+				$pool_id = '';
+				$client_id = '';
+
+				if ($submit_use_user_pool)
+				{
+					$cognito->update_user_pool_id($request->variable('cogauth_pool_id', ''));
+					$result = $cognito->describe_user_pool();
+					$this->submit_result_handler($result);
+				}
+				elseif ($submit_create_user_pool)
+				{
+					$new_name = $request->variable('cogauth_new_pool_name', '');
+					$result = $cognito->create_user_pool($new_name);
+					if ($result instanceof \Aws\Result)
+					{
+						//store the new user_pool id
+						$cognito->update_user_pool_id($result['UserPool']['Id']);
+					}
+					$this->submit_result_handler($result);
+				}
+				elseif ($submit_use_app_client)
+				{
+					$max_login = $request->variable('cogauth_refresh_token_expiration_days', 30);
+					$client_id = $request->variable('cogauth_app_client_id', '');
+					//$cognito->update_client_credentials($client_id); // Note this is called again below (deliberately)
+					$result = $cognito->update_user_pool_client($max_login, $client_id);
+					if  ($result instanceof \Aws\Result)
+					{
+						//todo:  collect other data password policies etc.
+						$pool_name = $result['UserPool']['Name'];
+						// Now the User Pool Client has been updated we can extract the secret from the response.
+						//$cognito->update_client_credentials(
+						//	$result['UserPoolClient']['ClientId'],
+						//	$result['UserPoolClient']['ClientSecret']);
+					}
+					$this->submit_result_handler($result);
+				}
+
+				$user_pool = $cognito->describe_user_pool();
+				if  ($user_pool instanceof \Aws\Result)
+				{
+					$pool_id = $user_pool['UserPool']['Id'];
+					$pool_name = $user_pool['UserPool']['Name'];
+				}
+
+				$validity = $config['max_autologin_time'];
+
+				$app_client = $cognito->describe_user_pool_client();
+				if ($app_client instanceof \Aws\Result)
+				{
+					//todo:  collect other data password policies etc.
+					$client = $app_client['UserPoolClient'];
+					$client_name = $client['ClientName'];
+					$validity = $client['RefreshTokenValidity'];
+					$client_id = $client['ClientId'];
+				}
+
+				$template->assign_vars(array_merge($commonVars, array(
+					'COGAUTH_POOL_ID' => $pool_id,
+					'COGAUTH_POOL_NAME' => $pool_name,
+					'COGAUTH_NEW_POOL_NAME' => $new_name,
+					'COGAUTH_APP_CLIENT_ID' => $client_id,
+					'COGAUTH_CLIENT_NAME' => $client_name,
+					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $validity,
+				)));
+			break;
+			case 'misc':
 				if ($submit)
 				{
-					if (!check_form_key('mrfg/cogauth')) {
-						trigger_error('FORM_INVALID');
-					} else {
-						$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
-						$cognito->update_client_id($request->variable('cogauth_client_id', ''));
+					$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
 
-						$max_login = $request->variable('cogauth_refresh_token_expiration_days', 30);
-						$result = $cognito->set_refresh_token_expiration($max_login);
-
-						$this->submit_result_handler($result);
-					}
-				}
-				$name = '';
-				$validity = $config['max_autologin_time'];
-				$result = $cognito->describe_user_pool_client();
-				if ($result instanceof \Aws\Result)
-				{
-					$client = $result['UserPoolClient'];
-					$name = $client['ClientName'];
-					$validity = $client['RefreshTokenValidity'];
 				}
 				$template->assign_vars(array_merge($commonVars, array(
-					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $validity,
 					'COGAUTH_TOKEN_CLEANUP' => $config['cogauth_token_cleanup_gc'],
-					'COGAUTH_CLIENT_ID' => $config['cogauth_client_id'],
-					'COGAUTH_CLIENT_NAME' => $name
 				)));
 
 			break;
@@ -148,6 +187,7 @@ class main_module
 			trigger_error($this->language->lang('ACP_COGAUTH_AWS_ERROR') . ': ' . $result .
 				adm_back_link($this->u_action), E_USER_WARNING);
 		} else {
+			// This shouldn't happen
 			trigger_error("Unhandled Error" .
 				adm_back_link($this->u_action),E_USER_WARNING);
 		}

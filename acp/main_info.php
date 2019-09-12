@@ -18,15 +18,20 @@ class main_info
 			'title'		=> 'ACP_COGAUTH_TITLE',
 			'version'	=> '1.0.5',
 			'modes'		=> array(
-				'settings'	=> array(
+				'aws_access'	=> array(
 					'title' => 'ACP_COGAUTH_TITLE_CFG',
 					'auth' => 'ext_mrfg/cogauth && acl_a_board',
 					'cat' => array('ACP_COGAUTH_TITLE')
 				),
-				'app_client'	=> array(
-					'title' => 'ACP_COGAUTH_TITLE_APP',
+				'user_pool'	=> array(
+					'title' => 'ACP_COGAUTH_TITLE_POOL',
 					'auth' => 'ext_mrfg/cogauth && acl_a_board',
-					'cat' => array('ACP_COGAUTH_APP_TITLE')
+					'cat' => array('ACP_COGAUTH_POOL_TITLE')
+				),
+				'misc'	=> array(
+					'title' => 'ACP_COGAUTH_TITLE_MISC',
+					'auth' => 'ext_mrfg/cogauth && acl_a_board',
+					'cat' => array('ACP_COGAUTH_MISC_TITLE')
 				),
 			),
 		);

@@ -1,10 +1,12 @@
 <!-- INCLUDE overall_header.html -->
 
 <h1>{L_SETTINGS}</h1>
-
+{% if COGAUTH_ACP_MODE == 'aws_access' || COGAUTH_ACP_MODE == 'app_client'%}
+<!--suppress HtmlUnknownTarget -->
 <form id="acp_board" method="post" action="{U_ACTION}">
 	<fieldset>
-	{% if COGAUTH_ACP_MODE == 'settings' %}
+		{% if COGAUTH_ACP_MODE == 'aws_access' %}
+		<legend>{L_APC_COGAUTH_AWS_ACCESS_KEY}</legend>
 		<dl>
 			<dt><label for="cogauth_aws_region">{L_COGAUTH_AWS_REGION}{L_COLON}</label><br /><span>{COGAUTH_AWS_REGION_EXPLAIN}</span></dt>
 			<dd><input type="text" id="cogauth_aws_region" size="40" name="cogauth_aws_region" value="{COGAUTH_AWS_REGION}" /></dd>
@@ -19,16 +21,7 @@
 			<dd><input type="text" id="cogauth_aws_secret" size="40" name="cogauth_aws_secret" value="{COGAUTH_AWS_SECRET}" /></dd>
 		</dl>
 
-		<dl>
-			<dt><label for="cogauth_pool_id">{L_COGAUTH_POOL_ID}{L_COLON}</label><br /><span>{COGAUTH_POOL_ID_EXPLAIN}</span></dt>
-			<dd><input type="text" id="cogauth_pool_id" size="40" name="cogauth_pool_id" value="{COGAUTH_POOL_ID}" /></dd>
-		</dl>
-		<dl>
-			<dt><label for="cogauth_pool_name">{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
-			<dd><input type="text" id="cogauth_pool_name" size="40" name="cogauth_pool_name" value="{COGAUTH_POOL_NAME}" /></dd>
-		</dl>
-
-		{% else %}
+		{% elseif COGAUTH_ACP_MODE == 'misc' %}
 		<dl>
 			<dt><label>{L_COGAUTH_CLIENT_NAME}{L_COLON}</label></dt>
 			<dd><strong>{COGAUTH_CLIENT_NAME}</strong></dd>
@@ -42,12 +35,7 @@
 				<span>{L_ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN}</span></dt>
 			<dd><input type="number" min="1" max="1440" id="cogauth_token_cleanup_gc" name="cogauth_token_cleanup_gc" value="{COGAUTH_TOKEN_CLEANUP}"/> {LMINUTES}</dd>
 		</dl>
-		<dl>
-			<dt><label for="cogauth_refresh_token_expiration_days">{L_CA_AUTOLOGIN_LENGTH}{L_COLON}</label><br>
-				<span>{L_CA_AUTOLOGIN_LENGTH_EXPLAIN}</span></dt>
-			<dd><input type="number" min="1" max="3650"  id="cogauth_refresh_token_expiration_days" name="cogauth_refresh_token_expiration_days"
-					   value="{COGAUTH_REFRESH_TOKEN_EXP_DAYS}"/> {L_DAYS}</dd>
-		</dl>
+
 		{% endif %}
 		<p class="submit-buttons">
 			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;
@@ -56,5 +44,68 @@
 		{S_FORM_TOKEN}
 	</fieldset>
 </form>
+{% endif %}
+
+{% if COGAUTH_ACP_MODE == 'user_pool' %}
+<!--suppress HtmlUnknownTarget -->
+<form id="acp_board_create_user_pool" method="post" action="{U_ACTION}">
+	<fieldset>
+		<legend>{L_APC_COGAUTH_AWS_CREATE_USER_POOL}</legend>
+		<dl>
+			<dt><label for="cogauth_new_pool_name">{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
+			<dd><input type="text" id="cogauth_new_pool_name" size="40" name="cogauth_new_pool_name" value="{COGAUTH_NEW_POOL_NAME}" /></dd>
+		</dl>
+
+		<p class="submit-buttons">
+			<input class="button" type="submit" id="create_user_pool" name="create_user_pool" value="{L_SUBMIT}" />&nbsp;
+		</p>
+	{S_FORM_TOKEN}
+	</fieldset>
+</form>
+<!--suppress HtmlUnknownTarget -->
+<form id="acp_board_use_user_pool" method="post" action="{U_ACTION}">
+	<fieldset>
+		<legend>{L_APC_COGAUTH_AWS_USE_USER_POOL}</legend>
+		<dl>
+			<dt><label for="cogauth_pool_id">{L_COGAUTH_POOL_ID}{L_COLON}</label><br /><span>{COGAUTH_POOL_ID_EXPLAIN}</span></dt>
+			<dd><input type="text" id="cogauth_pool_id" size="40" name="cogauth_pool_id" value="{COGAUTH_POOL_ID}" /></dd>
+		</dl>
+		<dl>
+			<dt><label>{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
+			<dd>{COGAUTH_POOL_NAME}</dd>
+		</dl>
+
+		<p class="submit-buttons">
+			<input class="button" type="submit" id="use_user_pool" name="use_user_pool" value="{L_SUBMIT}" />&nbsp;
+		</p>
+		{S_FORM_TOKEN}
+	</fieldset>
+</form>
+<!--suppress HtmlUnknownTarget -->
+<form id="acp_board_use_app_client" method="post" action="{U_ACTION}">
+	<fieldset>
+		<legend>{L_APC_COGAUTH_AWS_APP_CLIENT}</legend>
+		<dl>
+			<dt><label for="cogauth_app_client_id">{L_COGAUTH_APP_CLIENT_ID}{L_COLON}</label><br /><span>{COGAUTH_APP_CLIENT_ID_EXPLAIN}</span></dt>
+			<dd><input type="text" id="cogauth_app_client_id" size="40" name="cogauth_app_client_id" value="{COGAUTH_APP_CLIENT_ID}" /></dd>
+		</dl>
+		<dl>
+			<dt><label>{L_COGAUTH_APP_NAME}{L_COLON}</label><br /><span>{COGAUTH_APP_NAME_EXPLAIN}</span></dt>
+			<dd>{COGAUTH_CLIENT_NAME}</dd>
+		</dl>
+		<dl>
+			<dt><label for="cogauth_refresh_token_expiration_days">{L_CA_AUTOLOGIN_LENGTH}{L_COLON}</label><br>
+				<span>{L_CA_AUTOLOGIN_LENGTH_EXPLAIN}</span></dt>
+			<dd><input type="number" min="1" max="3650"  id="cogauth_refresh_token_expiration_days" name="cogauth_refresh_token_expiration_days"
+					   value="{COGAUTH_REFRESH_TOKEN_EXP_DAYS}"/> {L_DAYS}</dd>
+		</dl>
+		<p class="submit-buttons">
+			<input class="button" type="submit" id="use_app_client" name="use_app_client" value="{L_SUBMIT}" />&nbsp;
+		</p>
+		{S_FORM_TOKEN}
+	</fieldset>
+</form>
+{% endif %}
+
 
 <!-- INCLUDE overall_footer.html -->

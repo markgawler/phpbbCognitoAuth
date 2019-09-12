@@ -10,6 +10,8 @@
 
 namespace mrfg\cogauth\migrations;
 
+/** @noinspection PhpUnused */
+
 class install_acp_module_api extends \phpbb\db\migration\migration
 {
 	public function effectively_installed()
@@ -38,7 +40,7 @@ class install_acp_module_api extends \phpbb\db\migration\migration
 				'ACP_COGAUTH_TITLE',
 				array(
 					'module_basename'	=> '\mrfg\cogauth\acp\main_module',
-					'modes'				=> array('settings','app_client'),
+					'modes'				=> array('aws_access', 'user_pool','misc'),
 				),
 			)),
 		);

@@ -140,10 +140,10 @@ class cognito_client_wrapper
 	 * @param $args
 	 * @return \Aws\Result
 	 */
-	public function initiate_auth($args)
+	/*public function initiate_auth($args)
 	{
 		return $this->client->adminInitiateAuth($args);
-	}
+	}*/
 
 	/**
 	 * @param $args
@@ -171,6 +171,34 @@ class cognito_client_wrapper
 	{
 		return $this->client->describeUserPool($args);
 	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function list_user_pools($args)
+	{
+		return $this->client->listUserPools($args);
+	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function create_user_pool($args)
+	{
+		return $this->client->createUserPool($args);
+	}
+
+	/**
+	 * @param $args
+	 * @return \Aws\Result
+	 */
+	public function create_user_pool_client($args)
+	{
+		return $this->client->createUserPoolClient($args);
+	}
+
 
 
 }

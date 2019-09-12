@@ -24,14 +24,14 @@ $lang = array_merge($lang, array(
 	'COGAUTH_SETTINGS'				=> 'Settings',
 
 	'COGAUTH_AWS_REGION'			=> 'AWS Region',
-	'COGAUTH_AWS_SECRET'			=> 'Cognito Admin, Secret Access Key',
-	'COGAUTH_AWS_KEY'				=> 'Cognito Admin, Access Key ID',
+	'COGAUTH_AWS_SECRET'			=> 'Access Key Secret',
+	'COGAUTH_AWS_KEY'				=> 'Access Key ID',
 
-	'COGAUTH_CLIENT_ID'				=> 'Cognito Client ID',
+	'COGAUTH_APP_CLIENT_ID'			=> 'Cognito Client ID',
 	'COGAUTH_POOL_ID'				=> 'Cognito User Pool ID',
-	'COGAUTH_POOL_NAME'				=> 'Codnito User Pool Name',
+	'COGAUTH_POOL_NAME'				=> 'Cognito User Pool Name',
 	'COGAUTH_CLIENT_SECRET'			=> 'Cognito Client Secret',
-	'COGAUTH_CLIENT_NAME'			=> 'Client Name',
+	'COGAUTH_APP_NAME'			=> 'APP Client Name',
 
 	'COGAUTH_AWS_REGION_EXPLAIN'	=> 'AWS Region',
 	'COGAUTH_AWS_SECRET_EXPLAIN'	=> 'AWS Account Credentials, Cognito Admin User Secret Key',
@@ -47,6 +47,7 @@ $lang = array_merge($lang, array(
 
 	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region',
 	'COGAUTH_ACP_CHECK_REGION' 		=> 'Check the AWS region is valid',
+	'COGAUTH_ACP_NOT_CONFIGURED'	=> 'AWS Cognito User Pool not configured',
 
 	'COGAUTH_CONFIGURATION_ERROR'	=> '<strong>CogAuth, Configuration error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',
 	'COGAUTH_UNEXPECTED_ERROR'	 	=> '<strong>CogAuth, Unexpected error:</strong><br>»Action: "%1$s", Error Code: "%2$s"<br>Message: "%3$s"',

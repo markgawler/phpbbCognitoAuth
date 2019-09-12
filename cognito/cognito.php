@@ -12,6 +12,7 @@
 
 namespace mrfg\cogauth\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+use InvalidArgumentException;
 use mrfg\cogauth\jwt\exception\TokenVerificationException;
 
 define('COG_LOGIN_SUCCESS', 1);
@@ -154,13 +155,17 @@ class cognito
 		$this->client->create_client($args);
 	}
 
-	/** Update client_id
+	/** Update client_credentials
+	 *
 	 * @param string $client_id
+	 * @param string $client_secret
 	 */
-	public function update_client_id($client_id)
+	public function update_client_credentials($client_id, $client_secret = '')
 	{
 		$this->client_id = $client_id;
 		$this->config->set('cogauth_client_id', $client_id);
+		$this->client_secret = $client_secret;
+		$this->config->set('cogauth_client_secret', $client_secret);
 	}
 
 	/**
@@ -758,50 +763,53 @@ class cognito
 	}
 
 
-
-	/**
-	 * Set the Refresh Token Expiration for the App Client
-	 * @param integer $days
-	 * @return \Aws\Result | string  Array containing Aws/Result or String containing error message
-	 *
-	 * @since version
-	 */
-	public function set_refresh_token_expiration($days)
+	protected function create_user_pool_client($name, $user_pool_id)
 	{
-		if ( $days > 0)
-		{
-			$this->config->set('max_autologin_time', $days);
-			return $this->update_user_pool_client();
-		}
-		return null;
+		//try
+		//{
+			$params =  array_merge(
+				$this->get_user_pool_client_parameters(),
+				array('ClientName' => $name,
+					  'UserPoolId' => $user_pool_id,
+					  'GenerateSecret' => true,
+					));
+			return $this->client->create_user_pool_client($params);
+		//}
+		//catch (CognitoIdentityProviderException | InvalidArgumentException $e)
+		//{
+			//return $this->handle_identity_provider_exception_for_acp($e);
+		//}
 	}
 
 	/**
 	 * Set the Refresh Token Expiration for the App Client
-	 * @return array | string  Array containing Aws/Result or String containing error message
+ 	 * @param integer $days (0 = use current config value)
+	 * @param string $client_id (null is the client ID is not changing)
+
+	 * @return \Aws\Result | string  containing Aws/Result or String containing error message
 	 *
 	 * @since version
 	 */
-	public function update_user_pool_client()
+	public function update_user_pool_client($days = 0, $client_id = null)
 	{
+		if ($client_id == null)
+		{
+			$client_id =$this->client_id;
+		}
+		$this->update_max_autologin_time($days);
 		try
 		{
-			$home_url = $this->config['site_home_url'];
-			$script = $this->config['script_path'];
-			return $this->client->update_user_pool_client(array(
-				'ClientId'             => $this->client_id,
-				'UserPoolId'           => $this->user_pool_id,
-				'RefreshTokenValidity' => (int) $this->config['max_autologin_time'],
-				'ExplicitAuthFlows'    => array('ADMIN_NO_SRP_AUTH'),
-				'CallbackURLs'		   => array($home_url . $script . '/app.php/cogauth/auth/callback'),
-				'LogoutURLs' 		   => array($home_url . $script . '/app.php/cogauth/auth/signout'),
-				'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
-				'AllowedOAuthFlows'	   => array('code', 'implicit'),		// code | implicit | client_credentials
-				'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
-				'AllowedOAuthFlowsUserPoolClient' => true
-			));
+			$params =  array_merge(
+				$this->get_user_pool_client_parameters(),
+				array('ClientId' => $client_id,
+					));
+			$pool_client =  $this->client->update_user_pool_client($params);
+			$this->update_client_credentials(
+				$pool_client['UserPoolClient']['ClientId'],
+				$pool_client['UserPoolClient']['ClientSecret']);
+			return $pool_client;
 		}
-		catch (CognitoIdentityProviderException $e)
+		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
 		{
 			return $this->handle_identity_provider_exception_for_acp($e);
 		}
@@ -809,25 +817,67 @@ class cognito
 	}
 
 	/**
-	 * @return \Aws\Result | string Array containing Aws/Result or String containing error message
+	 * @return array UpdateUserPool parameters.
+	 */
+	protected function get_user_pool_client_parameters()
+	{
+		$days = $this->config['max_autologin_time'];
+		$home_url = $this->config['site_home_url'];
+		$script = $this->config['script_path'];
+		return array(
+			'UserPoolId'           => $this->user_pool_id,
+			'RefreshTokenValidity' => (int) $days,
+			'ExplicitAuthFlows'    => array('ADMIN_NO_SRP_AUTH'),
+			'CallbackURLs'		   => array($home_url . $script . '/app.php/cogauth/auth/callback'),
+			'LogoutURLs' 		   => array($home_url . $script . '/app.php/cogauth/auth/signout'),
+//			'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
+			'AllowedOAuthFlows'	   => array('code', 'implicit'),		// code | implicit | client_credentials
+			'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
+			'AllowedOAuthFlowsUserPoolClient' => true
+		);
+	}
+
+	/**
+	 * @param integer $days  validity time in days of autologin key (0 = use current config value)
+	 * @return integer
+	 */
+	protected function update_max_autologin_time($days)
+	{
+		if ( $days > 0 )
+		{
+			$this->config->set('max_autologin_time', $days);
+		} else {
+			$days = $this->config['max_autologin_time'];
+		}
+		return (int) $days;
+	}
+
+	/**
+	 * @return \Aws\Result | string containing Aws/Result or String containing error message
 	 */
 	public function describe_user_pool_client()
 	{
-		try
+		if (strlen($this->client_id) >= 1 or strlen($this->user_pool_id >= 1))
 		{
-			$result = $this->client->update_user_pool_client(array(
-				'ClientId'   => $this->client_id,
-				'UserPoolId' => $this->user_pool_id));
-			return $result;
+			try
+			{
+				$result = $this->client->describe_user_pool_client(array(
+					'ClientId'   => $this->client_id,
+					'UserPoolId' => $this->user_pool_id));
+				return $result;
+			}
+			catch (CognitoIdentityProviderException | InvalidArgumentException $e)
+			{
+				return $this->handle_identity_provider_exception_for_acp($e);
+			}
+		} else {
+			return $this->language->lang('COGAUTH_ACP_NOT_CONFIGURED');
 		}
-		catch (CognitoIdentityProviderException $e)
-		{
-			return $this->handle_identity_provider_exception_for_acp($e);
-		}
+
 	}
 
 	/**
-	 * @return \Aws\Result | string  Array containing Aws/Result or String containing error message
+	 * @return \Aws\Result | string  containing Aws/Result or String containing error message
 	 */
 	public function describe_user_pool()
 	{
@@ -837,11 +887,74 @@ class cognito
 			));
 			return $result;
 		}
-		catch (CognitoIdentityProviderException $e)
+		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
 		{
 			return $this->handle_identity_provider_exception_for_acp($e);
 		}
 	}
+
+	/**
+	 * @param integer $max_results
+	 * @return \Aws\Result | string containing Aws/Result or String containing error message
+	 */
+	public function list_user_pools($max_results = 1)
+	{
+		try{
+			$result = $this->client->list_user_pools(array(
+				'MaxResults' => $max_results
+			));
+			return $result;
+		}
+		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
+		{
+			return $this->handle_identity_provider_exception_for_acp($e);
+		}
+	}
+
+	/**
+	 * @param string $name The name of the user pool to create
+	 *
+	 * @return \Aws\Result | string containing Aws/Result or String containing error message
+	 * @since 1.0
+	 */
+	public function create_user_pool($name)
+	{
+		try{
+			$user_pool = $this->client->create_user_pool(array(
+				'Schema' => array(array(
+					'Name' => 'email',
+					'AttributeDataType' => 'String',
+					'DeveloperOnlyAttribute' => false,
+					'Mutable' => true,
+					'Required' => true,
+					'StringAttributeConstraints' => array('MaxLength' => '2028', 'MinLength' => '0'))),
+				'PoolName' => $name,
+				'AliasAttributes' => array('email', 'preferred_username'),
+				'AutoVerifiedAttributes' => array('email'),
+				'Policies' => array('PasswordPolicy' => array(
+							'MinimumLength' => (int) $this->config['min_pass_chars'],
+            				//todo: translate config('pass_complex') in to the following
+            				'RequireLowercase' => true,
+            				'RequireNumbers' => false,
+            				'RequireSymbols' => false,
+            				'RequireUppercase' => true,
+            				'TemporaryPasswordValidityDays' => 7,
+				)),
+			));
+
+			$pool_client = $this->create_user_pool_client($name . '_app_client', $user_pool['UserPool']['Id']);
+			$this->update_client_credentials(
+				$pool_client['UserPoolClient']['ClientId'],
+				$pool_client['UserPoolClient']['ClientSecret']);
+
+			return $user_pool;
+		}
+		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
+		{
+			return $this->handle_identity_provider_exception_for_acp($e);
+		}
+	}
+
 
 	/**
 	 * @param $e CognitoIdentityProviderException
@@ -852,10 +965,16 @@ class cognito
 	 */
 	protected function handle_identity_provider_exception_for_acp($e)
 	{
-		$message = $e->getAwsErrorMessage();
-		if ( empty($message)) {
-			$message = $e->getMessage() . '<br>' . $this->language->lang('COGAUTH_ACP_CHECK_REGION');
+		if ($e instanceof CognitoIdentityProviderException)
+		{
+			$message = $e->getAwsErrorMessage();
+			if ( empty($message)) {
+				$message = $e->getMessage() . '<br>' . $this->language->lang('COGAUTH_ACP_CHECK_REGION');
+			}
+		} else {
+			$message = $e->getMessage();
 		}
+
 		return $message;
 	}
 }

@@ -1,11 +1,20 @@
 <fieldset id="auth_cogauth_settings">
 	<legend>{L_COGAUTH_SETTINGS}</legend>
 	<dl>
-		<dt><label>{L_COGAUTH_CLIENT_NAME}{L_COLON}</label></dt>
-		<dd><input type="text" value="{COGAUTH_CLIENT_NAME}"  readonly="readonly" ></dd>
+		<dt><label>{L_COGAUTH_POOL_NAME}{L_COLON}</label></dt>
+		<dd>{COGAUTH_POOL_NAME}</dd>
 	</dl>
 	<dl>
-		<dt><label for="cogauth_client_id">{L_COGAUTH_CLIENT_ID}{L_COLON}</label><br /><span>{COGAUTH_CLIENT_ID_EXPLAIN}</span></dt>
-		<dd><input type="text" id="cogauth_client_id" size="40" name="config[cogauth_client_id]" value="{COGAUTH_CLIENT_ID}" /></dd>
+		<dt><label>{L_COGAUTH_POOL_ID}{L_COLON}</label></dt>
+		<dd>{COGAUTH_POOL_ID}</dd>
 	</dl>
+	<dl>
+		<dt><label>{L_COGAUTH_APP_NAME}{L_COLON}</label></dt>
+		<dd>{COGAUTH_CLIENT_NAME}</dd>
+	</dl>
+	<dl>
+		<dt><label>{L_COGAUTH_APP_CLIENT_ID}{L_COLON}</label></dt>
+		<dd>{COGAUTH_CLIENT_ID}</dd>
+	</dl>
+
 </fieldset>

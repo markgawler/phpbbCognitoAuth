@@ -95,15 +95,21 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function init()
 	{
-		// region and pool may have changed so force refresh of the keys
-		$keys = $this->web_token->download_jwt_web_keys(true);
-		if ($keys === false)
+		$result = $this->cognito_client->update_user_pool_client();
+		if ( $result instanceof \Aws\Result )
 		{
+			// region and pool may have changed so force refresh of the keys
+			$keys = $this->web_token->download_jwt_web_keys(true);
+			if ($keys === false)
+			{
+				/** @noinspection PhpUndefinedFieldInspection */
+				$message = $this->language->lang('COGAUTH_AWS_KEY_SET_ERROR') . adm_back_link($this->u_action);
+				trigger_error($message, E_USER_WARNING);
+			}
+		} else {
 			/** @noinspection PhpUndefinedFieldInspection */
-			$message = $this->language->lang('COGAUTH_AWS_KEY_SET_ERROR') . adm_back_link($this->u_action);
-			trigger_error($message,E_USER_WARNING);
+			trigger_error($result . adm_back_link($this->u_action), E_USER_WARNING);
 		}
-		$this->cognito_client->update_user_pool_client();
 	}
 
 	/**
@@ -117,7 +123,6 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function login($username, $password)
 	{
-		error_log('CogAuth Provider');
 		$authenticated_phpbb = false;
 		$authenticated_cognito = false;
 		// Auth plugins get the password untrimmed.
@@ -368,21 +373,35 @@ class cogauth extends \phpbb\auth\provider\base
 	public function acp()
 	{
 		// These are fields required in the config table
-		return array(
-			'cogauth_client_id',
-			'cogauth_client_secret'
-		);
+		return array();
 	}
 
 	public function get_acp_template($new_config)
 	{
-		$user_pool_client = $this->cognito_client->describe_user_pool_client()['UserPoolClient'];
-		$this->config['cogauth_client_secret'] =  $user_pool_client['ClientSecret'];
+		$pool_id = '';
+		$pool_name = '';
+		$client_id = '';
+		$client_name = '';
+		$user_pool = $this->cognito_client->describe_user_pool();
+		if  ($user_pool instanceof \Aws\Result)
+		{
+			$pool_id = $user_pool['UserPool']['Id'];
+			$pool_name = $user_pool['UserPool']['Name'];
+		}
+
+		$app_client = $this->cognito_client->describe_user_pool_client();
+		if ($app_client instanceof \Aws\Result)
+		{
+			$client_name = $app_client['UserPoolClient']['ClientName'];
+			$client_id = $app_client['UserPoolClient']['ClientId'];
+		}
 		return array(
 			'TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
 			'TEMPLATE_VARS' => array(
-				'COGAUTH_CLIENT_NAME' =>  $user_pool_client['ClientName'],
-				'COGAUTH_CLIENT_ID' => $new_config['cogauth_client_id'],
+				'COGAUTH_POOL_NAME'   => $pool_name,
+				'COGAUTH_POOL_ID'     => $pool_id,
+				'COGAUTH_CLIENT_NAME' => $client_name,
+				'COGAUTH_CLIENT_ID'   => $client_id,
 			)
 		);
 	}

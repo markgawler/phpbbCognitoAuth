@@ -159,7 +159,6 @@ class main_listener implements EventSubscriberInterface
 		 */
 
 		$session = $event['session_id'];
-		/** @noinspection PhpUnusedLocalVariableInspection */
 		$session_token = $this->auth_result->get_session_token(false);
 
 		$this->auth_result->kill_session($session);

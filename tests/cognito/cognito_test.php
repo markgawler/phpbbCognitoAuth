@@ -22,17 +22,11 @@ class cognito_test extends \phpbb_test_case
     /** @var $user \phpbb\user */
     protected $user;
 
+    /** @var $language \phpbb\language\language */
+    protected $language;
+
     /** @var $cognito_client \phpbb\config\config */
     protected $config;
-
-    /** @var $db \phpbb\db\driver\driver_interface */
-    protected $db;
-	/** @var \phpbb\db\tools\tools */
-
-	protected $db_tools;
-
-	/** @var string */
-	protected $table_prefix;
 
 	/** @var $cognito_user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cognito_user;
@@ -63,9 +57,9 @@ class cognito_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-        $this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
-            ->disableOriginalConstructor()
-            ->getMock();
+		$this->language = $this->getMockBuilder('\phpbb\language\language')
+			->disableOriginalConstructor()
+			->getMock();
 
         $this->config = $this->getMockBuilder('\phpbb\config\config')
             ->disableOriginalConstructor()
@@ -113,9 +107,15 @@ class cognito_test extends \phpbb_test_case
 
 		/** @var $client \mrfg\cogauth\cognito\cognito_client_wrapper */
 		$this->cognito = new \mrfg\cogauth\cognito\cognito(
-			$this->db, $this->config, $this->user, $this->request,
-			$this->log, $this->client, $this->web_token, $this->cognito_user,
-			$this->authentication, '');
+			$this->config,
+			$this->user,
+			$this->language,
+			$this->request,
+			$this->log,
+			$this->client,
+			$this->web_token,
+			$this->cognito_user,
+			$this->authentication);
 
 	}
 

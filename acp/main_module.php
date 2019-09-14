@@ -121,16 +121,11 @@ class main_module
 				{
 					$max_login = $request->variable('cogauth_refresh_token_expiration_days', 30);
 					$client_id = $request->variable('cogauth_app_client_id', '');
-					//$cognito->update_client_credentials($client_id); // Note this is called again below (deliberately)
 					$result = $cognito->update_user_pool_client($max_login, $client_id);
 					if  ($result instanceof \Aws\Result)
 					{
 						//todo:  collect other data password policies etc.
 						$pool_name = $result['UserPool']['Name'];
-						// Now the User Pool Client has been updated we can extract the secret from the response.
-						//$cognito->update_client_credentials(
-						//	$result['UserPoolClient']['ClientId'],
-						//	$result['UserPoolClient']['ClientSecret']);
 					}
 					$this->submit_result_handler($result);
 				}

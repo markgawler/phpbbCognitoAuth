@@ -95,7 +95,7 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function init()
 	{
-		$result = $this->cognito_client->update_user_pool_client();
+		$result = $this->cognito_client->describe_user_pool_client();
 		if ( $result instanceof \Aws\Result )
 		{
 			// region and pool may have changed so force refresh of the keys

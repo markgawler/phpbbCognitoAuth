@@ -40,7 +40,7 @@ class cognito
 	/** @var \phpbb\user */
 	protected $user;
 
-	/**@var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient */
+	/** @var \mrfg\cogauth\cognito\cognito_client_wrapper  */
 	protected $client;
 
 	/**@var $string */
@@ -54,9 +54,6 @@ class cognito
 
 	/** @var string */
 	protected $region;
-
-	/** @var \phpbb\db\driver\driver_interface */
-	protected $db;
 
 	/**@var array $auth_result */
 	protected $auth_result;
@@ -88,7 +85,6 @@ class cognito
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\db\driver\driver_interface    $db
 	 * @param	\phpbb\config\config                 $config
 	 * @param	\phpbb\user                          $user
 	 * @param	\phpbb\language\language             $language
@@ -100,7 +96,6 @@ class cognito
 	 * @param	\mrfg\cogauth\cognito\auth_result    $authentication
 	 */
 	public function __construct(
-		\phpbb\db\driver\driver_interface $db,
 		\phpbb\config\config $config,
 		\phpbb\user $user,
 		\phpbb\language\language $language,
@@ -111,7 +106,6 @@ class cognito
 		\mrfg\cogauth\cognito\user $cognito_user,
 		\mrfg\cogauth\cognito\auth_result $authentication)
 	{
-		$this->db = $db;
 		$this->config = $config;
 		$this->user = $user;
 		$this->language = $language;
@@ -763,22 +757,24 @@ class cognito
 	}
 
 
+	/**
+	 * Create a new App Client for a User Pool
+	 * @param string $name
+	 * @param string $user_pool_id
+	 *
+	 * @return \Aws\Result
+	 *
+	 * @since 1.0
+	 */
 	protected function create_user_pool_client($name, $user_pool_id)
 	{
-		//try
-		//{
-			$params =  array_merge(
-				$this->get_user_pool_client_parameters(),
-				array('ClientName' => $name,
-					  'UserPoolId' => $user_pool_id,
-					  'GenerateSecret' => true,
-					));
-			return $this->client->create_user_pool_client($params);
-		//}
-		//catch (CognitoIdentityProviderException | InvalidArgumentException $e)
-		//{
-			//return $this->handle_identity_provider_exception_for_acp($e);
-		//}
+		$params =  array_merge(
+			$this->get_user_pool_client_parameters(),
+			array('ClientName' => $name,
+				  'UserPoolId' => $user_pool_id,
+				  'GenerateSecret' => true,
+				));
+		return $this->client->create_user_pool_client($params);
 	}
 
 	/**
@@ -788,7 +784,7 @@ class cognito
 
 	 * @return \Aws\Result | string  containing Aws/Result or String containing error message
 	 *
-	 * @since version
+	 * @since 1.0
 	 */
 	public function update_user_pool_client($days = 0, $client_id = null)
 	{

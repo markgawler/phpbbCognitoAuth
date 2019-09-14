@@ -41,7 +41,6 @@ services:
     mrfg.cogauth.cognito:
         class: mrfg\cogauth\cognito\cognito
         arguments:
-            - '@dbal.conn'
             - '@config'
             - '@user'
             - '@language'

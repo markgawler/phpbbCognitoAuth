@@ -19,8 +19,6 @@ if (empty($lang) || !is_array($lang))
 }
 
 $lang = array_merge($lang, array(
-	'ACP_COGAUTH_TOKEN_CLEANUP'	=> 'Cognito Access Token cleanup check frequency (minutes)',
-	'ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN' => 'Removal of Cogauth sessions information for expired phpBB sessions and expired AWS Cognito Access tokens. Range one minute to one day (1440 minutes)',
 	'ACP_COGAUTH_TITLE'	=> 'AWS Cognito Auth',
 	'ACP_COGAUTH_TITLE_CFG'	=> 'IAM Access Key Settings',
 	'ACP_COGAUTH_MISC_TITLE' => 'Miscellaneous Settings',
@@ -35,4 +33,13 @@ $lang = array_merge($lang, array(
 	'APC_COGAUTH_AWS_USE_USER_POOL' => 'Use Existing User Pool',
 	'APC_COGAUTH_AWS_CREATE_USER_POOL' => 'Create New User Pool',
 	'APC_COGAUTH_AWS_APP_CLIENT' => 'Configure App Client',
+
+	'APC_COGAUTH_CRON_ACCESS_TOKENS' => 'Cron Frequency',
+	'ACP_COGAUTH_TOKEN_CLEANUP'	=> 'Access Token cleanup check frequency (minutes)',
+	'ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN' => 'Removal of Cogauth sessions information for expired phpBB sessions and expired AWS Cognito Access tokens. Range one minute to one day (1440 minutes)',
+
+	'APC_COGAUTH_PURGE_ACCESS_TOKENS' => 'Purge expired access tokens',
+	'APC_COGAUTH_PURGE_TOKENS'			=> 'Purge Expired Tokens',
+	'APC_COGAUTH_PURGE_TOKENS_EXPLAIN'	=> 'Purge any expired access tokens, both sessions and auto loging sesions are checked (this replicates the cron task)',
+
 ));

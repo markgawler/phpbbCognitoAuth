@@ -51,8 +51,6 @@ services:
             - '@mrfg.cogauth.auth_result'
             - '@aws.sdk'
 
-    mrfg.cogauth.cognito_client_wrapper:
-        class: mrfg\cogauth\cognito\cognito_client_wrapper
 
     mrfg.cogauth.user:
         class: mrfg\cogauth\cognito\user

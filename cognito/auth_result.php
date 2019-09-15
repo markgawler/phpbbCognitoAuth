@@ -449,10 +449,11 @@ class auth_result
 		//todo: investigate optimising by adding "phpbb_sessions.session_user_id != 1"
 		$cogauth_table = $this->cogauth_authentication;
 
+		//todo: understand the next bit!
 		$sql = "DELETE FROM " . $cogauth_table . " WHERE sid IN "
-			. "(SELECT " .$cogauth_table. ".sid FROM $cogauth_table LEFT JOIN "
-			. SESSIONS_TABLE. " ON " . $cogauth_table . ".sid = " .SESSIONS_TABLE . ".session_id WHERE "
-			. SESSIONS_TABLE . ".session_id is NULL and " . $cogauth_table . ".autologin is '0')";
+		. "(SELECT S.sid FROM (SELECT sid FROM " . $cogauth_table. " WHERE autologin = 0) AS S LEFT JOIN "
+		. SESSIONS_TABLE. " ON S.sid = " .SESSIONS_TABLE . ".session_id WHERE "
+		. SESSIONS_TABLE . ".session_id is NULL)";
 
 		$this->db->sql_query($sql);
 

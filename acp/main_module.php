@@ -56,7 +56,7 @@ class main_module
 		$submit_create_user_pool = $request->is_set_post('create_user_pool');
 		$submit_use_user_pool = $request->is_set_post('use_user_pool');
 		$submit_use_app_client = $request->is_set_post('use_app_client');
-
+		$submit_clean_access_tokens = $request->is_set_post('clean_access_tokens');
 		add_form_key('mrfg/cogauth');
 
 		$commonVars = array(
@@ -167,6 +167,12 @@ class main_module
 				$template->assign_vars(array_merge($commonVars, array(
 					'COGAUTH_TOKEN_CLEANUP' => $config['cogauth_token_cleanup_gc'],
 				)));
+
+				if ($submit_clean_access_tokens)
+				{
+					$auth_result = $phpbb_container->get('mrfg.cogauth.auth_result');
+					$auth_result->cleanup_session_tokens($config['max_autologin_time']);
+				}
 
 			break;
 		}

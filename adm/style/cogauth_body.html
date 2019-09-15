@@ -22,6 +22,7 @@
 		</dl>
 
 		{% elseif COGAUTH_ACP_MODE == 'misc' %}
+		<legend>{L_APC_COGAUTH_CRON_ACCESS_TOKENS}</legend>
 		<dl>
 			<dt><label for="cogauth_token_cleanup_gc">{L_ACP_COGAUTH_TOKEN_CLEANUP}{L_COLON}</label><br>
 				<span>{L_ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN}</span></dt>
@@ -97,6 +98,23 @@
 		{S_FORM_TOKEN}
 	</fieldset>
 </form>
+{% elseif COGAUTH_ACP_MODE == 'misc' %}
+<!--suppress HtmlUnknownTarget -->
+<form id="acp_board_clean_access_tokens" method="post" action="{U_ACTION}">
+	<fieldset>
+		<legend>{L_APC_COGAUTH_PURGE_ACCESS_TOKENS}</legend>
+		<dl>
+			<dt><label for="clean_access_tokens">{L_APC_COGAUTH_PURGE_TOKENS}</label><br>
+				<span>{L_APC_COGAUTH_PURGE_TOKENS_EXPLAIN}</span>
+			</dt>
+			<dd><input type="hidden" name="clean_access_tokens" value="{L_SUBMIT}">
+				<input class="button2" type="submit" id="clean_access_tokens" name="clean_access_tokens" value="{L_RUN}">
+			</dd>
+		</dl>
+		{S_FORM_TOKEN}
+	</fieldset>
+</form>
+
 {% endif %}
 
 

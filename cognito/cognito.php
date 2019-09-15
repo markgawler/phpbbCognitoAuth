@@ -781,7 +781,7 @@ class cognito
 	protected function create_user_pool_client($name, $user_pool_id)
 	{
 		$params =  array_merge(
-			$this->get_user_pool_client_parameters(),
+			$this->get_user_pool_client_default_parameters(),
 			array('ClientName' => $name,
 				  'UserPoolId' => $user_pool_id,
 				  'GenerateSecret' => true,
@@ -808,7 +808,7 @@ class cognito
 		try
 		{
 			$params =  array_merge(
-				$this->get_user_pool_client_parameters(),
+				$this->get_user_pool_client_default_parameters(),
 				array('ClientId' => $client_id,
 					));
 			$pool_client =  $this->client->updateUserPoolClient($params);
@@ -821,13 +821,12 @@ class cognito
 		{
 			return $this->handle_identity_provider_exception_for_acp($e);
 		}
-
 	}
 
 	/**
 	 * @return array UpdateUserPool parameters.
 	 */
-	protected function get_user_pool_client_parameters()
+	protected function get_user_pool_client_default_parameters()
 	{
 		$days = $this->config['max_autologin_time'];
 		$home_url = $this->config['site_home_url'];

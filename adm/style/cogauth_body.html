@@ -1,7 +1,7 @@
 <!-- INCLUDE overall_header.html -->
 
 <h1>{L_SETTINGS}</h1>
-{% if COGAUTH_ACP_MODE == 'aws_access' || COGAUTH_ACP_MODE == 'app_client'%}
+{% if COGAUTH_ACP_MODE == 'aws_access' || COGAUTH_ACP_MODE == 'misc'%}
 <!--suppress HtmlUnknownTarget -->
 <form id="acp_board" method="post" action="{U_ACTION}">
 	<fieldset>
@@ -22,14 +22,6 @@
 		</dl>
 
 		{% elseif COGAUTH_ACP_MODE == 'misc' %}
-		<dl>
-			<dt><label>{L_COGAUTH_CLIENT_NAME}{L_COLON}</label></dt>
-			<dd><strong>{COGAUTH_CLIENT_NAME}</strong></dd>
-		</dl>
-		<dl>
-			<dt><label for="cogauth_client_id">{L_COGAUTH_CLIENT_ID}{L_COLON}</label><br /><span>{COGAUTH_CLIENT_ID_EXPLAIN}</span></dt>
-			<dd><input type="text" id="cogauth_client_id" size="40" name="cogauth_client_id" value="{COGAUTH_CLIENT_ID}" /></dd>
-		</dl>
 		<dl>
 			<dt><label for="cogauth_token_cleanup_gc">{L_ACP_COGAUTH_TOKEN_CLEANUP}{L_COLON}</label><br>
 				<span>{L_ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN}</span></dt>

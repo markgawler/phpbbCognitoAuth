@@ -31,6 +31,12 @@ define('COG_MIGRATE_FAIL', 21);
 
 class cognito
 {
+	/** @var  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient */
+	protected $client;
+
+	/** @var \Aws\Sdk $aws_sdk */
+	protected $aws_sdk;
+
 	/**@var \phpbb\config\config $config Config object */
 	protected $config;
 
@@ -39,9 +45,6 @@ class cognito
 
 	/** @var \phpbb\user */
 	protected $user;
-
-	/** @var \mrfg\cogauth\cognito\cognito_client_wrapper  */
-	protected $client;
 
 	/**@var $string */
 	protected $user_pool_id;
@@ -85,15 +88,15 @@ class cognito
 	/**
 	 * Database Authentication Constructor
 	 *
-	 * @param	\phpbb\config\config                 $config
-	 * @param	\phpbb\user                          $user
-	 * @param	\phpbb\language\language             $language
-	 * @param   \phpbb\request\request_interface      $request
-	 * @param   \phpbb\log\log_interface              $log
-     * @param   cognito_client_wrapper                $client,
+	 * @param	\phpbb\config\config                $config
+	 * @param	\phpbb\user                         $user
+	 * @param	\phpbb\language\language            $language
+	 * @param   \phpbb\request\request_interface    $request
+	 * @param   \phpbb\log\log_interface            $log
      * @param   \mrfg\cogauth\cognito\web_token_phpbb $web_token
-	 * @param 	\mrfg\cogauth\cognito\user           $cognito_user
-	 * @param	\mrfg\cogauth\cognito\auth_result    $authentication
+	 * @param 	\mrfg\cogauth\cognito\user          $cognito_user
+	 * @param	\mrfg\cogauth\cognito\auth_result	$authentication
+	 * @param 	\Aws\Sdk							$aws_sdk
 	 */
 	public function __construct(
 		\phpbb\config\config $config,
@@ -101,11 +104,12 @@ class cognito
 		\phpbb\language\language $language,
 		\phpbb\request\request_interface $request,
 		\phpbb\log\log_interface $log,
-        cognito_client_wrapper $client,
 		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
 		\mrfg\cogauth\cognito\user $cognito_user,
-		\mrfg\cogauth\cognito\auth_result $authentication)
+		\mrfg\cogauth\cognito\auth_result $authentication,
+		\Aws\Sdk $aws_sdk)
 	{
+		$this->aws_sdk = $aws_sdk;
 		$this->config = $config;
 		$this->user = $user;
 		$this->language = $language;
@@ -121,8 +125,8 @@ class cognito
         $this->region = $config['cogauth_aws_region'];
 
         $this->auth_result = array();
-		$this->client = $client;
-		$this->create_identity_provider($this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
+		$this->client = $this->create_identity_provider(
+			$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
 		$this->web_token = $web_token;
         $this->log = $log;
     }
@@ -133,9 +137,16 @@ class cognito
 		$this->config->set('cogauth_aws_region', $region);
 		$this->config->set('cogauth_aws_key', $key);
 		$this->config->set('cogauth_aws_secret', $secret);
-		$this->create_identity_provider($region, $key, $secret);
+		$this->client = $this->create_identity_provider($region, $key, $secret);
 	}
 
+	/**
+	 * @param string $region
+	 * @param string $key
+	 * @param string $secret
+	 *
+	 * @return  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient
+	 */
 	private function create_identity_provider($region, $key, $secret)
 	{
 		$args = array(
@@ -146,7 +157,8 @@ class cognito
 			'version' => '2016-04-18',
 			'region' =>  $region,
 		);
-		$this->client->create_client($args);
+		//todo: is there a delete to call id client is not null?
+		return $this->aws_sdk->createCognitoIdentityProvider($args);
 	}
 
 	/** Update client_credentials
@@ -262,7 +274,7 @@ class cognito
 	private function authenticate_user($user_id, $password)
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
-		$response = $this->client->admin_initiate_auth(array(
+		$response = $this->client->AdminInitiateAuth(array(
 			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 			'AuthParameters' => array(
 				'USERNAME' => $username,
@@ -278,7 +290,7 @@ class cognito
 	public function refresh_access_token($refresh_token, $user_id)
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
-		$response = $this->client->admin_initiate_auth(array(
+		$response = $this->client->adminInitiateAuth(array(
 			'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
 			'AuthParameters' => array(
 				'REFRESH_TOKEN' => $refresh_token,
@@ -399,7 +411,7 @@ class cognito
 		$username = $this->cognito_user->get_cognito_username($user_id);
 
 		try {
-			$response = $this->client->admin_create_user(array(
+			$response = $this->client->adminCreateUser(array(
 				'UserPoolId' => $this->user_pool_id,
 				'Username' => $username,
 				'TemporaryPassword' => $password,
@@ -456,7 +468,7 @@ class cognito
 								'Session'            => $response['Session']);
 				try
 				{
-					$response = $this->client->admin_respond_to_auth_challenge($params);
+					$response = $this->client->adminRespondToAuthChallenge($params);
 					if (isset($response['AuthenticationResult']))
 					{
 						// login success, store the result locally. The result will be stored in the database once the logged in
@@ -510,7 +522,7 @@ class cognito
 		}
 
 		try {
-			$this->client->change_password(array(
+			$this->client->changePassword(array(
 				'AccessToken' => $access_token,
 				'PreviousPassword' => $old_password,
 				'ProposedPassword' => $new_password,
@@ -546,7 +558,7 @@ class cognito
 		));
 		try
 		{
-			$this->client->update_user_attributes(array(
+			$this->client->updateUserAttributes(array(
 					'AccessToken'    => $access_token,
 					'UserAttributes' => $attr,
 			));
@@ -599,7 +611,7 @@ class cognito
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try
 		{
-			$response = $this->client->admin_get_user(array(
+			$response = $this->client->adminGetUser(array(
 				"Username"   => $username,
 				"UserPoolId" => $this->user_pool_id
 			));
@@ -637,7 +649,7 @@ class cognito
 	{
 		$user_id = $this->cognito_user->get_cognito_username($user_id);
 
-		$this->client->admin_delete_user(
+		$this->client->adminDeleteUser(
 			array('Username' => $user_id,
 				  'UserPoolId' => $this->user_pool_id)
 		);
@@ -685,7 +697,7 @@ class cognito
 			'UserPoolId'     => $this->user_pool_id,
 		);
 		try {
-			$this->client->admin_update_user_attributes($data);
+			$this->client->adminUpdateUserAttributes($data);
 		} catch (CognitoIdentityProviderException $e)
 		{
 			$this->handle_cognito_identity_provider_exception($e,$user_id,'update_user_attributes');
@@ -727,7 +739,7 @@ class cognito
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
-			$this->client->admin_enable_user(array(
+			$this->client->adminEnableUser(array(
 				'Username' => $username,
 				'UserPoolId' => $this->user_pool_id));
 		}
@@ -745,7 +757,7 @@ class cognito
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
-			$this->client->admin_disable_user(array(
+			$this->client->adminDisableUser(array(
 				'Username' => $username,
 				'UserPoolId' => $this->user_pool_id));
 		}
@@ -774,7 +786,7 @@ class cognito
 				  'UserPoolId' => $user_pool_id,
 				  'GenerateSecret' => true,
 				));
-		return $this->client->create_user_pool_client($params);
+		return $this->client->createUserPoolClient($params);
 	}
 
 	/**
@@ -799,7 +811,7 @@ class cognito
 				$this->get_user_pool_client_parameters(),
 				array('ClientId' => $client_id,
 					));
-			$pool_client =  $this->client->update_user_pool_client($params);
+			$pool_client =  $this->client->updateUserPoolClient($params);
 			$this->update_client_credentials(
 				$pool_client['UserPoolClient']['ClientId'],
 				$pool_client['UserPoolClient']['ClientSecret']);
@@ -857,7 +869,7 @@ class cognito
 		{
 			try
 			{
-				$result = $this->client->describe_user_pool_client(array(
+				$result = $this->client->describeUserPoolClient(array(
 					'ClientId'   => $this->client_id,
 					'UserPoolId' => $this->user_pool_id));
 				return $result;
@@ -878,7 +890,7 @@ class cognito
 	public function describe_user_pool()
 	{
 		try{
-			$result = $this->client->describe_user_pool(array(
+			$result = $this->client->describeUserPool(array(
 				'UserPoolId' => $this->user_pool_id
 			));
 			return $result;
@@ -896,7 +908,7 @@ class cognito
 	public function list_user_pools($max_results = 1)
 	{
 		try{
-			$result = $this->client->list_user_pools(array(
+			$result = $this->client->listUserPools(array(
 				'MaxResults' => $max_results
 			));
 			return $result;
@@ -916,7 +928,7 @@ class cognito
 	public function create_user_pool($name)
 	{
 		try{
-			$user_pool = $this->client->create_user_pool(array(
+			$user_pool = $this->client->createUserPool(array(
 				'Schema' => array(array(
 					'Name' => 'email',
 					'AttributeDataType' => 'String',

@@ -42,4 +42,6 @@ $lang = array_merge($lang, array(
 	'APC_COGAUTH_PURGE_TOKENS'			=> 'Purge Expired Tokens',
 	'APC_COGAUTH_PURGE_TOKENS_EXPLAIN'	=> 'Purge any expired access tokens, both sessions and auto loging sesions are checked (this replicates the cron task)',
 
+	'APC_HOSTED_UI' => 'Hosted UI Support (Experimental)',
+	'APC_HOSTED_UI_EXPLAIN' => 'Enable support for Cognito Hosted UI support, this will require configuration in the AWS Console',
 ));

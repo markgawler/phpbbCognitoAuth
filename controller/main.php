@@ -7,8 +7,6 @@
 
 namespace mrfg\cogauth\controller;
 
-use \Symfony\Component\HttpFoundation\Response;
-
 class main
 {
 	/* @var \phpbb\config\config */
@@ -20,32 +18,34 @@ class main
 	/* @var \phpbb\language\language $language */
 	protected $language;
 
-	/* @var \mrfg\cogauth\cognito\cognito */
-	protected $cognito;
+	/* @var \phpbb\controller\helper */
+	protected $helper;
 
-	/** @var \mrfg\cogauth\cognito\web_token_phpbb */
-	protected $web_token;
+	/* @var \mrfg\cogauth\cognito\auth_result */
+	protected $auth_result;
+
 	/**
 	 * Constructor
 	 *
 	 * @param \phpbb\config\config      		$config
 	 * @param \phpbb\request\request_interface  $request
-	 * @param \mrfg\cogauth\cognito\cognito 	$cognito
-	 * @param \mrfg\cogauth\cognito\web_token_phpbb $web_token
+	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
 	 * @param \phpbb\language\language 			$language
- */
+   	 * @param   \phpbb\controller\helper $helper
+
+	 */
 	public function __construct(
 		\phpbb\config\config $config,
 		\phpbb\request\request_interface $request,
-		\mrfg\cogauth\cognito\cognito $cognito,
-		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-		\phpbb\language\language $language)
+		\mrfg\cogauth\cognito\auth_result $auth_result,
+		\phpbb\language\language $language,
+		\phpbb\controller\helper $helper)
 	{
 		$this->config   = $config;
 		$this->request = $request;
-		$this->cognito = $cognito;
+		$this->auth_result = $auth_result;
 		$this->language = $language;
-		$this->web_token = $web_token;
+		$this->helper =$helper;
 
 	}
 
@@ -58,63 +58,80 @@ class main
 	 */
 	public function handle($command)
 	{
-		$client_id = $this->config['cogauth_client_id'];
-		//$client_id  = '13h3u2ie5tvvf4ot20p316n822';
-		$client_secret = $this->config['cogauth_client_secret'];
-		//$client_secret = 'o2d9423m32aijr63l83t38rl9hga55hq82nq5r747onmikrnips';
-		$code = $this->request->variable('code','');
-		$result_text = '';
-		error_log('handle ' . $code);
+		$this->language->add_lang(array('ucp'));
 
-		if ($code != '')
+		if ($command === 'callback')
 		{
-			$url = 'https://auth.ukriversguidebook.co.uk/oauth2/token';
-			$data = array(
-				'grant_type'   => 'authorization_code',
-				'client_id'    => $client_id,
-				'code'         => $code,
-				'redirect_uri' => 'https://area51.ukriversguidebook.co.uk/forum/app.php/cogauth/auth/callback');
-
-			$handle = curl_init($url);
-			curl_setopt($handle, CURLOPT_VERBOSE, true);
-			curl_setopt($handle, CURLOPT_FOLLOWLOCATION, true);
-			curl_setopt($handle, CURLOPT_USERPWD, $client_id . ":" . $client_secret);
-			curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-			$field_string = http_build_query($data);
-
-			curl_setopt($handle, CURLOPT_POSTFIELDS, $field_string);
-			$resp = curl_exec($handle);
-
-			if (!curl_errno($handle))
+			$client_id = $this->config['cogauth_client_id'];
+			$client_secret = $this->config['cogauth_client_secret'];
+			$code = $this->request->variable('code', '');
+			if ($code != '')
 			{
-				switch ($http_code = curl_getinfo($handle, CURLINFO_HTTP_CODE))
-				{
-					case 200:  # OK
-						$this->validate_response(json_decode($resp,true));
+				$url = 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/oauth2/token';
+				$prefix = $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'];
+				$data = array(
+					'grant_type'   => 'authorization_code',
+					'client_id'    => $client_id,
+					'code'         => $code,
+					'redirect_uri' => $prefix . '/app.php/cogauth/auth/callback');
 
-						$result_text  = 'OK';
-					break;
-					default:
-						$result_text  =  'Unexpected HTTP code: ' . $http_code;
+				$handle = curl_init($url);
+				curl_setopt($handle, CURLOPT_FOLLOWLOCATION, true);
+				curl_setopt($handle, CURLOPT_USERPWD, $client_id . ":" . $client_secret);
+				curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+				$field_string = http_build_query($data);
+
+				curl_setopt($handle, CURLOPT_POSTFIELDS, $field_string);
+				$resp = curl_exec($handle);
+
+				if (!curl_errno($handle))
+				{
+					switch ($http_code = curl_getinfo($handle, CURLINFO_HTTP_CODE))
+					{
+						case 200:  # OK
+							$token = $this->validate_response(json_decode($resp, true));
+							if ($token)
+							{
+								// Success
+								$this->helper->assign_meta_refresh_var(2, generate_board_url());
+								return $this->helper->message('LOGIN_REDIRECT');
+							}
+						break;
+						default:
+							// Unexpected http code
+							return $this->helper->message('COGAUTH_HOSTED_UI_STATUS_FAIL',array($http_code));
+					}
+				}
+				else
+				{
+					// curl error
+					return $this->helper->message('COGAUTH_HOSTED_UI_FAIL',array(curl_error($handle)));
 				}
 			}
+			// Missing 'code' in callback
+			return $this->helper->message('COGAUTH_HOSTED_UI_INVALID',array(),'INFORMATION',500);
+
+		} elseif ($command === 'signout')
+		{
+			error_log('signout - not implemented');
+			$this->helper->assign_meta_refresh_var(2,generate_board_url());
+			return $this->helper->message('LOGOUT_REDIRECT');
 		}
-
-
-		$result = array('re' => $result_text);
-
-		$content = json_encode((object) $result );
-		return new \Symfony\Component\HttpFoundation\Response($content, Response::HTTP_OK);
+		else {
+			// Invalid command parameter (invalid url)
+			return $this->helper->message('COGAUTH_HOSTED_UI_404',array(),'INFORMATION',404);
+		}
 	}
 
 	protected function validate_response($response)
 	{
-		$decode_id = $this->web_token->decode_token($response['id_token']);
-		$decode_access = $this->web_token->decode_token($response['access_token']);
+		$cogauth_token = $this->auth_result->validate_and_store_auth_response(
+			array('IdToken' => $response['id_token'],
+				  'AccessToken' => $response['access_token'],
+				  'RefreshToken' => $response['refresh_token'],
+		));
 
-		var_dump($response);
-		var_dump($decode_id);
-		var_dump($decode_access);
+		return $cogauth_token;
 	}
 
 }

@@ -104,6 +104,11 @@ class main_module
 				{
 					$cognito->update_user_pool_id($request->variable('cogauth_pool_id', ''));
 					$result = $cognito->describe_user_pool();
+					if ($result instanceof \Aws\Result)
+					{
+						//todo: Changes via AWS console should get reflected here on change (may be a Lambda trigger?)
+						$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain']);
+					}
 					$this->submit_result_handler($result);
 				}
 				elseif ($submit_create_user_pool)
@@ -119,6 +124,7 @@ class main_module
 				}
 				elseif ($submit_use_app_client)
 				{
+					$config->set('cogauth_hosted_ui', $request->variable('cogauth_hosted_ui', 0));
 					$max_login = $request->variable('cogauth_refresh_token_expiration_days', 30);
 					$client_id = $request->variable('cogauth_app_client_id', '');
 					$result = $cognito->update_user_pool_client($max_login, $client_id);
@@ -156,6 +162,7 @@ class main_module
 					'COGAUTH_APP_CLIENT_ID' => $client_id,
 					'COGAUTH_CLIENT_NAME' => $client_name,
 					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $validity,
+					'COGAUTH_HOSTED_UI' => $config['cogauth_hosted_ui'],
 				)));
 			break;
 			case 'misc':

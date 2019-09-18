@@ -56,4 +56,9 @@ $lang = array_merge($lang, array(
 	'COGAUTH_AUTO_PASSWD_RESET'		=> '<strong>Cognito password mismatch, automatically reset</strong><br>» %1$s',
 	'COGAUTH_MIGRATE_USER'			=> '<strong>User Migrated to Cognito User Pool</strong><br>» %1$s',
 	'COGAUTH_NO_ACCESS_TOKEN'		=> '<strong>AWS Cognito login error, phpBB login only, see error log.</strong>',
+
+	'COGAUTH_HOSTED_UI_STATUS_FAIL' => 'An unexpected status code %1$s returned. User not logged in.',
+	'COGAUTH_HOSTED_UI_FAIL' => 'An unexpected internal error: "%1$s". User not logged in.',
+	'COGAUTH_HOSTED_UI_INVALID' => 'An invalid authentication response was received.',
+	'COGAUTH_HOSTED_UI_404' => 'Page not found'
 ));

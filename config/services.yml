@@ -19,9 +19,10 @@ services:
         arguments:
             - '@config'
             - '@request'
-            - '@mrfg.cogauth.cognito'
-            - '@mrfg.cogauth.web_token_phpbb'
+            - '@mrfg.cogauth.auth_result'
             - '@language'
+            - '@controller.helper'
+
 
     mrfg.cogauth.cognito_controller:
         class: mrfg\cogauth\cognito\controller

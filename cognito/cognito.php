@@ -829,19 +829,31 @@ class cognito
 	protected function get_user_pool_client_default_parameters()
 	{
 		$days = $this->config['max_autologin_time'];
-		$home_url = $this->config['site_home_url'];
-		$script = $this->config['script_path'];
-		return array(
+
+		$result = array(
 			'UserPoolId'           => $this->user_pool_id,
 			'RefreshTokenValidity' => (int) $days,
 			'ExplicitAuthFlows'    => array('ADMIN_NO_SRP_AUTH'),
-			'CallbackURLs'		   => array($home_url . $script . '/app.php/cogauth/auth/callback'),
-			'LogoutURLs' 		   => array($home_url . $script . '/app.php/cogauth/auth/signout'),
-//			'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
-			'AllowedOAuthFlows'	   => array('code', 'implicit'),		// code | implicit | client_credentials
-			'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
-			'AllowedOAuthFlowsUserPoolClient' => true
 		);
+
+		if ($this->config['cogauth_hosted_ui'])
+		{
+			$prefix = $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'];
+
+			return array_merge($result, array(
+				'CallbackURLs'      => array($prefix . '/app.php/cogauth/auth/callback'),
+				'LogoutURLs'        => array($prefix . '/app.php/cogauth/auth/signout'),
+				'AllowedOAuthFlows' => array('code', 'implicit'),        // code | implicit | client_credentials
+				//'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
+				'SupportedIdentityProviders' => array('COGNITO'),//COGNITO, Facebook, Google and LoginWithAmazon.
+				'AllowedOAuthFlowsUserPoolClient' => true,
+				'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
+
+			));
+		} else
+		{
+			return $result;
+		}
 	}
 
 	/**
@@ -892,6 +904,7 @@ class cognito
 			$result = $this->client->describeUserPool(array(
 				'UserPoolId' => $this->user_pool_id
 			));
+
 			return $result;
 		}
 		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
@@ -926,6 +939,7 @@ class cognito
 	 */
 	public function create_user_pool($name)
 	{
+		$this->config->set('cogauth_hosted_ui',0);
 		try{
 			$user_pool = $this->client->createUserPool(array(
 				'Schema' => array(array(

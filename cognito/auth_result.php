@@ -113,6 +113,12 @@ class auth_result
 			return false;
 		}
 
+		if (! $id_token['custom:phpbb_user_id'])
+		{
+			// missing php user_id
+			return false;
+		}
+
 		$this->store_access_token($response['AccessToken']);
 
 		# If this is a refreshed Access Token do not decode and store the parameters.
@@ -146,6 +152,19 @@ class auth_result
 		$this->nickname = $token['nickname'];
 		$this->expires = $token['exp'];
 		$this->email = $token['email'];
+		if ($this->phpbb_user_id == null)
+		{
+			$this->phpbb_user_id = (int) $token['custom:phpbb_user_id'];
+		}
+		/*else
+		{
+			if ($this->phpbb_user_id != $token['custom:phpbb_user_id'])
+			{
+				//todo: verify claims
+				throw ;
+			}
+		}
+		*/
 	}
 
 
@@ -399,11 +418,12 @@ class auth_result
 	 * @param $length
 	 * @return string A unique Token
 	 */
-	private function get_unique_token($length = 32){
+	private function get_unique_token($length = 32)
+	{
 		$token = "";
 		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		$code_alphabet.= "abcdefghijklmnopqrstuvwxyz";
-		$code_alphabet.= "0123456789";
+		$code_alphabet .= "abcdefghijklmnopqrstuvwxyz";
+		$code_alphabet .= "0123456789";
 		$max = strlen($code_alphabet);
 
 		try
@@ -412,13 +432,24 @@ class auth_result
 			{
 				$token .= $code_alphabet[random_int(0, $max - 1)];
 			}
-		} catch (\Exception $e)
+		}
+		catch (\Exception $e)
 		{
 			return "";
 		}
 		return $token;
 	}
 
+	/**
+	 * Get the phpBB user ID for the current session, posibly returned in the id_token in the id_toke during
+	 * hosted ui login.
+	 *
+	 * @return integer phpbb user id
+	 */
+	public function get_phpbb_user_id()
+	{
+		return (int) $this->phpbb_user_id;
+	}
 
 	/**
 	 * Delete the Session token for a session token

@@ -46,4 +46,14 @@ class user
 	{
 		return 'u' . str_pad($user_id, 6, "0", STR_PAD_LEFT);
 	}
+
+	/** Return the phpBB user ID
+	 * @param string $cognito_username
+	 * @return int
+	 */
+	public function get_phpbb_user_id($cognito_username)
+	{
+		return (int) substr($cognito_username,1);
+	}
+
 }

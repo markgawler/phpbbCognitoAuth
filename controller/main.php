@@ -24,6 +24,12 @@ class main
 	/* @var \mrfg\cogauth\cognito\auth_result */
 	protected $auth_result;
 
+	/** @var \phpbb\user $user */
+	protected $user;
+
+	/** @var \phpbb\auth\auth $auth */
+	protected $auth;
+
 	/**
 	 * Constructor
 	 *
@@ -32,6 +38,8 @@ class main
 	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
 	 * @param \phpbb\language\language 			$language
    	 * @param   \phpbb\controller\helper $helper
+	 * @param \phpbb\user $user
+	 * @param \phpbb\auth\auth $auth
 
 	 */
 	public function __construct(
@@ -39,14 +47,17 @@ class main
 		\phpbb\request\request_interface $request,
 		\mrfg\cogauth\cognito\auth_result $auth_result,
 		\phpbb\language\language $language,
-		\phpbb\controller\helper $helper)
+		\phpbb\controller\helper $helper,
+		\phpbb\user $user,
+		\phpbb\auth\auth $auth)
 	{
 		$this->config   = $config;
 		$this->request = $request;
 		$this->auth_result = $auth_result;
 		$this->language = $language;
 		$this->helper =$helper;
-
+		$this->user = $user;
+		$this->auth = $auth;
 	}
 
 	/**
@@ -93,6 +104,11 @@ class main
 							if ($token)
 							{
 								// Success
+
+								$this->user->session_create($this->auth_result->get_phpbb_user_id(), false, false, true);  //todo  remember me
+								$this->auth->acl($this->user->data);
+								$this->user->setup();
+
 								$this->helper->assign_meta_refresh_var(2, generate_board_url());
 								return $this->helper->message('LOGIN_REDIRECT');
 							}

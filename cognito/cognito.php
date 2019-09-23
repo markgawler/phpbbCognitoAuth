@@ -205,26 +205,31 @@ class cognito
 	{
 		try {
 			$response = $this->authenticate_user($user_id, $password);
-
+			$token = false;
 			if (isset($response['AuthenticationResult']))
 			{
-				// Successful login.
+				// Successful login (maybe!).
+				// The login will still fail if the claims in the id_token are invalid or the phpBB_user_id attribute is
+				// null / missing  //todo validate the phpbb_user_id and claims
 				// Store the result locally. The result will be stored in the database once the logged in
 				// session has started  (the SID changes so we cant store it in the DB yet).
 				//$token = $this->authentication->get_session_token();
 				//$this->session_token = $token;
-				$token =$this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
+				$token = $this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
+			}
+
+			if ($token)
+			{
 				return array(
 					'status'    => COG_LOGIN_SUCCESS,
 					'response'  => $response['AuthenticationResult'],
 					'session_token' => $token
 				);
-			} else {
+			}
 				return array(
 					'status'    => COG_LOGIN_NO_AUTH,
 					'response'  => $response['ChallengeName']
-				);
-			}
+			);
 
 		} catch (CognitoIdentityProviderException $e) {
 			switch ($e->getAwsErrorCode())
@@ -364,7 +369,8 @@ class cognito
 			'preferred_username' => utf8_clean_string($nickname),
 			'email' => $email,
 			'nickname' => $nickname,
-			'email_verified' => "True"
+			'email_verified' => "True",
+			'custom:phpbb_user_id' => $user_id,
 		));
 
 		$result = $this->admin_create_user($user_id, $password, $user_attributes);
@@ -785,6 +791,8 @@ class cognito
 			array('ClientName' => $name,
 				  'UserPoolId' => $user_pool_id,
 				  'GenerateSecret' => true,
+				  'ReadAttributes' => array('custom:phpbb_user_id','email','email_verified','nickname','preferred_username'),
+				  //'WriteAttributes' => array('custom:phpbb_user_id','email','email_verified','nickname','preferred_username')
 				));
 		return $this->client->createUserPoolClient($params);
 	}
@@ -847,8 +855,8 @@ class cognito
 				//'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
 				'SupportedIdentityProviders' => array('COGNITO'),//COGNITO, Facebook, Google and LoginWithAmazon.
 				'AllowedOAuthFlowsUserPoolClient' => true,
-				'AllowedOAuthScopes'   => array('email','openid'),			//"phone", "email", "openid", and "Cognito".
-
+				'AllowedOAuthScopes'   => array('email','openid','profile'),			//"phone", "email", "openid", and "Cognito".
+					// 'profile' - required for custom attribute to appear in the id_token (hosted ui login requires this)
 			));
 		} else
 		{
@@ -942,13 +950,16 @@ class cognito
 		$this->config->set('cogauth_hosted_ui',0);
 		try{
 			$user_pool = $this->client->createUserPool(array(
-				'Schema' => array(array(
-					'Name' => 'email',
-					'AttributeDataType' => 'String',
-					'DeveloperOnlyAttribute' => false,
-					'Mutable' => true,
-					'Required' => true,
-					'StringAttributeConstraints' => array('MaxLength' => '2028', 'MinLength' => '0'))),
+				'Schema' => array(
+					array(
+						'Name' => 'email',
+						'AttributeDataType' => 'String',
+						'DeveloperOnlyAttribute' => false,
+						'Mutable' => true,
+						'Required' => true,
+						'StringAttributeConstraints' => array('MaxLength' => '2028', 'MinLength' => '0')),
+					$this->get_custom_attribute(),
+				),
 				'PoolName' => $name,
 				'AliasAttributes' => array('email', 'preferred_username'),
 				'AutoVerifiedAttributes' => array('email'),
@@ -976,6 +987,36 @@ class cognito
 		}
 	}
 
+	/**
+	 *
+	 * @return \Aws\Result | string containing Aws/Result or String containing error message
+	 * @since 1.0
+	 */
+	public function add_custom_attribute()
+	{
+		try{
+			$result = $this->client->addCustomAttributes(array(
+				'CustomAttributes' => array($this->get_custom_attribute()),
+				'UserPoolId' => $this->user_pool_id,
+			));
+			return $result;
+		}
+		catch ( CognitoIdentityProviderException $e)
+		{
+			return $this->handle_identity_provider_exception_for_acp($e);
+		}
+	}
+
+	protected function get_custom_attribute()
+	{
+		return array(
+			'Name' => 'phpbb_user_id',
+			'AttributeDataType' => 'Number',
+			'DeveloperOnlyAttribute' => false,
+			'Mutable' => true,
+			'Required' => false,
+			'NumberAttributeConstraints' => array('MinValue' => '0', 'MaxValue' => '99999999'));
+	}
 
 	/**
 	 * @param $e CognitoIdentityProviderException

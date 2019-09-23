@@ -22,7 +22,8 @@ services:
             - '@mrfg.cogauth.auth_result'
             - '@language'
             - '@controller.helper'
-
+            - '@user'
+            - '@auth'
 
     mrfg.cogauth.cognito_controller:
         class: mrfg\cogauth\cognito\controller

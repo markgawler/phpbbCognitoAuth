@@ -108,6 +108,21 @@ class main_module
 					{
 						//todo: Changes via AWS console should get reflected here on change (may be a Lambda trigger?)
 						$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain']);
+
+						// Add the phpbb_user_id cutom attribute is it dose not exist.
+						$attributes = $result['UserPool']['SchemaAttributes'];
+						$add_attr = true;
+						foreach ($attributes as $a)
+						{
+							if ($a['Name'] == 'custom:phpbb_user_id')
+							{
+								$add_attr = false;
+							}
+						}
+						if ($add_attr)
+						{
+							$result = $cognito->add_custom_attribute(); // Add Custom Attribute phpbb_user_id
+						}
 					}
 					$this->submit_result_handler($result);
 				}

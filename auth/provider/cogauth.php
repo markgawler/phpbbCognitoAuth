@@ -95,18 +95,10 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	public function init()
 	{
+		// Check the configuration is valid
 		$result = $this->cognito_client->describe_user_pool_client();
-		if ( $result instanceof \Aws\Result )
+		if ( ! $result instanceof \Aws\Result )
 		{
-			// region and pool may have changed so force refresh of the keys
-			$keys = $this->web_token->download_jwt_web_keys(true);
-			if ($keys === false)
-			{
-				/** @noinspection PhpUndefinedFieldInspection */
-				$message = $this->language->lang('COGAUTH_AWS_KEY_SET_ERROR') . adm_back_link($this->u_action);
-				trigger_error($message, E_USER_WARNING);
-			}
-		} else {
 			/** @noinspection PhpUndefinedFieldInspection */
 			trigger_error($result . adm_back_link($this->u_action), E_USER_WARNING);
 		}

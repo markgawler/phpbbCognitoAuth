@@ -60,13 +60,18 @@
 	<fieldset>
 		<legend>{L_APC_COGAUTH_AWS_USE_USER_POOL}</legend>
 		<dl>
-			<dt><label for="cogauth_pool_id">{L_COGAUTH_POOL_ID}{L_COLON}</label><br /><span>{COGAUTH_POOL_ID_EXPLAIN}</span></dt>
+			<dt><label for="cogauth_pool_id">{L_COGAUTH_POOL_ID}{L_COLON}</label><br /><span>{L_COGAUTH_POOL_ID_EXPLAIN}</span></dt>
 			<dd><input type="text" id="cogauth_pool_id" size="40" name="cogauth_pool_id" value="{COGAUTH_POOL_ID}" /></dd>
 		</dl>
 		<dl>
-			<dt><label>{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
+			<dt><label>{L_COGAUTH_POOL_NAME}{L_COLON}</label><br /><span>{L_COGAUTH_POOL_NAME_EXPLAIN}</span></dt>
 			<dd>{COGAUTH_POOL_NAME}</dd>
 		</dl>
+		<dl>
+			<dt><label>{L_APC_COGAUTH_HOSTED_UI_DOMAIN}{L_COLON}</label><br /><span>{L_APC_COGAUTH_HOSTED_UI_DOMAIN_EXPLAIN}</span></dt>
+			<dd>{COGAUTH_HOSTED_UI_DOMAIN}</dd>
+		</dl>
+
 
 		<p class="submit-buttons">
 			<input class="button" type="submit" id="use_user_pool" name="use_user_pool" value="{L_SUBMIT}" />&nbsp;

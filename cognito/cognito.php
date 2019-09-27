@@ -182,6 +182,10 @@ class cognito
 	{
 		$this->user_pool_id = $user_pool_id;
 		$this->config->set('cogauth_pool_id', $user_pool_id);
+
+		// Update keys when User Pool changed
+		$keys = $this->web_token->download_jwt_web_keys(true);
+
 	}
 
 
@@ -580,7 +584,7 @@ class cognito
 	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
 	 *
-	 *                     todo: uae AdminSetUserPassword
+	 * todo: uae AdminSetUserPassword
 	 */
 	public function admin_change_password($user_id, $new_password)
 	{
@@ -862,6 +866,16 @@ class cognito
 		{
 			return $result;
 		}
+	}
+
+	/**
+	 * @return string uri of hosted ui for User Pool App Client
+	 */
+	public function get_hosted_ui_uri()
+	{
+		$callback =  $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'] . '/app.php/cogauth/auth/callback';
+		$uri = 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' .$callback;
+		return $uri;
 	}
 
 	/**

@@ -110,12 +110,17 @@ class auth_result
 			$this->web_token->decode_token($response['AccessToken']);
 		} catch  (TokenVerificationException $e)
 		{
+			//todo log error
+			//error_log($e->getMessage());
+			$this->log->add('critical', $this->phpbb_user_id, 0, $e->getMessage());
 			return false;
 		}
 
 		if (! $id_token['custom:phpbb_user_id'])
 		{
+			//todo error log this
 			// missing php user_id
+			error_log('missing phpBB user id (missing custom attribute)');
 			return false;
 		}
 
@@ -480,7 +485,7 @@ class auth_result
 		//todo: investigate optimising by adding "phpbb_sessions.session_user_id != 1"
 		$cogauth_table = $this->cogauth_authentication;
 
-		//  todo: Gettin this to works with both MySQL and SQLite was more problematic than expected, revisit to optimise / tidy
+		//  todo: Getting this to works with both MySQL and SQLite was more problematic than expected, revisit to optimise / tidy
 		$sql = "DELETE FROM " . $cogauth_table . " WHERE sid IN "
 		. "(SELECT S.sid FROM (SELECT sid FROM " . $cogauth_table. " WHERE autologin = 0) AS S LEFT JOIN "
 		. SESSIONS_TABLE. " ON S.sid = " .SESSIONS_TABLE . ".session_id WHERE "

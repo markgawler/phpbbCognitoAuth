@@ -30,8 +30,9 @@ $lang = array_merge($lang, array(
 	'COGAUTH_APP_CLIENT_ID'			=> 'Cognito Client ID',
 	'COGAUTH_POOL_ID'				=> 'Cognito User Pool ID',
 	'COGAUTH_POOL_NAME'				=> 'Cognito User Pool Name',
+	'COGAUTH_POOL_NAME_EXPLAIN'     => 'Cognito User Pool Name',
 	'COGAUTH_CLIENT_SECRET'			=> 'Cognito Client Secret',
-	'COGAUTH_APP_NAME'			=> 'APP Client Name',
+	'COGAUTH_APP_NAME'				=> 'APP Client Name',
 
 	'COGAUTH_AWS_REGION_EXPLAIN'	=> 'AWS Region',
 	'COGAUTH_AWS_SECRET_EXPLAIN'	=> 'AWS Account Credentials, Cognito Admin User Secret Key',

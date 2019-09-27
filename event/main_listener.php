@@ -55,6 +55,9 @@ class main_listener implements EventSubscriberInterface
 	/**@var \phpbb\config\config $config Config object */
 	protected $config;
 
+	/** @var \phpbb\template\template $template */
+	protected $template;
+
 	/**
 	 * Constructor
 	 *
@@ -65,6 +68,7 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\event\dispatcher_interface $dispatcher Event dispatcher
 	 * @param \phpbb\request\request            $request
 	 * @param \phpbb\config\config              $config
+	 * @param \phpbb\template\template			$template
 	 */
 	public function __construct(
 		\phpbb\user $user,
@@ -73,7 +77,8 @@ class main_listener implements EventSubscriberInterface
 		\mrfg\cogauth\cognito\controller $controller,
 		\phpbb\event\dispatcher_interface $dispatcher,
 		\phpbb\request\request $request,
-		\phpbb\config\config $config)
+		\phpbb\config\config $config,
+		\phpbb\template\template $template)
 	{
 		$this->auth_result = $auth_result;
 		$this->user = $user;
@@ -82,6 +87,7 @@ class main_listener implements EventSubscriberInterface
 		$this->dispatcher = $dispatcher;
 		$this->request = $request;
 		$this->config   = $config;
+		$this->template = $template;
 
 	}
 
@@ -100,6 +106,11 @@ class main_listener implements EventSubscriberInterface
 			'lang_set' => 'common',
 		);
 		$event['lang_set_ext'] = $lang_set_ext;
+
+
+		$this->template->assign_vars(array(
+				'U_COGAUTH_HOSTED_UI' => $this->client->get_hosted_ui_uri(),
+			));
 	}
 
 

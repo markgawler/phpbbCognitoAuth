@@ -107,7 +107,15 @@ class main_module
 					if ($result instanceof \Aws\Result)
 					{
 						//todo: Changes via AWS console should get reflected here on change (may be a Lambda trigger?)
-						$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain']);
+						if ($result['UserPool']['CustomDomain'])
+						{
+							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['CustomDomain']);
+						}
+						else
+						{
+							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain'] . '.auth.'
+								. $config['cogauth_aws_region'] . '.amazoncognito.com');
+						}
 
 						// Add the phpbb_user_id cutom attribute is it dose not exist.
 						$attributes = $result['UserPool']['SchemaAttributes'];
@@ -178,6 +186,7 @@ class main_module
 					'COGAUTH_CLIENT_NAME' => $client_name,
 					'COGAUTH_REFRESH_TOKEN_EXP_DAYS' => $validity,
 					'COGAUTH_HOSTED_UI' => $config['cogauth_hosted_ui'],
+					'COGAUTH_HOSTED_UI_DOMAIN' => $config['cogauth_hosted_ui_domain'],
 				)));
 			break;
 			case 'misc':
@@ -199,6 +208,7 @@ class main_module
 			break;
 		}
 	}
+
 
 	protected function submit_result_handler($result)
 	{

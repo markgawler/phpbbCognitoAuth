@@ -44,4 +44,6 @@ $lang = array_merge($lang, array(
 
 	'APC_HOSTED_UI' => 'Hosted UI Support (Experimental)',
 	'APC_HOSTED_UI_EXPLAIN' => 'Enable support for Cognito Hosted UI support, this will require configuration in the AWS Console',
+	'APC_COGAUTH_HOSTED_UI_DOMAIN' => 'Cognito Hosted UI Domain name',
+	'APC_COGAUTH_HOSTED_UI_DOMAIN_EXPLAIN' => 'The domain name for the Hosted UI, this must be set via the AWS Control Panel if the Hosted UI is used',
 ));

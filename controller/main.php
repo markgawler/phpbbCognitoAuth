@@ -9,55 +9,48 @@ namespace mrfg\cogauth\controller;
 
 class main
 {
-	/* @var \phpbb\config\config */
+	/** @var \phpbb\config\config */
 	protected $config;
 
-	/* @var \phpbb\request\request 	phpBB request object */
+	/** @var \phpbb\request\request 	phpBB request object */
 	protected $request;
 
-	/* @var \phpbb\language\language $language */
+	/** @var \phpbb\language\language $language */
 	protected $language;
 
-	/* @var \phpbb\controller\helper */
+	/** @var \phpbb\controller\helper */
 	protected $helper;
 
-	/* @var \mrfg\cogauth\cognito\auth_result */
-	protected $auth_result;
-
-	/** @var \phpbb\user $user */
-	protected $user;
-
-	/** @var \phpbb\auth\auth $auth */
-	protected $auth;
+	/** @var  \mrfg\cogauth\cognito\user $controller*/
+	protected $controller;
 
 	/**
 	 * Constructor
 	 *
 	 * @param \phpbb\config\config      		$config
 	 * @param \phpbb\request\request_interface  $request
-	 * @param \mrfg\cogauth\cognito\auth_result $auth_result
+	 * param \mrfg\cogauth\cognito\auth_result $auth_result
 	 * @param \phpbb\language\language 			$language
-   	 * @param   \phpbb\controller\helper $helper
-	 * @param \phpbb\user $user
-	 * @param \phpbb\auth\auth $auth
+   	 * @param \phpbb\controller\helper $helper
+	 * @param \mrfg\cogauth\cognito\controller $controller
+	 * param \mrfg\cogauth\cognito\user $user
+
 
 	 */
 	public function __construct(
 		\phpbb\config\config $config,
 		\phpbb\request\request_interface $request,
-		\mrfg\cogauth\cognito\auth_result $auth_result,
 		\phpbb\language\language $language,
 		\phpbb\controller\helper $helper,
-		\phpbb\user $user,
-		\phpbb\auth\auth $auth)
+		\mrfg\cogauth\cognito\controller $controller
+		)
 	{
 		$this->config   = $config;
 		$this->request = $request;
-		$this->auth_result = $auth_result;
 		$this->language = $language;
 		$this->helper =$helper;
-		$this->user = $user;
-		$this->auth = $auth;
+		$this->controller = $controller;
+
 	}
 
 	/**
@@ -100,15 +93,11 @@ class main
 					switch ($http_code = curl_getinfo($handle, CURLINFO_HTTP_CODE))
 					{
 						case 200:  # OK
-							$token = $this->validate_response(json_decode($resp, true));
-							if ($token)
+							$tokens = $this->format_response(json_decode($resp, true));
+							$result = $this->controller->login($tokens);
+							if ($result)
 							{
 								// Success
-
-								$this->user->session_create($this->auth_result->get_phpbb_user_id(), false, false, true);  //todo  remember me
-								$this->auth->acl($this->user->data);
-								$this->user->setup();
-
 								$this->helper->assign_meta_refresh_var(2, generate_board_url());
 								return $this->helper->message('LOGIN_REDIRECT');
 							}
@@ -124,7 +113,7 @@ class main
 					return $this->helper->message('COGAUTH_HOSTED_UI_FAIL',array(curl_error($handle)));
 				}
 			}
-			// Missing 'code' in callback
+			// Missing 'code' in callback, or validate response returned false
 			return $this->helper->message('COGAUTH_HOSTED_UI_INVALID',array(),'INFORMATION',500);
 
 		} elseif ($command === 'signout')
@@ -139,15 +128,12 @@ class main
 		}
 	}
 
-	protected function validate_response($response)
+	protected function format_response($response)
 	{
-		$cogauth_token = $this->auth_result->validate_and_store_auth_response(
-			array('IdToken' => $response['id_token'],
-				  'AccessToken' => $response['access_token'],
-				  'RefreshToken' => $response['refresh_token'],
-		));
-
-		return $cogauth_token;
+		return array('IdToken' => $response['id_token'],
+			  'AccessToken' => $response['access_token'],
+			  'RefreshToken' => $response['refresh_token'],
+		);
 	}
 
 }

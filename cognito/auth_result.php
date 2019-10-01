@@ -98,7 +98,7 @@ class auth_result
 	 * @param array $response - AWS Authentication Result
 	 * @param bool	$refreshed - true is the storing a refreshed Access token
 	 *
-	 * @return boolean | string False if validation fails otherwise a session_token.
+	 * @return boolean | validation_result False if validation fails otherwise a session_token.
 	 *
 	 * @since 1.0
 	 */
@@ -116,14 +116,6 @@ class auth_result
 			return false;
 		}
 
-		if (! $id_token['custom:phpbb_user_id'])
-		{
-			//todo error log this
-			// missing php user_id
-			error_log('missing phpBB user id (missing custom attribute)');
-			return false;
-		}
-
 		$this->store_access_token($response['AccessToken']);
 
 		# If this is a refreshed Access Token do not decode and store the parameters.
@@ -138,7 +130,8 @@ class auth_result
 		if ($this->session_token && $refreshed){
 			$this->update_auth_data();
 		}
-		return $this->get_session_token();
+		$result = new validation_result($this->get_session_token(),$this->phpbb_user_id);
+		return $result;
 	}
 
 
@@ -157,9 +150,14 @@ class auth_result
 		$this->nickname = $token['nickname'];
 		$this->expires = $token['exp'];
 		$this->email = $token['email'];
-		if ($this->phpbb_user_id == null)
+		if (array_key_exists('custom:phpbb_user_id', $token))
 		{
 			$this->phpbb_user_id = (int) $token['custom:phpbb_user_id'];
+		}
+		else
+		{
+			// New User
+			$this->phpbb_user_id = 0;
 		}
 		/*else
 		{
@@ -172,6 +170,24 @@ class auth_result
 		*/
 	}
 
+	/**
+	 * Return the interesting user attributes extracted from the id_token
+	 *
+	 * @return array
+	 *
+	 * @since version
+	 */
+	public function get_user_attributes()
+	{
+		return array(
+			//'sub' => $this->uuid,
+			'cognito:username' => $this->cognito_username,
+			'preferred_username' => $this->preferred_username,
+			'nickname' => $this->nickname,
+			//'exp' => $this->expires,
+			'email' => $this->email,
+			'custom:phpbb_user_id' => (string) $this->phpbb_user_id);
+	}
 
 	/**
 	 * Decoded and store Access token,
@@ -228,7 +244,7 @@ class auth_result
 				$this->first_active = $this->time_now;
 			}
 			$this->sid = $sid;
-			$this->store_auth_data($phpbb_user_id, $sid);
+			$this->commit_auth_data($phpbb_user_id, $sid);
 			return $this->session_token;
 		}
 		return false;
@@ -238,7 +254,7 @@ class auth_result
 	 * @param int    $phpbb_user_id
 	 * @param string $sid
 	 */
-	protected function store_auth_data($phpbb_user_id, $sid)
+	protected function commit_auth_data($phpbb_user_id, $sid)
 	{
 		$fields = array(
 			'session_token' => $this->get_session_token(),
@@ -446,17 +462,6 @@ class auth_result
 	}
 
 	/**
-	 * Get the phpBB user ID for the current session, posibly returned in the id_token in the id_toke during
-	 * hosted ui login.
-	 *
-	 * @return integer phpbb user id
-	 */
-	public function get_phpbb_user_id()
-	{
-		return (int) $this->phpbb_user_id;
-	}
-
-	/**
 	 * Delete the Session token for a session token
 	 *
 	 * @param string $session_id phpbb session_id
@@ -509,4 +514,5 @@ class auth_result
 	{
 		$this->autologin = $autologin;
 	}
+
 }

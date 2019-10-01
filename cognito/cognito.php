@@ -58,8 +58,8 @@ class cognito
 	/** @var string */
 	protected $region;
 
-	/**@var array $auth_result */
-	protected $auth_result;
+	/**@var array $auth_response */
+	protected $auth_response;
 
     /** @var \mrfg\cogauth\cognito\web_token_phpbb */
     protected $web_token;
@@ -79,14 +79,14 @@ class cognito
 	/** @var \mrfg\cogauth\cognito\user $cognito_user */
 	protected $cognito_user;
 
-	/** @var \mrfg\cogauth\cognito\auth_result $authentication */
-	protected $authentication;
+	/** @var \mrfg\cogauth\cognito\auth_result $auth_result */
+	protected $auth_result;
 
 	/** @var \phpbb\language\language  */
 	protected $language;
 
 	/**
-	 * Database Authentication Constructor
+	 * Constructor
 	 *
 	 * @param	\phpbb\config\config                $config
 	 * @param	\phpbb\user                         $user
@@ -115,7 +115,7 @@ class cognito
 		$this->language = $language;
 		$this->request = $request;
 		$this->cognito_user = $cognito_user;
-		$this->authentication = $authentication;
+		$this->auth_result = $authentication;
 
 		$this->time_now = time();
 
@@ -124,7 +124,7 @@ class cognito
 		$this->client_secret = $config['cogauth_client_secret'];
         $this->region = $config['cogauth_aws_region'];
 
-        $this->auth_result = array();
+        $this->auth_response = array();
 		$this->client = $this->create_identity_provider(
 			$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
 		$this->web_token = $web_token;
@@ -184,7 +184,7 @@ class cognito
 		$this->config->set('cogauth_pool_id', $user_pool_id);
 
 		// Update keys when User Pool changed
-		$keys = $this->web_token->download_jwt_web_keys(true);
+		$this->web_token->download_jwt_web_keys(true);
 
 	}
 
@@ -219,8 +219,14 @@ class cognito
 				// session has started  (the SID changes so we cant store it in the DB yet).
 				//$token = $this->authentication->get_session_token();
 				//$this->session_token = $token;
-				$token = $this->authentication->validate_and_store_auth_response($response['AuthenticationResult']);
-			}
+				$result = $this->auth_result->validate_and_store_auth_response($response['AuthenticationResult']);
+				if ($result instanceof validation_result)
+				{
+					// todo Test for new user (this would only happen if the user pool had users before
+					// todo the hosted UI was enabled for the user pool.
+					$token = $result->cogauth_token;
+				}
+		}
 
 			if ($token)
 			{
@@ -483,7 +489,7 @@ class cognito
 					{
 						// login success, store the result locally. The result will be stored in the database once the logged in
 						// session has started  (the SID changes so we cant store it in the DB yet).
-						$this->auth_result = $response['AuthenticationResult'];
+						$this->auth_response = $response['AuthenticationResult'];
 					}
 				}
 				catch (CognitoIdentityProviderException $e)
@@ -711,6 +717,38 @@ class cognito
 		} catch (CognitoIdentityProviderException $e)
 		{
 			$this->handle_cognito_identity_provider_exception($e,$user_id,'update_user_attributes');
+		}
+	}
+
+	/**
+	 * @param string $user_name - Cognito Username
+	 * @param string $email
+	 * @param string $nickname - Human Friendly Username (will be the same as  Cognito Username for Hosted UI created users)
+	 *
+	 * @since 1.0
+	 */
+	public function normalize_user($user_name, $email, $nickname = null)
+	{
+
+		if (empty($nickname))
+		{
+			$nickname = $user_name;
+		}
+		$attributes = array(
+			'preferred_username' => utf8_clean_string($nickname),
+			'email' => utf8_strtolower($email),
+			'nickname' => $nickname,
+		);
+		$data = array(
+			'UserAttributes' => $this->build_attributes_array($attributes),
+			'Username'       => $user_name,
+			'UserPoolId'     => $this->user_pool_id,
+		);
+		try {
+			$this->client->adminUpdateUserAttributes($data);
+		} catch (CognitoIdentityProviderException $e)
+		{
+			$this->handle_cognito_identity_provider_exception($e, 0,'normalize_user');
 		}
 	}
 

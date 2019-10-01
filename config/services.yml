@@ -20,16 +20,14 @@ services:
         arguments:
             - '@config'
             - '@request'
-            - '@mrfg.cogauth.auth_result'
             - '@language'
             - '@controller.helper'
-            - '@user'
-            - '@auth'
+            - '@mrfg.cogauth.cognito_controller'
 
     mrfg.cogauth.cognito_controller:
         class: mrfg\cogauth\cognito\controller
         arguments:
-            - '@user'
+            - '@mrfg.cogauth.user'
             - '@mrfg.cogauth.auth_result'
             - '@mrfg.cogauth.cognito'
 
@@ -58,6 +56,8 @@ services:
     mrfg.cogauth.user:
         class: mrfg\cogauth\cognito\user
         arguments:
+            - '@user'
+            - '@auth'
             - '@dbal.conn'
 
     mrfg.cogauth.web_token_phpbb:

@@ -59,6 +59,11 @@ services:
             - '@user'
             - '@auth'
             - '@dbal.conn'
+            - '@config'
+            - '@passwords.manager'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+
 
     mrfg.cogauth.web_token_phpbb:
         class: mrfg\cogauth\cognito\web_token_phpbb

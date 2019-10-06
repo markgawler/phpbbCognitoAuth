@@ -13,6 +13,8 @@
 
 namespace mrfg\cogauth\tests\cognito;
 
+use mrfg\cogauth\cognito\validation_result;
+
 class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 {
 	public function set_time_now($time_now)
@@ -64,7 +66,7 @@ class auth_result_test extends \phpbb_test_case
 		$auth = new \mrfg\cogauth\cognito\auth_result(
 			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 
-		// Get the session token but dont create a token if one dosn't exist.
+		// Get the session token but dont create a token if one dose not exist.
 		$token = $auth->get_session_token(false);
 		$this->assertNull($token, 'Validating token not initialized ');
 
@@ -81,17 +83,17 @@ class auth_result_test extends \phpbb_test_case
     {
     	$time_now = time();
 		$id_token = 'A simple ID Token';
-		$access_token = 'A simple Acces Token';
+		$access_token = 'A simple Access Token';
 		$refresh_token = 'A Simple Refresh Token';
 
 		$sid = 'cd4e8aaaaaaaaaaaaaaaaaaaaaaaaae2';
 		$expires = '1546345899';
 		$uuid = 'aaaaaaaa-xxxx-yyyy-zzzz-eeeeeeeeeeee';
-		$cognito_username = 'fred the rock flintston';
+		$cognito_username = 'fred the rock flintstones';
 		$nickname = 'Fred Flint';
 		$email = 'fred_1999929135@tfbnw.ne';
 		$phpbb_user_id = 1234;
-		$preferred_username = 'Frederick Flintstone';
+		$preferred_username = 'Frederick Flintstones';
 
 		$id_token_decoded = array(
 			'sub' => $uuid,
@@ -99,7 +101,8 @@ class auth_result_test extends \phpbb_test_case
 			'nickname' => $nickname,
 			'exp' => $expires,
 			'email' => $email,
-			'preferred_username' => $preferred_username);
+			'preferred_username' => $preferred_username,
+			'custom:phpbb_user_id' => (string) $phpbb_user_id);
 		$access_token_decoded = 'decoded access token';
 
     	$auth_response = array(
@@ -146,7 +149,85 @@ class auth_result_test extends \phpbb_test_case
 
     	$result = $auth->validate_and_store_auth_response($auth_response);
 
-    	$this->assertEquals($session_token,$result,'Asserting validate_and_store_auth_response is True');
+    	$this->assertEquals(new validation_result($session_token,$phpbb_user_id),$result,'Asserting validate_and_store_auth_response is well formed validation object');
+
+
+		/** @noinspection PhpUnhandledExceptionInspection */
+		$session_token = $auth->authenticated($phpbb_user_id, $sid);
+		$this->assertEquals($sql_fields['session_token'],$session_token,
+			'Session_Token returned correctly');
+	}
+
+
+	public function test_validate_and_store_auth_response_cognito_created_user()
+	{
+		$time_now = time();
+		$id_token = 'A simple ID Token';
+		$access_token = 'A simple Access Token';
+		$refresh_token = 'A Simple Refresh Token';
+
+		$sid = 'cd4e8aaaaaaaaaaggggaaaaaaaaaaae2';
+		$expires = '1546345899';
+		$uuid = 'aaaaaaaa-xxxx-yyyy-zzzz-eeeeeeeeeeee';
+		$cognito_username = 'Fred';
+		$nickname = 'Fred';
+		$email = 'fred_1999929135@tfbnw.ne';
+		$phpbb_user_id = 55;
+		$preferred_username = 'Fred';
+
+		// note missing fields in the id token as this is a native Cognito created user
+		$id_token_decoded = array(
+			'sub' => $uuid,
+			'cognito:username' => $cognito_username,
+			'exp' => $expires,
+			'email' => $email);
+		$access_token_decoded = 'decoded access token';
+
+		$auth_response = array(
+			'IdToken'=> $id_token,
+			'AccessToken' => $access_token,
+			'RefreshToken' => $refresh_token);
+
+
+		$map = array(
+			array($id_token, $id_token_decoded),
+			array($access_token, $access_token_decoded)
+		);
+		$this->web_token->expects($this->exactly(2))
+			->method('decode_token')->will($this->returnValueMap($map));
+
+		$auth = new auth_result_test_functions(
+			$this->web_token, $this->db, $this->log,'cogauth_authentication');
+		$auth->set_time_now($time_now);
+
+		$session_token =$auth->get_session_token();
+		// Validate the Database Store
+		$sql_fields = array(
+			'session_token' => $session_token,
+			'expires'  		=> $expires,
+			'uuid'			=> $uuid,
+			'username' 		=> $cognito_username,
+			'preferred_username' => $preferred_username,
+			'nickname' 		=> $nickname,
+			'email' 		=> $email,
+			'phpbb_user_id' => $phpbb_user_id,
+			'sid' 			=> $sid,
+			'access_token'  => $access_token,
+			'refresh_token' => $refresh_token,
+			'autologin' 	=> 0,
+			'last_active'	=> $time_now,
+			'first_active'	=> $time_now);
+
+		$this->db->expects($this->once())
+			->method('sql_build_array')
+			->with($this->equalTo('INSERT'), $this->equalTo($sql_fields));
+
+		$this->db->expects($this->once())->method('sql_query');
+
+
+		$result = $auth->validate_and_store_auth_response($auth_response);
+
+		$this->assertEquals(new validation_result($session_token,$phpbb_user_id),$result,'Asserting validate_and_store_auth_response is well formed validation object');
 
 
 		/** @noinspection PhpUnhandledExceptionInspection */
@@ -210,7 +291,8 @@ class auth_result_test extends \phpbb_test_case
 			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
-		$this->assertEquals(strlen($result),32,'Validating response');
+		$this->assertInstanceOf(validation_result::class, $result, 'validating a response');
+		$this->assertEquals(strlen($result->cogauth_token),32,'Validating response');
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated('1234', '');
@@ -263,138 +345,7 @@ class auth_result_test extends \phpbb_test_case
 
 	}
 
-	//todo fix after refactor
-	/*public function test_get_access_token_from_sid_load_auth_data(){
-		$time_now = time();
 
-		$row = array (
-			'session_token' => 'NtMQHaaaaaaaaaaaaaaaaaaaaaaaaaa1',
-			'expires' => $time_now + 5000,
-			'uuid' => 'aaaaaaaa-bbbb-xxxx-dddd-eeeeeeeeeeee',
-			'username' => 'u000101',
-			'preferred_username' => '',
-			'nickname' => '',
-			'email' => 1221,
-			'phpbb_user_id' => '',
-			'sid' => 'a652e8feaaaaaaaaaaaaaaaaaaaaa54a',
-			'access_token' =>'eyJraWQiOiJndlwvcmNDQTBMWUhMd2-piUlVmMU.Fwe',
-			'refresh_token' => 'eyJjdHkiOiJKV1Qiffffffffffffff.U2R0NNIiwi-'
-		);
-
-		$auth = new \mrfg\cogauth\tests\cognito\authentication_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
-		$time_now = time();
-		$auth->set_time_now($time_now);
-
-		// Check the session_token is escaped
-		$this->db->expects($this->once())
-			->method('sql_escape')
-			->with('a652e8feaaaaaaaaaaaaaaaaaaaaa54a')
-			->willReturn('aeaaaaaaaaaaaaaaaaa54a');
-
-		// Is he SQL query formed correctly
-		$this->db->expects($this->once())
-			->method('sql_query')
-			->with("SELECT * FROM cogauth_authentication WHERE sid = 'aeaaaaaaaaaaaaaaaaa54a'");
-
-		// Is he SQL query formed correctly
-		$this->db->expects($this->once())
-			->method('sql_fetchrow')
-			->willReturn($row);
-
-
-		//Assert no refresh required
-		$this->cognito->expects($this->never())
-			->method('refresh_access_token_for_username');
-
-		$result = $auth->get_access_token_from_sid('a652e8feaaaaaaaaaaaaaaaaaaaaa54a');
-		$this->assertEquals($row['access_token'], $result, "Asserting access token returned");
-
-	}
-*/
-	//todo fix after refactor
-	/*public function test_get_access_token_from_sid_load_auth_data_refresh(){
-		$time_now = time();
-		$refresh_token ='eyJjdHkiO.refresh.token.ffffff.U2R0NNIiwi-';
-		$cognito_username = 'u000101';
-		$phpbb_user_id = 1221;
-		$row = array (
-			'session_token' => 'NtMQHaaaaaaaaaaaa.refresh.aaaaa1',
-			'expires' => $time_now + 299,
-			'uuid' => 'aaaaaaaa-bbbb-xxxx-dddd-eeeeeeeeeeee',
-			'username' => $cognito_username,
-			'preferred_username' => '',
-			'nickname' => '',
-			'email' => '',
-			'phpbb_user_id' => $phpbb_user_id,
-			'sid' => 'a652e8feaaaaa.refresh.aaaaaaa54a',
-			'access_token' =>'eyJraWQiOiJndlwvcmNDQTBMWUhMd2-piUlVmMU.Fwe',
-			'refresh_token' => $refresh_token
-		);
-		$new_token = 'eyJjdeeeee.new.token.aaffffff.U2R0NNIiwi-';
-
-		$auth = new \mrfg\cogauth\tests\cognito\authentication_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
-		$time_now = time();
-		$auth->set_time_now($time_now);
-
-		// Is he SQL query formed correctly
-		$this->db->expects($this->once())
-			->method('sql_fetchrow')
-			->willReturn($row);
-
-		//Assert no refresh required
-		$this->cognito->expects($this->once())
-			->method('refresh_access_token_for_username')
-			->with($refresh_token, $cognito_username, $phpbb_user_id)
-			->willReturn($new_token);
-
-		$result = $auth->get_access_token_from_sid('a652e8feaaaaaaaaaaaaaaaaaaaaa54a');
-		$this->assertEquals($new_token, $result, "Asserting access token returned");
-
-	}
-*/
-	//todo fix after refactor
-	/*public function test_get_access_token_from_sid_load_auth_data_refresh_fail(){
-		$time_now = time();
-		$refresh_token ='eyJjdHkiO.refresh.token.ffffff.U2R0NNIiwi-';
-		$cognito_username = 'u000101';
-		$phpbb_user_id = 1991;
-		$row = array (
-			'session_token' => 'NtMQHaaaaaaaaaaaa.refresh.aaaaa1',
-			'expires' => $time_now + 299,
-			'uuid' => 'aaaaaaaa-bbbb-xxxx-dddd-eeeeeeeeeeee',
-			'username' => $cognito_username,
-			'preferred_username' => '',
-			'nickname' => '',
-			'email' => '',
-			'phpbb_user_id' => $phpbb_user_id,
-			'sid' => 'a652e8feaaaaa.refresh.aaaaaaa54a',
-			'access_token' =>'eyJraWQiOiJndlwvcmNDQTBMWUhMd2-piUlVmMU.Fwe',
-			'refresh_token' => $refresh_token
-		);
-
-		$auth = new \mrfg\cogauth\tests\cognito\authentication_test_functions(
-			$this->web_token, $this->db,'cogauth_authentication');
-		$time_now = time();
-		$auth->set_time_now($time_now);
-
-		// Is he SQL query formed correctly
-		$this->db->expects($this->once())
-			->method('sql_fetchrow')
-			->willReturn($row);
-
-		//Assert no refresh required
-		$this->cognito->expects($this->once())
-			->method('refresh_access_token_for_username')
-			->with($refresh_token, $cognito_username, $phpbb_user_id)
-			->willReturn(false);
-
-		$result = $auth->get_access_token_from_sid('a652e8feaaaaaaaaaaaaaaaaaaaaa54a');
-		$this->assertFalse($result, "Asserting access refresh fail");
-
-	}
-*/
 	public function test_get_access_token_from_sid_load_auth_data_null(){
 		$time_now = time();
 

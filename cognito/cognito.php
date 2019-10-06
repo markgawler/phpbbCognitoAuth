@@ -721,29 +721,38 @@ class cognito
 	}
 
 	/**
-	 * @param string $user_name - Cognito Username
-	 * @param string $email
-	 * @param string $nickname - Human Friendly Username (will be the same as  Cognito Username for Hosted UI created users)
+	 * Normalise a Cognito created user (Hosted UI),
+	 * Use the same rules as phpBB:
+	 * - email to lowercase
+	 * - preferred_username to utf8_clean_string (phpBB username_clean)
+	 *
+	 *
+	 * - user_name - Cognito Username
+	 * - nickname Human Friendly Username (will be the same as  Cognito Username for Hosted UI created users)
+	 *
+	 * @param int $user_id
 	 *
 	 * @since 1.0
 	 */
-	public function normalize_user($user_name, $email, $nickname = null)
+	public function normalize_user($user_id)
 	{
+		$attributes = $this->auth_result->get_user_attributes();
+		$user_name = $attributes['cognito:username'];
+		$nickname = $user_name;
 
-		if (empty($nickname))
-		{
-			$nickname = $user_name;
-		}
-		$attributes = array(
+		$new_attributes = array(
 			'preferred_username' => utf8_clean_string($nickname),
-			'email' => utf8_strtolower($email),
+			'email' => strtolower($attributes['email']),
 			'nickname' => $nickname,
-		);
+			'custom:phpbb_user_id' => $user_id);
+
 		$data = array(
-			'UserAttributes' => $this->build_attributes_array($attributes),
+			'UserAttributes' => $this->build_attributes_array($new_attributes),
 			'Username'       => $user_name,
-			'UserPoolId'     => $this->user_pool_id,
+			'UserPoolId'     => $this->user_pool_id
 		);
+
+		$this->auth_result->set_user_attributes($new_attributes);
 		try {
 			$this->client->adminUpdateUserAttributes($data);
 		} catch (CognitoIdentityProviderException $e)

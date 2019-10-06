@@ -13,6 +13,7 @@
 
 namespace mrfg\cogauth\tests\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+use mrfg\cogauth\cognito\validation_result;
 
 /** @noinspection PhpIncludeInspection */
 include_once __DIR__ . '/../../vendor/autoload.php';
@@ -163,6 +164,9 @@ class cognito_test extends \phpbb_test_case
 			->with('1234')
 			->willReturn('u001234');
 
+		$this->authentication->method('validate_and_store_auth_response')
+			->willReturn(new validation_result('',1234));
+
         $response = $this->cognito->get_user('1234');
         $this->assertTrue($response['status'] == COG_USER_FOUND, 'Asserting status is COG_USER_FOUND');
         $this->assertTrue($response['user_status'] == 'CONFIRMED', 'Asserting user_status is CONFIRMED');
@@ -207,6 +211,9 @@ class cognito_test extends \phpbb_test_case
 			->method('get_cognito_username')
 			->with('1234')
 			->willReturn('u001234');
+
+		$this->authentication->method('validate_and_store_auth_response')
+			->willReturn(new validation_result('xx',1234));
 
         $response = $this->cognito->authenticate(1234, 'Str0n@-p@ssw0rd');
         $this->assertTrue($response['status'] === COG_LOGIN_SUCCESS);

@@ -142,12 +142,13 @@ class auth_result
 	 * @since 1.0
 	 */
 	protected function store_id_token($token){
-
+		$user_name = $token['cognito:username'];
 		// Only store the interesting bits
 		$this->uuid = $token['sub'];
-		$this->cognito_username =  $token['cognito:username'];
-		$this->preferred_username = $token['preferred_username'];
-		$this->nickname = $token['nickname'];
+		$this->cognito_username = $user_name;
+		$this->preferred_username = ($token['preferred_username']) ? $token['preferred_username'] : $user_name;
+		//$this->preferred_username = $token['preferred_username'];
+		$this->nickname = ($token['nickname']) ? $token['nickname'] : $user_name;
 		$this->expires = $token['exp'];
 		$this->email = $token['email'];
 		if (array_key_exists('custom:phpbb_user_id', $token))
@@ -180,13 +181,26 @@ class auth_result
 	public function get_user_attributes()
 	{
 		return array(
-			//'sub' => $this->uuid,
+			'sub' => $this->uuid,
 			'cognito:username' => $this->cognito_username,
 			'preferred_username' => $this->preferred_username,
 			'nickname' => $this->nickname,
-			//'exp' => $this->expires,
+			'exp' => $this->expires,
 			'email' => $this->email,
 			'custom:phpbb_user_id' => (string) $this->phpbb_user_id);
+	}
+
+	/**
+	 * @param array $attributes
+	 *
+	 * @since version
+	 */
+	public function set_user_attributes($attributes)
+	{
+		$this->preferred_username = $attributes['preferred_username'];
+		$this->nickname = $attributes['nickname'];
+		$this->email = $attributes['email'];
+		$this->phpbb_user_id = (int) $attributes['custom:phpbb_user_id'];
 	}
 
 	/**

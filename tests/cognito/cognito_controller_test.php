@@ -9,9 +9,11 @@
 
 namespace mrfg\cogauth\tests\cognito;
 
+use mrfg\cogauth\cognito\validation_result;
+
 class cognito_controller_test extends \phpbb_test_case
 {
-	/** @var \phpbb\user | \PHPUnit_Framework_MockObject_MockObject $user */
+	/** @var \mrfg\cogauth\cognito\user | \PHPUnit_Framework_MockObject_MockObject $user */
 	protected $user;
 
 	/** @var \mrfg\cogauth\cognito\auth_result | \PHPUnit_Framework_MockObject_MockObject $auth_result */
@@ -24,7 +26,7 @@ class cognito_controller_test extends \phpbb_test_case
 	{
 		parent::setUp();
 
-		$this->user = $this->getMockBuilder('\phpbb\user')
+		$this->user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
 			->disableOriginalConstructor()
 			->getMock();
 
@@ -40,7 +42,8 @@ class cognito_controller_test extends \phpbb_test_case
 	public function test_get_access_token_fail()
 	{
 		$sid = 1234;
-		$this->user->session_id = $sid;
+
+		$this->user->method('get_phpbb_session_id')->willReturn($sid);
 
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
@@ -65,7 +68,9 @@ class cognito_controller_test extends \phpbb_test_case
 								  'RefreshToken' => 'token_string_5678',
 								  'IdToken' => 'token_string_9012'));
 		$access_token = $response['AuthenticationResult']['AccessToken'];
-		$this->user->session_id = $sid;
+		//$this->user->session_id = $sid;
+		$this->user->method('get_phpbb_session_id')->willReturn($sid);
+
 
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
@@ -93,7 +98,9 @@ class cognito_controller_test extends \phpbb_test_case
 								  'IdToken' => 'id_token_string_1098'));
 		$access_token = $response['AuthenticationResult']['AccessToken'];
 		$refresh_token = $response['AuthenticationResult']['RefreshToken'];
-		$this->user->session_id = $sid;
+
+		//$this->user->session_id = $sid;
+		$this->user->method('get_phpbb_session_id')->willReturn($sid);
 
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
@@ -113,7 +120,7 @@ class cognito_controller_test extends \phpbb_test_case
 		$this->auth_result->expects($this->once())
 			->method('validate_and_store_auth_response')
 			->with($response['AuthenticationResult'], true)
-			->willReturn('88453297852475');
+			->willReturn(new validation_result('88453297852475',$user_id));
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$this->assertEquals($access_token, $controller->get_access_token(),'Asserting token returned');

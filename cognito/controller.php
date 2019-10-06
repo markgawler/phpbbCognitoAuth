@@ -49,7 +49,8 @@ class controller
 	 */
 	public function get_access_token()
 	{
-		$result = $this->auth_result->get_access_token_from_sid($this->user->get_phpbb_session_id());
+		$sid = $this->user->get_phpbb_session_id();
+		$result = $this->auth_result->get_access_token_from_sid($sid);
 		if ($result !== false)
 		{
 			$token = $result['token'];
@@ -78,26 +79,31 @@ class controller
 	public function login($jwt_tokens)
 	{
 		$result = $this->auth_result->validate_and_store_auth_response($jwt_tokens);
+
 		if ($result instanceof validation_result)
 		{
 			if (!$result->is_new_user())
 			{
+				// Login
 				return $this->user->login($result);
 			}
 			else
 			{
-				//todo normalise the cognito user (lowercase email, preferred username, nickname)
-				// Can this ever happen?
-				error_log('Normalize User');
-				$this->normalise_cognito_user();
+				// New user registered via Cognito UI, create phpBB user and Normalize (cognito) User
+				$id = $this->create_user();
+				$result->phpbb_user_id = (int) $id;
+				$this->cognito->normalize_user((int) $id);
+				return $this->user->login($result);
+
 			}
 		}
 		return false;
 	}
 
-	public function normalise_cognito_user()
+	public function create_user()
 	{
-		$attributes = $this->auth_result->get_user_attributes();
-		$this->cognito->normalize_user($attributes['cognito:username'],$attributes['email']);
+		$attr = $this->auth_result->get_user_attributes();
+		$id = $this->user->add_user($attr);
+		return $id;
 	}
 }

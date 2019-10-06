@@ -42,6 +42,9 @@ class main_listener_event_test extends \phpbb_test_case
 	/** @var \mrfg\cogauth\cognito\controller $controller \PHPUnit_Framework_MockObject_MockObject */
 	protected $controller;
 
+	/** @var \phpbb\template\template $template */
+	protected $template;
+
     public function setUp()
     {
         parent::setUp();
@@ -77,6 +80,10 @@ class main_listener_event_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->template = $this->getMockBuilder('\phpbb\template\template')
+		->disableOriginalConstructor()
+		->getMock();
+
         $this->listener = new \mrfg\cogauth\event\main_listener(
             $this->user,
             $this->cognito_client,
@@ -84,7 +91,8 @@ class main_listener_event_test extends \phpbb_test_case
 			$this->controller,
 			$this->dispatcher,
 			$this->request,
-			$this->config);
+			$this->config,
+			$this->template);
     }
 
 

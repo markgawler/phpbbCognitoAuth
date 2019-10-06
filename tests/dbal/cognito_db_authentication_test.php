@@ -22,6 +22,9 @@ class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 	}
 }
 */
+
+use mrfg\cogauth\cognito\validation_result;
+
 class cognito_authentication_test extends \phpbb_database_test_case
 {
 	/* @var $db \phpbb\db\driver\driver_interface */
@@ -159,7 +162,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 
-		$this->assertEquals($session_token, $result,'Asserting validate_and_store_auth_response is True');
+		$this->assertEquals(new validation_result($session_token), $result,'Asserting validate_and_store_auth_response is True');
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated($phpbb_user_id, $sid);

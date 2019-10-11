@@ -24,36 +24,29 @@ class cogauth extends \phpbb\auth\provider\base
 	 */
 	protected $phpbb_container;
 
-	/**
-	 * @var \phpbb\config\config $config Config object
-	 */
+	/** @var \phpbb\config\config $config Config object */
 	protected $config;
 
-	/**
-	 * @var \phpbb\user
-	 */
+	/** @var \phpbb\user */
 	protected $user;
 
-	/**
-	 * @var \phpbb\language\language
-	 */
+	/** @var  \mrfg\cogauth\cognito\user $cognito_user*/
+	protected $cognito_user;
+
+	/** @var \phpbb\language\language */
 	protected $language;
 
-	/**
-	 * @var \phpbb\db\driver\driver_interface
-	 */
+	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-	/**
-	 * @var \mrfg\cogauth\cognito\cognito
-	 */
-	protected $cognito_client;
+	/** @var \mrfg\cogauth\cognito\cognito */
+	protected $cognito;
 
-	/**  @var \mrfg\cogauth\cognito\web_token_phpbb $web_token */
-	protected $web_token;
-
-	/** @var \phpbb\log\log_interface	$log */
+	/** @var \phpbb\log\log_interface $log */
 	protected $log;
+
+	/** @var \phpbb\auth\auth |\PHPUnit_Framework_MockObject_MockObject  $auth */
+	protected $auth;
 
 	/**
 	 * Database Authentication Constructor
@@ -62,10 +55,10 @@ class cogauth extends \phpbb\auth\provider\base
 	 * @param	\phpbb\config\config                                      $config
 	 * @param	\phpbb\passwords\manager                                  $passwords_manager
 	 * @param	\phpbb\user                                               $user
+	 * @param 	\mrfg\cogauth\cognito\user 								  $cognito_user
 	 * @param	\phpbb\language\language                                  $language
 	 * @param	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container DI container
-	 * @param 	\mrfg\cogauth\cognito\cognito                             $cognito_client
-	 * @param 	\mrfg\cogauth\cognito\web_token_phpbb                     $web_token
+	 * @param 	\mrfg\cogauth\cognito\cognito                             $cognito
 	 * @param   \phpbb\log\log_interface                                   $log	Logger instance
 	 */
 	public function __construct(
@@ -73,20 +66,20 @@ class cogauth extends \phpbb\auth\provider\base
 		\phpbb\config\config $config,
 		\phpbb\passwords\manager $passwords_manager,
 		\phpbb\user $user,
+		\mrfg\cogauth\cognito\user $cognito_user,
 		\phpbb\language\language $language,
 		\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container,
-		\mrfg\cogauth\cognito\cognito $cognito_client,
-		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
+		\mrfg\cogauth\cognito\cognito $cognito,
 		\phpbb\log\log_interface $log)
 	{
 		$this->db = $db;
 		$this->config = $config;
 		$this->passwords_manager = $passwords_manager;
 		$this->user = $user;
+		$this->cognito_user = $cognito_user;
 		$this->language = $language;
 		$this->phpbb_container = $phpbb_container;
-		$this->cognito_client = $cognito_client;
-		$this->web_token = $web_token;
+		$this->cognito = $cognito;
 		$this->log =$log;
 	}
 
@@ -96,7 +89,7 @@ class cogauth extends \phpbb\auth\provider\base
 	public function init()
 	{
 		// Check the configuration is valid
-		$result = $this->cognito_client->describe_user_pool_client();
+		$result = $this->cognito->describe_user_pool_client();
 		if ( ! $result instanceof \Aws\Result )
 		{
 			/** @noinspection PhpUndefinedFieldInspection */
@@ -231,11 +224,11 @@ class cogauth extends \phpbb\auth\provider\base
 
 		// Find the user in AWS Cognito, we only authenticate against cognito if user exists and confirmed
 		// otherwise we attempt to migrate the user if the user authenticated via phpBB rules.
-		$cognito_user = $this->cognito_client->get_user($row['user_id']);
+		$cognito_user = $this->cognito->get_user($row['user_id']);
 
-		if ($cognito_user['status'] == COG_USER_FOUND &&  $cognito_user['user_status'] == 'CONFIRMED')
+		if ($cognito_user['status'] == COG_USER_FOUND && $cognito_user['user_status'] == 'CONFIRMED')
 		{
-			$auth_status = $this->cognito_client->authenticate($row['user_id'], $password);
+			$auth_status = $this->cognito->authenticate($row['user_id'], $password);
 			switch ($auth_status['status'])
 			{
 				case COG_LOGIN_SUCCESS:
@@ -270,27 +263,37 @@ class cogauth extends \phpbb\auth\provider\base
 		{
 			$auth_status['session_token'] = null;
 		}
-		// Check password phpBB rules...
-		//else
-		//$authenticated = false;
-		if ($this->passwords_manager->check($password, $row['user_password'], $row))
+
+
+		if ($cognito_user['phpbb_password_valid'] && $this->passwords_manager->check($password, $row['user_password'], $row))
 		{
 			// Check for old password hash...
 			if ($this->passwords_manager->convert_flag || strlen($row['user_password']) == 32)
 			{
-				$hash = $this->passwords_manager->hash($password);
-
-				// Update the password in the users table to the new format
-				$sql = 'UPDATE ' . USERS_TABLE . "
-					SET user_password = '" . $this->db->sql_escape($hash) . "'
-					WHERE user_id = {$row['user_id']}";
-				$this->db->sql_query($sql);
-
-				$row['user_password'] = $hash;
+				$row['user_password'] = $this->update_phpbb_password($row['user_id'], $password);
 			}
 			$authenticated_phpbb = true;
 		}
-		if ($authenticated_phpbb)
+
+		// At this point we have tested authentication with both phpBB and Cognito.
+
+		// cogauth_master_auth = 0 phpBB, 1 = Cognito
+		$use_cognito_authentication = $this->config['cogauth_master_auth'];
+
+		// Test for overriding the master authentication directory
+		if (!$cognito_user['phpbb_password_valid'] ){
+			// Cognito created user, first login via phpBB (phpBB password is random)
+			$use_cognito_authentication = true;
+		} elseif ($cognito_user['status'] != COG_USER_FOUND)
+		{
+			// User has not been migrated yet
+			$use_cognito_authentication = false;
+		}
+		error_log('use_cognito_authentication: ' . $use_cognito_authentication);
+
+		// if phpBB authenticated or Cognito authenticated a new (to phpBB) user,
+		if (($authenticated_phpbb && !$use_cognito_authentication) ||
+			($authenticated_cognito && $use_cognito_authentication))
 		{
 			// Authenticated either by phpBB or Cognito.
 			$sql = 'DELETE FROM ' . LOGIN_ATTEMPT_TABLE . '
@@ -320,22 +323,30 @@ class cogauth extends \phpbb\auth\provider\base
 			if ($cognito_user['status'] == COG_USER_NOT_FOUND)
 			{
 				// Migrate the user
-				$this->cognito_client->migrate_user($row['username'], $password, $row['user_id'], $row['user_email']);
+				$this->cognito->migrate_user($row['username'], $password, $row['user_id'], $row['user_email']);
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_MIGRATE_USER', time(), array($row['username']));
 			}
-			elseif ($authenticated_cognito == false && $cognito_user['status'] == COG_USER_FOUND &&
+			elseif ($authenticated_cognito == false && $cognito_user['status'] == COG_USER_FOUND && !$use_cognito_authentication &&
 				($auth_status['status'] == COG_LOGIN_ERROR_PASSWORD ||  $cognito_user['user_status'] == 'FORCE_CHANGE_PASSWORD'))
 			{
-
 				// Cognito user exists, but failed to authenticate password (other failures dont get this far).
 				// automatic password reset
 				// todo: this should be configurable.
 				// todo: log different error if FORCE_CHANGE_PASSWORD
-				$this->cognito_client->admin_change_password($row['user_id'],$password);
+				$this->cognito->admin_change_password($row['user_id'],$password);
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('user' ,$row['user_id'] , $user_ip, 'COGAUTH_AUTO_PASSWD_RESET', time(),array($row['username']));
 			}
+
+			// Update the phpBB password on users first phpBB login
+			if (!$cognito_user['phpbb_password_valid'])
+			{
+				$this->update_phpbb_password($row['user_id'],$password);
+				$this->cognito_user->set_phpbb_password_status($row['user_id'],true);
+			}
+
+
 
 			// Successful login... set user_login_attempts to zero...
 			return array(
@@ -361,6 +372,22 @@ class cogauth extends \phpbb\auth\provider\base
 		);
 	}
 
+	/**
+	 * @param string $user_id
+	 * @param  string $password
+	 * @return string
+	 */
+	protected function update_phpbb_password($user_id, $password)
+	{
+		$hash = $this->passwords_manager->hash($password);
+
+		// Update the password in the users table to the new format
+		$sql = 'UPDATE ' . USERS_TABLE . "
+					SET user_password = '" . $this->db->sql_escape($hash) . "'
+					WHERE user_id = {$user_id}";
+		$this->db->sql_query($sql);
+		return $hash;
+	}
 
 	public function acp()
 	{
@@ -374,14 +401,14 @@ class cogauth extends \phpbb\auth\provider\base
 		$pool_name = '';
 		$client_id = '';
 		$client_name = '';
-		$user_pool = $this->cognito_client->describe_user_pool();
+		$user_pool = $this->cognito->describe_user_pool();
 		if  ($user_pool instanceof \Aws\Result)
 		{
 			$pool_id = $user_pool['UserPool']['Id'];
 			$pool_name = $user_pool['UserPool']['Name'];
 		}
 
-		$app_client = $this->cognito_client->describe_user_pool_client();
+		$app_client = $this->cognito->describe_user_pool_client();
 		if ($app_client instanceof \Aws\Result)
 		{
 			$client_name = $app_client['UserPoolClient']['ClientName'];

@@ -10,6 +10,8 @@
 
 namespace mrfg\cogauth\migrations;
 
+/** @noinspection PhpUnused */
+
 class install_db_table_authentication_class extends \phpbb\db\migration\migration
 {
 	static public function depends_on()
@@ -41,7 +43,7 @@ class install_db_table_authentication_class extends \phpbb\db\migration\migratio
 					'PRIMARY_KEY'	=> array('session_token',),
 					'KEYS' => array(
 						'i_d'            => array('INDEX', 'sid')),
-				),
+				)
 			),
 		);
 	}

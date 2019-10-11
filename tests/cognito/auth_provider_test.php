@@ -13,25 +13,41 @@
 
 namespace mrfg\cogauth\tests\cognito;
 
-class auth_provider_test extends \phpbb_test_case
+class user_test extends \phpbb_test_case
 {
+	/** @var \phpbb\passwords\manager | \PHPUnit_Framework_MockObject_MockObject  $passwords_manager */
+	protected $passwords_manager;
+
+	/** @var \Symfony\Component\DependencyInjection\ContainerInterface */
+	protected $phpbb_container;
+
+	/** @var \phpbb\config\config $config Config object */
+	protected $config;
+
+	/** @var \phpbb\user */
+	protected $user;
+
+	/** @var $user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject  */
+	protected $cognito_user;
+
+	/** @var \phpbb\language\language |\PHPUnit_Framework_MockObject_MockObject*/
+	protected $language;
+
 	/** @var $db \phpbb\db\driver\driver_interface|\PHPUnit_Framework_MockObject_MockObject */
 	protected $db;
 
-	/** @var $user \mrfg\cogauth\cognito\user|\PHPUnit_Framework_MockObject_MockObject  */
-	protected $user;
+	/** @var \mrfg\cogauth\cognito\cognito |\PHPUnit_Framework_MockObject_MockObject*/
+	protected $cognito;
 
-	/** @var \phpbb\user |\PHPUnit_Framework_MockObject_MockObject $phpbb_user */
-	protected $phpbb_user;
+	/**  @var \mrfg\cogauth\cognito\web_token_phpbb $web_token |\PHPUnit_Framework_MockObject_MockObject*/
+	protected $web_token;
+
+	/** @var \phpbb\log\log_interface $log |\PHPUnit_Framework_MockObject_MockObject*/
+	protected $log;
 
 	/** @var \phpbb\auth\auth |\PHPUnit_Framework_MockObject_MockObject  $auth */
 	protected $auth;
 
-	/** @var \phpbb\passwords\manager | \PHPUnit_Framework_MockObject_MockObject  $passwords_manager */
-	protected $passwords_manager;
-
-	/** @var \phpbb\config\config $config */
-	protected $config;
 
 	public function setUp()
 	{
@@ -61,26 +77,14 @@ class auth_provider_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->user = new \mrfg\cogauth\cognito\user(
-			$this->phpbb_user,
-			$this->auth,
-			$this->db,
-			$this->config,
-			$this->passwords_manager,
-			'',
-			'',
-			''
-		);
+
 
 
 	}
 
 	public function test_get_cognito_username_simple()
 	{
-		$this->assertEquals('u000001',$this->user->get_cognito_username(1));
-		$this->assertEquals('u000020',$this->user->get_cognito_username(20));
-		$this->assertEquals('u300020',$this->user->get_cognito_username(300020));
-		$this->assertEquals('u4000020',$this->user->get_cognito_username(4000020));
+
 
 	}
 

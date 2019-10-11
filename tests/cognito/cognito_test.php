@@ -74,7 +74,9 @@ class cognito_test extends \phpbb_test_case
 
 		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
 			->disableOriginalConstructor()
-			->setMethods(array('get_cognito_username'))
+			->setMethods(array(
+				'get_cognito_username',
+				'get_cognito_usermap_attributes'))
 			->getMock();
 
 		$this->authentication = $this->getMockBuilder('\mrfg\cogauth\cognito\auth_result')
@@ -160,9 +162,11 @@ class cognito_test extends \phpbb_test_case
                 "UserPoolId" => 'eu-west-1_T0xxxxx1'));
 
 		$this->cognito_user->expects($this->once())
-			->method('get_cognito_username')
+			->method('get_cognito_usermap_attributes')
 			->with('1234')
-			->willReturn('u001234');
+			->willReturn( array(
+				'cognito_username' => 'u001234' ,
+				'phpbb_password_valid' => true));
 
 		$this->authentication->method('validate_and_store_auth_response')
 			->willReturn(new validation_result('',1234));

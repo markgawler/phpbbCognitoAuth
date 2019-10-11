@@ -6,10 +6,10 @@ services:
             - '@config'
             - '@passwords.manager'
             - '@user'
+            - '@mrfg.cogauth.user'
             - '@language'
             - '@service_container'
             - '@mrfg.cogauth.cognito'
-            - '@mrfg.cogauth.web_token_phpbb'
             - '@log'
 
         tags:

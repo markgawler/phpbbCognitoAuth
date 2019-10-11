@@ -1,2 +1,3 @@
 parameters:
     mrfg.cogauth.tables.cogauth_authentication: '%core.table_prefix%cogauth_authentication'
+    mrfg.cogauth.tables.cogauth_usermap: '%core.table_prefix%cogauth_usermap'

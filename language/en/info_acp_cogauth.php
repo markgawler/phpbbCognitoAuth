@@ -36,14 +36,23 @@ $lang = array_merge($lang, array(
 
 	'APC_COGAUTH_CRON_ACCESS_TOKENS' => 'Cron Frequency',
 	'ACP_COGAUTH_TOKEN_CLEANUP'	=> 'Access Token cleanup check frequency (minutes)',
-	'ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN' => 'Removal of Cogauth sessions information for expired phpBB sessions and expired AWS Cognito Access tokens. Range one minute to one day (1440 minutes)',
+	'ACP_COGAUTH_TOKEN_CLEANUP_EXPLAIN' => 'Removal of Cogauth sessions information for expired phpBB sessions and '
+								. 'expired AWS Cognito Access tokens. Range one minute to one day (1440 minutes)',
 
 	'APC_COGAUTH_PURGE_ACCESS_TOKENS' => 'Purge expired access tokens',
 	'APC_COGAUTH_PURGE_TOKENS'			=> 'Purge Expired Tokens',
-	'APC_COGAUTH_PURGE_TOKENS_EXPLAIN'	=> 'Purge any expired access tokens, both sessions and auto loging sesions are checked (this replicates the cron task)',
+	'APC_COGAUTH_PURGE_TOKENS_EXPLAIN'	=> 'Purge any expired access tokens, both sessions and auto login sessions are '
+								. 'checked (this replicates the cron task)',
 
 	'APC_HOSTED_UI' => 'Hosted UI Support (Experimental)',
 	'APC_HOSTED_UI_EXPLAIN' => 'Enable support for Cognito Hosted UI support, this will require configuration in the AWS Console',
 	'APC_COGAUTH_HOSTED_UI_DOMAIN' => 'Cognito Hosted UI Domain name',
-	'APC_COGAUTH_HOSTED_UI_DOMAIN_EXPLAIN' => 'The domain name for the Hosted UI, this must be set via the AWS Control Panel if the Hosted UI is used',
+	'APC_COGAUTH_HOSTED_UI_DOMAIN_EXPLAIN' => 'The domain name for the Hosted UI, this must be set via the AWS Control '
+								. 'Panel if the Hosted UI is used',
+
+	'APC_MASTER_AUTH' => 'Master Authentication Directory',
+	'APC_MASTER_AUTH_EXPLAIN' => 'The directory that users must authenticate against when logging in via phpBB. '
+								. 'If authentication fails against the secondary directory the users password will be updated '
+								. 'with the valid password from the master. The master is ignored when migrating phpBB users '
+								. 'to Cognito and the first phpBB login after a user is created via the hosted UI. ',
 ));

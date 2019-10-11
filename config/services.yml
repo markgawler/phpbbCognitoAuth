@@ -63,6 +63,7 @@ services:
             - '@passwords.manager'
             - '%core.root_path%'
             - '%core.php_ext%'
+            - '%mrfg.cogauth.tables.cogauth_usermap%'
 
 
     mrfg.cogauth.web_token_phpbb:

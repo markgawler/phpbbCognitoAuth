@@ -29,6 +29,15 @@
 			<dd><input type="number" min="1" max="1440" id="cogauth_token_cleanup_gc" name="cogauth_token_cleanup_gc" value="{COGAUTH_TOKEN_CLEANUP}"/> {LMINUTES}</dd>
 		</dl>
 
+		<dl>
+			<dt><label for="cogauth_master_auth">{L_APC_MASTER_AUTH}{L_COLON}</label><br>
+				<span>{L_APC_MASTER_AUTH_EXPLAIN}</span></dt>
+			<dd><label><input type="radio" id="cogauth_master_auth" name="cogauth_master_auth" value="1" {% if not COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> phpBB</label>
+				<label><input type="radio"  name="cogauth_master_auth" value="0" {% if COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> Cognito</label>
+			</dd>
+
+		</dl>
+
 		{% endif %}
 		<p class="submit-buttons">
 			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;

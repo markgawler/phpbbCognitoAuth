@@ -147,11 +147,12 @@ class auth_result
 		$this->uuid = $token['sub'];
 		$this->cognito_username = $user_name;
 		$this->preferred_username = ($token['preferred_username']) ? $token['preferred_username'] : $user_name;
-		//$this->preferred_username = $token['preferred_username'];
 		$this->nickname = ($token['nickname']) ? $token['nickname'] : $user_name;
 		$this->expires = $token['exp'];
 		$this->email = $token['email'];
-		if (array_key_exists('custom:phpbb_user_id', $token))
+		$this->phpbb_user_id = ($token['custom:phpbb_user_id']) ? (int) $token['custom:phpbb_user_id'] : 0;
+
+		/*if (array_key_exists('custom:phpbb_user_id', $token))
 		{
 			$this->phpbb_user_id = (int) $token['custom:phpbb_user_id'];
 		}

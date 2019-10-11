@@ -590,7 +590,7 @@ class cognito
 	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
 	 *
-	 * todo: uae AdminSetUserPassword
+	 * todo: uae AdminSetUserPassword - new AIP which avoids the hack?
 	 */
 	public function admin_change_password($user_id, $new_password)
 	{
@@ -624,17 +624,18 @@ class cognito
 	 */
 	public function get_user($user_id)
 	{
-		$username = $this->cognito_user->get_cognito_username($user_id);
+		$attr = $this->cognito_user->get_cognito_usermap_attributes($user_id);
 		try
 		{
 			$response = $this->client->adminGetUser(array(
-				"Username"   => $username,
+				"Username"   => $attr['cognito_username'],
 				"UserPoolId" => $this->user_pool_id
 			));
 			return array(
 				'status' => COG_USER_FOUND,
 				'user_status' => $response['UserStatus'],
-				'user_attributes' => $response['UserAttributes']
+				'user_attributes' => $response['UserAttributes'],
+				'phpbb_password_valid' => $attr['phpbb_password_valid']
 			);
 
 		} catch (CognitoIdentityProviderException $e) {

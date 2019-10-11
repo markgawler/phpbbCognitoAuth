@@ -227,7 +227,7 @@ class auth_result_test extends \phpbb_test_case
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 
-		$this->assertEquals(new validation_result($session_token,$phpbb_user_id),$result,'Asserting validate_and_store_auth_response is well formed validation object');
+		$this->assertEquals(new validation_result($session_token,0),$result,'Asserting validate_and_store_auth_response is well formed validation object');
 
 
 		/** @noinspection PhpUnhandledExceptionInspection */

@@ -193,10 +193,12 @@ class main_module
 				if ($submit)
 				{
 					$config->set('cogauth_token_cleanup_gc', $request->variable('cogauth_token_cleanup_gc', ''));
+					$config->set('cogauth_master_auth', $request->variable('cogauth_master_auth', 0));
 					trigger_error($this->language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 				}
 				$template->assign_vars(array_merge($commonVars, array(
 					'COGAUTH_TOKEN_CLEANUP' => $config['cogauth_token_cleanup_gc'],
+					'COGAUTH_MASTER_AUTH' => $config['cogauth_master_auth'],
 				)));
 
 				if ($submit_clean_access_tokens)

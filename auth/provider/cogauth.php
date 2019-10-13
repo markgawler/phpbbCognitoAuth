@@ -134,9 +134,8 @@ class cogauth extends \phpbb\auth\provider\base
 		}
 
 		$username_clean = utf8_clean_string($username);
-		$sql = 'SELECT *
-			FROM ' . USERS_TABLE . "
-			WHERE username_clean = '" . $this->db->sql_escape($username_clean) . "'";
+		$sql = 'SELECT * FROM ' . USERS_TABLE . " WHERE username_clean = '" .
+			$this->db->sql_escape($username_clean) . "'";
 		$result = $this->db->sql_query($sql);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);

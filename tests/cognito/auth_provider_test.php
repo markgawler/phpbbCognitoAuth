@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * AWS Cognito Authentication. An extension for the phpBB Forum Software package.
@@ -12,6 +13,11 @@
  */
 
 namespace mrfg\cogauth\tests\cognito;
+///home/mrfg/git/phpbb/phpBB/includes/functions_acp.php
+
+/** @noinspection PhpIncludeInspection */
+include_once __DIR__ . '/../../vendor/autoload.php';
+include_once  'phpBB/includes/functions_acp.php';
 
 class user_test extends \phpbb_test_case
 {
@@ -39,37 +45,18 @@ class user_test extends \phpbb_test_case
 	/** @var \mrfg\cogauth\cognito\cognito |\PHPUnit_Framework_MockObject_MockObject*/
 	protected $cognito;
 
-	/**  @var \mrfg\cogauth\cognito\web_token_phpbb $web_token |\PHPUnit_Framework_MockObject_MockObject*/
-	protected $web_token;
-
 	/** @var \phpbb\log\log_interface $log |\PHPUnit_Framework_MockObject_MockObject*/
 	protected $log;
-
-	/** @var \phpbb\auth\auth |\PHPUnit_Framework_MockObject_MockObject  $auth */
-	protected $auth;
-
 
 	public function setUp()
 	{
 		parent::setUp();
 
-		$this->phpbb_user = $this->getMockBuilder('\phpbb\user')
-			->disableOriginalConstructor()
-			->getMock();
-
-		$this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
-		->disableOriginalConstructor()
-		->getMock();
-
 		$this->passwords_manager = $this->getMockBuilder('\phpbb\passwords\manager')
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
-			->disableOriginalConstructor()
-			->getMock();
-
-		$this->auth = $this->getMockBuilder('\phpbb\auth\auth')
+		$this->phpbb_container = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerInterface')
 			->disableOriginalConstructor()
 			->getMock();
 
@@ -77,16 +64,152 @@ class user_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->user = $this->getMockBuilder('\phpbb\user')
+			->disableOriginalConstructor()
+			->getMock();
 
+		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
+			->disableOriginalConstructor()
+			->getMock();
 
+		$this->language = $this->getMockBuilder('\phpbb\language\language')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
+			->disableOriginalConstructor()
+			//->setMethods(array('sql_escape', 'sql_query', 'sql_fetchrow'))
+			->getMock();
+
+		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$this->log = $this->getMockBuilder('phpbb\log\log_interface')
+			->disableOriginalConstructor()
+			->getMock();
 
 	}
 
-	public function test_get_cognito_username_simple()
+	public function test_init_happy_day()
+	{
+		$this->cognito->expects($this->once())
+			->method('describe_user_pool_client')
+			->willReturn(new \Aws\Result());
+
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->user,
+			$this->cognito_user,
+			$this->language,
+			$this->phpbb_container,
+			$this->cognito,
+			$this->log
+		);
+		$cogauth->init();
+
+	}
+	public function test_init_error()
+	{
+		$this->cognito->expects($this->once())
+		->method('describe_user_pool_client')
+		->willReturn('');
+
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->user,
+			$this->cognito_user,
+			$this->language,
+			$this->phpbb_container,
+			$this->cognito,
+			$this->log
+		);
+
+		$this->setExpectedTriggerError(512,0);
+		$cogauth->init();
+	}
+
+	public function test_login_password_and_username_checks()
 	{
 
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->user,
+			$this->cognito_user,
+			$this->language,
+			$this->phpbb_container,
+			$this->cognito,
+			$this->log
+		);
+		$expected = array(
+			'status'    => LOGIN_ERROR_PASSWORD,
+			'error_msg' => 'NO_PASSWORD_SUPPLIED',
+			'user_row'  => array('user_id' => ANONYMOUS));
+
+		$result = $cogauth->login('','');
+		$this->assertEquals($expected, $result, 'verify no password check (empty)');
+
+		$result = $cogauth->login('','  ');
+		$this->assertEquals($expected, $result, 'verify no password check (trim to empty)');
+
+		$expected = array(
+			'status'    => LOGIN_ERROR_USERNAME,
+			'error_msg' => 'LOGIN_ERROR_USERNAME',
+			'user_row'  => array('user_id' => ANONYMOUS));
+
+		$result = $cogauth->login('','passw0rd');
+		$this->assertEquals($expected, $result, 'verify username check (empty)');
 
 	}
 
+	public function test_login_checks_phpbb_user()
+	{
+		$password = 'p@ssword';
+		$username = 'MyUserName';
+		$username_clean = utf8_clean_string($username);
+		$sql = "SELECT * FROM " . USERS_TABLE . " WHERE username_clean = '". $username_clean . "'";
+		$row = array(
+			'user_id' => '123',
+			'username' => $username,
+			'user_email' => '',
+			'user_type' => USER_NORMAL,
+			'user_login_attempts' => 0,
+			'user_password' => ''
+			);
+
+		$this->db->expects($this->once())
+			->method('sql_escape')
+			->with($username_clean)
+			->willReturn($username_clean);
+
+		$this->db->expects($this->once())
+		->method('sql_query')
+			->with($sql)
+			->willReturn('dummy');
+
+		$this->db->expects($this->once())
+			->method('sql_fetchrow')
+			->with('dummy')
+			->willReturn($row);
+
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->user,
+			$this->cognito_user,
+			$this->language,
+			$this->phpbb_container,
+			$this->cognito,
+			$this->log);
+
+		$result = $cogauth->login($username,$password);
+	}
 
 }

@@ -32,8 +32,8 @@
 		<dl>
 			<dt><label for="cogauth_master_auth">{L_APC_MASTER_AUTH}{L_COLON}</label><br>
 				<span>{L_APC_MASTER_AUTH_EXPLAIN}</span></dt>
-			<dd><label><input type="radio" id="cogauth_master_auth" name="cogauth_master_auth" value="1" {% if not COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> phpBB</label>
-				<label><input type="radio"  name="cogauth_master_auth" value="0" {% if COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> Cognito</label>
+			<dd><label><input type="radio" id="cogauth_master_auth" name="cogauth_master_auth" value="0" {% if not COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> phpBB</label>
+				<label><input type="radio"  name="cogauth_master_auth" value="1" {% if COGAUTH_MASTER_AUTH %}checked="checked"{%endif%} class="radio"> Cognito</label>
 			</dd>
 
 		</dl>
@@ -109,8 +109,8 @@
 		<dl>
 		<dt><label for="cogauth_hosted_ui">{L_APC_HOSTED_UI}{L_COLON}</label><br>
 			<span>{L_APC_HOSTED_UI_EXPLAIN}</span></dt>
-			<dd><label><input type="radio" id="cogauth_hosted_ui" name="cogauth_hosted_ui" value="1" {% if COGAUTH_HOSTED_UI %}checked="checked"{%endif%} class="radio"> {L_YES}</label>
-				<label><input type="radio"  name="cogauth_hosted_ui" value="0" {% if not COGAUTH_HOSTED_UI %}checked="checked"{%endif%} class="radio"> {L_NO}</label>
+			<dd><label><input type="radio" id="cogauth_hosted_ui" name="cogauth_hosted_ui" value="1" {% if not COGAUTH_HOSTED_UI %}checked="checked"{%endif%} class="radio"> {L_YES}</label>
+				<label><input type="radio"  name="cogauth_hosted_ui" value="0" {% if COGAUTH_HOSTED_UI %}checked="checked"{%endif%} class="radio"> {L_NO}</label>
 			</dd>
 
 		</dl>

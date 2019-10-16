@@ -1,16 +1,17 @@
 services:
+
     auth.provider.cogauth:
         class: mrfg\cogauth\auth\provider\cogauth
         arguments:
-            - '@dbal.conn'
-            - '@config'
-            - '@passwords.manager'
-            - '@user'
-            - '@mrfg.cogauth.user'
-            - '@language'
-            - '@service_container'
-            - '@mrfg.cogauth.cognito'
-            - '@log'
-
+           - '@dbal.conn'
+           - '@config'
+           - '@passwords.manager'
+           - '@request'
+           - '@user'
+           - '@service_container'
+           - '%core.root_path%'
+           - '%core.php_ext%'
+           - '@mrfg.cogauth.cognito'
+           - '@mrfg.cogauth.cognito_controller'
         tags:
             - { name: auth.provider }

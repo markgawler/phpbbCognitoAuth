@@ -30,6 +30,8 @@ services:
             - '@mrfg.cogauth.user'
             - '@mrfg.cogauth.auth_result'
             - '@mrfg.cogauth.cognito'
+            - '@log'
+            - '@config'
 
     mrfg.cogauth.auth_result:
         class: mrfg\cogauth\cognito\auth_result

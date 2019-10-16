@@ -17,6 +17,7 @@ namespace mrfg\cogauth\tests\cognito;
 
 /** @noinspection PhpIncludeInspection */
 include_once __DIR__ . '/../../vendor/autoload.php';
+/** @noinspection PhpIncludeInspection */
 include_once  'phpBB/includes/functions_acp.php';
 
 class user_test extends \phpbb_test_case
@@ -45,8 +46,14 @@ class user_test extends \phpbb_test_case
 	/** @var \mrfg\cogauth\cognito\cognito |\PHPUnit_Framework_MockObject_MockObject*/
 	protected $cognito;
 
-	/** @var \phpbb\log\log_interface $log |\PHPUnit_Framework_MockObject_MockObject*/
+	/** @var \phpbb\log\log_interface  |\PHPUnit_Framework_MockObject_MockObject $log*/
 	protected $log;
+
+	/** @var \phpbb\request\request |\PHPUnit_Framework_MockObject_MockObject $request */
+	protected $request;
+
+	/** @var \mrfg\cogauth\cognito\controller | \PHPUnit_Framework_MockObject_MockObject $controller */
+	protected $controller;
 
 	public function setUp()
 	{
@@ -68,13 +75,6 @@ class user_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->cognito_user = $this->getMockBuilder('\mrfg\cogauth\cognito\user')
-			->disableOriginalConstructor()
-			->getMock();
-
-		$this->language = $this->getMockBuilder('\phpbb\language\language')
-			->disableOriginalConstructor()
-			->getMock();
 
 		$this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
 			->disableOriginalConstructor()
@@ -89,6 +89,13 @@ class user_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->controller = $this->getMockBuilder('\mrfg\cogauth\cognito\controller')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$this->request = $this->getMockBuilder('\phpbb\request\request')
+			->disableOriginalConstructor()
+			->getMock();
 	}
 
 	public function test_init_happy_day()
@@ -101,12 +108,13 @@ class user_test extends \phpbb_test_case
 			$this->db,
 			$this->config,
 			$this->passwords_manager,
+			$this->request,
 			$this->user,
-			$this->cognito_user,
-			$this->language,
 			$this->phpbb_container,
+			'',
+			'',
 			$this->cognito,
-			$this->log
+			$this->controller
 		);
 		$cogauth->init();
 
@@ -121,95 +129,17 @@ class user_test extends \phpbb_test_case
 			$this->db,
 			$this->config,
 			$this->passwords_manager,
+			$this->request,
 			$this->user,
-			$this->cognito_user,
-			$this->language,
 			$this->phpbb_container,
+			'',
+			'',
 			$this->cognito,
-			$this->log
+			$this->controller
 		);
 
 		$this->setExpectedTriggerError(512,0);
 		$cogauth->init();
-	}
-
-	public function test_login_password_and_username_checks()
-	{
-
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
-			$this->config,
-			$this->passwords_manager,
-			$this->user,
-			$this->cognito_user,
-			$this->language,
-			$this->phpbb_container,
-			$this->cognito,
-			$this->log
-		);
-		$expected = array(
-			'status'    => LOGIN_ERROR_PASSWORD,
-			'error_msg' => 'NO_PASSWORD_SUPPLIED',
-			'user_row'  => array('user_id' => ANONYMOUS));
-
-		$result = $cogauth->login('','');
-		$this->assertEquals($expected, $result, 'verify no password check (empty)');
-
-		$result = $cogauth->login('','  ');
-		$this->assertEquals($expected, $result, 'verify no password check (trim to empty)');
-
-		$expected = array(
-			'status'    => LOGIN_ERROR_USERNAME,
-			'error_msg' => 'LOGIN_ERROR_USERNAME',
-			'user_row'  => array('user_id' => ANONYMOUS));
-
-		$result = $cogauth->login('','passw0rd');
-		$this->assertEquals($expected, $result, 'verify username check (empty)');
-
-	}
-
-	public function test_login_checks_phpbb_user()
-	{
-		$password = 'p@ssword';
-		$username = 'MyUserName';
-		$username_clean = utf8_clean_string($username);
-		$sql = "SELECT * FROM " . USERS_TABLE . " WHERE username_clean = '". $username_clean . "'";
-		$row = array(
-			'user_id' => '123',
-			'username' => $username,
-			'user_email' => '',
-			'user_type' => USER_NORMAL,
-			'user_login_attempts' => 0,
-			'user_password' => ''
-			);
-
-		$this->db->expects($this->once())
-			->method('sql_escape')
-			->with($username_clean)
-			->willReturn($username_clean);
-
-		$this->db->expects($this->once())
-		->method('sql_query')
-			->with($sql)
-			->willReturn('dummy');
-
-		$this->db->expects($this->once())
-			->method('sql_fetchrow')
-			->with('dummy')
-			->willReturn($row);
-
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
-			$this->config,
-			$this->passwords_manager,
-			$this->user,
-			$this->cognito_user,
-			$this->language,
-			$this->phpbb_container,
-			$this->cognito,
-			$this->log);
-
-		$result = $cogauth->login($username,$password);
 	}
 
 }

@@ -77,7 +77,7 @@ class user
 		$this->passwords_manager = $passwords_manager;
 		$this->phpbb_root_path = $phpbb_root_path;
 		$this->php_ext = $php_ext;
-		$this->usermap =$usermap;
+		$this->usermap = $usermap;
 
 	}
 
@@ -170,6 +170,11 @@ class user
 		return $this->user->session_id;
 	}
 
+	public function get_ip()
+	{
+		return $this->user->ip;
+	}
+
 	public function add_user($user_attributes)
 	{
 		/** @noinspection PhpIncludeInspection */
@@ -226,4 +231,35 @@ class user
 		return $user_id;
 	}
 
+	/**
+	 * @param string $user_id
+	 * @param  string $password
+	 * @return string
+	 */
+	public function update_phpbb_password($user_id, $password)
+	{
+		$hash = $this->passwords_manager->hash($password);
+
+		// Update the password in the users table to the new format
+		$sql = 'UPDATE ' . USERS_TABLE . "
+					SET user_password = '" . $this->db->sql_escape($hash) . "'
+					WHERE user_id = {$user_id}";
+		$this->db->sql_query($sql);
+		return $hash;
+	}
+
+	/**
+	 * @param integer $user_id
+	 *
+	 *
+	 * @since 1.0
+	 */
+	public function reset_phpbb_login_attempts($user_id)
+	{
+		$sql = 'DELETE FROM ' . LOGIN_ATTEMPT_TABLE . ' WHERE user_id = ' . $user_id;
+		$this->db->sql_query($sql);
+
+		$sql = 'UPDATE ' . USERS_TABLE . ' SET user_login_attempts = 0 WHERE user_id = ' . $user_id;
+		$this->db->sql_query($sql);
+	}
 }

@@ -1,10 +1,14 @@
 <?php
 /**
- * @package     cognito
- * @subpackage
+ * * *
+ * AWS Cognito Authentication. An extension for the phpBB Forum Software package.
  *
- * @copyright   A copyright
- * @license     A "Slug" license name e.g. GPL2
+ * @copyright (c) 2019, Mark Gawler
+ * @license GNU General Public License, version 2 (GPL-2.0)
+ *
+ * @package     mrfg\cogauth\tests\cognito
+ *
+ * Date: 31/10/16
  */
 
 namespace mrfg\cogauth\tests\cognito;
@@ -22,6 +26,12 @@ class cognito_controller_test extends \phpbb_test_case
 	/** @var \mrfg\cogauth\cognito\cognito | \PHPUnit_Framework_MockObject_MockObject $cognito */
 	protected $cognito;
 
+	/** @var \phpbb\config\config | \PHPUnit_Framework_MockObject_MockObject  */
+	protected $config;
+
+	/** @var \phpbb\log\log_interface | \PHPUnit_Framework_MockObject_MockObject  */
+	protected $log;
+
 	public function setUp()
 	{
 		parent::setUp();
@@ -37,6 +47,14 @@ class cognito_controller_test extends \phpbb_test_case
 		$this->cognito = $this->getMockBuilder('mrfg\cogauth\cognito\cognito')
 			->disableOriginalConstructor()
 			->getMock();
+
+		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$this->config = $this->getMockBuilder('\phpbb\config\config')
+			->disableOriginalConstructor()
+			->getMock();
 	}
 
 	public function test_get_access_token_fail()
@@ -48,7 +66,9 @@ class cognito_controller_test extends \phpbb_test_case
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
 			$this->auth_result,
-			$this->cognito);
+			$this->cognito,
+			$this->log,
+			$this->config);
 
 
 		$this->auth_result->expects($this->once())
@@ -75,7 +95,9 @@ class cognito_controller_test extends \phpbb_test_case
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
 			$this->auth_result,
-			$this->cognito);
+			$this->cognito,
+			$this->log,
+			$this->config);
 
 		$this->auth_result->expects($this->once())
 			->method('get_access_token_from_sid')
@@ -105,7 +127,9 @@ class cognito_controller_test extends \phpbb_test_case
 		$controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
 			$this->auth_result,
-			$this->cognito);
+			$this->cognito,
+			$this->log,
+			$this->config);
 
 		$this->auth_result->expects($this->once())
 			->method('get_access_token_from_sid')

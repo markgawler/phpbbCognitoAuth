@@ -29,6 +29,12 @@ class controller_test extends \phpbb_test_case
 	/** @var \mrfg\cogauth\cognito\controller |\PHPUnit_Framework_MockObject_MockObject $controller */
 	protected $controller;
 
+	/** @var \phpbb\log\log_interface |\PHPUnit_Framework_MockObject_MockObject $log */
+	protected $log;
+
+	/**@var \phpbb\config\config |\PHPUnit_Framework_MockObject_MockObject $config Config object */
+	protected $config;
+
 	public function setUp()
 	{
 		parent::setUp();
@@ -45,10 +51,20 @@ class controller_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->log = $this->getMockBuilder('\phpbb\log\log_interface')
+			->disableOriginalConstructor()
+			->getMock();
+
+		$this->config = $this->getMockBuilder('\phpbb\config\config')
+			->disableOriginalConstructor()
+			->getMock();
+
 		$this->controller = new \mrfg\cogauth\cognito\controller(
 			$this->user,
 			$this->auth_result,
-			$this->cognito);
+			$this->cognito,
+			$this->log,
+			$this->config);
 
 
 	}
@@ -113,6 +129,5 @@ class controller_test extends \phpbb_test_case
 		$result = $this->controller->login($dummy_jwt_tokens);
 		$this->assertTrue($result,'Asserting successful login');
 	}
-
 
 }

@@ -78,11 +78,11 @@ class user_test extends \phpbb_test_case
 
 		$this->db = $this->getMockBuilder('\phpbb\db\driver\driver_interface')
 			->disableOriginalConstructor()
-			//->setMethods(array('sql_escape', 'sql_query', 'sql_fetchrow'))
 			->getMock();
 
 		$this->cognito = $this->getMockBuilder('\mrfg\cogauth\cognito\cognito')
 			->disableOriginalConstructor()
+			->setMethods(array('describe_user_pool', 'describe_user_pool_client'))
 			->getMock();
 
 		$this->log = $this->getMockBuilder('phpbb\log\log_interface')
@@ -140,6 +140,91 @@ class user_test extends \phpbb_test_case
 
 		$this->setExpectedTriggerError(512,0);
 		$cogauth->init();
+	}
+
+	public function test_get_acp_template()
+	{
+		$pool_id = 'eu-west-1_aaaaaaaaa';
+		$pool_name = 'test59595';
+		$client_id = '2aaaaaaaaaaaaaaaaaaaaaaa79';
+		$client_name = 'test_aaaaaa_client';
+		$user_pool = new \Aws\Result(
+			array('UserPool' => array(
+				'Id' => $pool_id,
+				'Name' => $pool_name)));
+		$app_client = new \Aws\Result(
+			array('UserPoolClient' => array(
+				'ClientName' => $client_name,
+				'ClientId' => $client_id)));
+
+		$expected = array('TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
+						  'TEMPLATE_VARS' => array(
+						  	'COGAUTH_POOL_NAME'   => $pool_name,
+							'COGAUTH_POOL_ID'     => $pool_id,
+							'COGAUTH_CLIENT_NAME' => $client_name,
+							'COGAUTH_CLIENT_ID'   => $client_id,));
+
+		$this->cognito->expects($this->once())
+			->method('describe_user_pool')
+			->willReturn($user_pool);
+
+		$this->cognito->expects($this->once())
+			->method('describe_user_pool_client')
+			->willReturn($app_client);
+
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->request,
+			$this->user,
+			$this->phpbb_container,
+			'',
+			'',
+			$this->cognito,
+			$this->controller
+		);
+
+		$result = $cogauth->get_acp_template(array());
+		$this->assertEquals($expected,$result);
+
+	}
+	public function test_get_acp_template_invalid()
+	{
+		$user_pool = null;
+		$app_client = null;
+
+		$expected = array('TEMPLATE_FILE' => '@mrfg_cogauth/auth_provider_cogauth.html',
+						  'TEMPLATE_VARS' => array(
+							  'COGAUTH_POOL_NAME'   => '',
+							  'COGAUTH_POOL_ID'     => '',
+							  'COGAUTH_CLIENT_NAME' => '',
+							  'COGAUTH_CLIENT_ID'   => '',));
+
+		$this->cognito->expects($this->once())
+			->method('describe_user_pool')
+			->willReturn($user_pool);
+
+		$this->cognito->expects($this->once())
+			->method('describe_user_pool_client')
+			->willReturn($app_client);
+
+		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
+			$this->db,
+			$this->config,
+			$this->passwords_manager,
+			$this->request,
+			$this->user,
+			$this->phpbb_container,
+			'',
+			'',
+			$this->cognito,
+			$this->controller
+		);
+
+		$result = $cogauth->get_acp_template(array());
+		$this->assertEquals($expected,$result);
+
 	}
 
 }

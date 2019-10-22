@@ -149,4 +149,6 @@ class cognito_controller_test extends \phpbb_test_case
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$this->assertEquals($access_token, $controller->get_access_token(),'Asserting token returned');
 	}
+
+
 }

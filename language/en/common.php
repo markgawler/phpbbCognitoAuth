@@ -46,7 +46,7 @@ $lang = array_merge($lang, array(
 	'COGAUTH_PASSWORD_ERROR' 		=> 'Unexpected error setting password (Cognito)',
 	'COGAUTH_EMAIL_CHANGE_ERROR'	=> 'Unexpected error updating email (Cognito)',
 	'COGAUTH_ACP_PROFILE_CHANGE_ERROR'	=> 'Unexpected error updating user profile (Cognito)',
-
+	'COGAUTH_UNHANDLED_LOGIN_ERROR' => 'Unexpected error occurred during authentication (Cognito)',
 	'COGAUTH_AWS_KEY_SET_ERROR' 	=> 'Invalid Configuration: User Pool ID not found in Region',
 	'COGAUTH_ACP_CHECK_REGION' 		=> 'Check the AWS region is valid',
 	'COGAUTH_ACP_NOT_CONFIGURED'	=> 'AWS Cognito User Pool not configured',
@@ -57,6 +57,8 @@ $lang = array_merge($lang, array(
 	'COGAUTH_AUTO_PASSWD_RESET'		=> '<strong>Cognito password mismatch, automatically reset</strong><br>» %1$s',
 	'COGAUTH_MIGRATE_USER'			=> '<strong>User Migrated to Cognito User Pool</strong><br>» %1$s',
 	'COGAUTH_NO_ACCESS_TOKEN'		=> '<strong>AWS Cognito login error, phpBB login only, see error log.</strong>',
+	'COGAUTH_USERMAP_ERROR'			=> '<strong>phpBB user id of Cognito user dose not match:</strong><br>»Cognito users ID: "%1$s", cognito user disabled"',
+	'COGAUTH_CONFIRMED_ERROR'		=> '<strong>User created in Cognito but not confirmed:</strong>',
 
 	'COGAUTH_HOSTED_UI_STATUS_FAIL' => 'An unexpected status code %1$s returned. User not logged in.',
 	'COGAUTH_HOSTED_UI_FAIL' => 'An unexpected internal error: "%1$s". User not logged in.',

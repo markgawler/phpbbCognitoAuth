@@ -226,7 +226,7 @@ class cognito
 					// todo the hosted UI was enabled for the user pool.
 					$token = $result->cogauth_token;
 				}
-		}
+			}
 
 			if ($token)
 			{

@@ -34,9 +34,9 @@ $lang = array_merge($lang, array(
 	'COGAUTH_CLIENT_SECRET'			=> 'Cognito Client Secret',
 	'COGAUTH_APP_NAME'				=> 'APP Client Name',
 
-	'COGAUTH_AWS_REGION_EXPLAIN'	=> 'AWS Region',
-	'COGAUTH_AWS_SECRET_EXPLAIN'	=> 'AWS Account Credentials, Cognito Admin User Secret Key',
-	'COGAUTH_AWS_KEY_EXPLAIN'		=> 'AWS Account Credentials, Cognito Admin User Access Key ID',
+	'COGAUTH_AWS_REGION_EXPLAIN'	=> 'Leave blank to use same region as the IAM Role',
+	'COGAUTH_AWS_SECRET_EXPLAIN'	=> 'Leave blank to use IAM Role',
+	'COGAUTH_AWS_KEY_EXPLAIN'		=> 'Leave blank to use IAM Role',
 
 
 	'COGAUTH_CLIENT_ID_EXPLAIN'		=> 'AWS Cognito Client ID',

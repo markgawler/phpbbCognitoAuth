@@ -122,16 +122,16 @@ class cognito
 		$this->user_pool_id = $config['cogauth_pool_id'];
 		$this->client_id = $config['cogauth_client_id'];
 		$this->client_secret = $config['cogauth_client_secret'];
-        $this->region = $config['cogauth_aws_region'];
+		$this->region = $config['cogauth_aws_region'];
 
-        $this->auth_response = array();
+		$this->auth_response = array();
 		$this->client = $this->create_identity_provider(
-			$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
+		$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
 		$this->web_token = $web_token;
-        $this->log = $log;
+		$this->log = $log;
     }
 
-    public function update_credentials($region, $key, $secret)
+	public function update_credentials($region, $key, $secret)
 	{
 		$this->region = $region;
 		$this->config->set('cogauth_aws_region', $region);
@@ -150,13 +150,33 @@ class cognito
 	private function create_identity_provider($region, $key, $secret)
 	{
 		$args = array(
-			'credentials' => array(
+			'version' => '2016-04-18'
+		);
+		/*
+		 * If region is empty, try to use to the AWS_DEFAULT_REGION
+		 *   environment variable.
+		 * If environment variable not set, leave blank.
+		 * Will use the default region the API Call uses.
+		 */
+		if ( empty($this->region) ) {
+			$this->region = $_ENV["AWS_DEFAULT_REGION"];
+			if ( ! empty($this->region) ) {
+				$args['region'] = $this->region;
+			}
+		}
+		/*
+		 * If access key and secret key are empty,
+		 *   use an IAM Role.
+		 * To use the IAM Role, do not specify credentials
+		 *   in the AWS API Call.
+		 */
+		if (! (empty($key) && empty($secret))) {
+			$args['credentials'] = array(
 				'key' => $key,
 				'secret' => $secret,
-			),
-			'version' => '2016-04-18',
-			'region' =>  $region,
-		);
+			);
+		}
+
 		//todo: is there a delete to call id client is not null?
 		return $this->aws_sdk->createCognitoIdentityProvider($args);
 	}

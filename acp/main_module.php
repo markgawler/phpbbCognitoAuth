@@ -91,6 +91,9 @@ class main_module
 					'COGAUTH_AWS_REGION' => $config['cogauth_aws_region'],
 					'COGAUTH_AWS_KEY' => $config['cogauth_aws_key'],
 					'COGAUTH_AWS_SECRET' => $config['cogauth_aws_secret'],
+					'COGAUTH_AWS_REGION_EXPLAIN' => $language->lang('COGAUTH_AWS_REGION_EXPLAIN'),
+					'COGAUTH_AWS_KEY_EXPLAIN' => $language->lang('COGAUTH_AWS_KEY_EXPLAIN'),
+					'COGAUTH_AWS_SECRET_EXPLAIN' => $language->lang('COGAUTH_AWS_SECRET_EXPLAIN'),
 				)));
 			break;
 			case 'user_pool':

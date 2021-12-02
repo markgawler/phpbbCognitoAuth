@@ -14,6 +14,8 @@
 namespace mrfg\cogauth\cognito;
 
 use mrfg\cogauth\cognito\exception\cogauth_internal_exception;
+use phpbb\config\config;
+use phpbb\log\log_interface;
 
 class controller
 {
@@ -41,11 +43,7 @@ class controller
 
 	 */
 	public function __construct(
-		\mrfg\cogauth\cognito\user $user,
-		\mrfg\cogauth\cognito\auth_result $auth_result,
-		\mrfg\cogauth\cognito\cognito $cognito,
-		\phpbb\log\log_interface $log,
-		\phpbb\config\config $config)
+		user $user,	auth_result $auth_result, cognito $cognito, log_interface $log,	config $config)
 	{
 		$this->auth_result = $auth_result;
 		$this->cognito = $cognito;
@@ -106,8 +104,8 @@ class controller
 			{
 				// New user registered via Cognito UI, create phpBB user and Normalize (cognito) User
 				$id = $this->create_user();
-				$result->phpbb_user_id = (int) $id;
-				$this->cognito->normalize_user((int) $id);
+				$result->phpbb_user_id = $id;
+				$this->cognito->normalize_user($id);
 
 			}
 			return $this->user->login($result);
@@ -136,7 +134,7 @@ class controller
 	 * @throws \Exception
 	 * @since 1.0
 	 */
-	public function login_phpbb($password, $phpbb_auth_result)
+	public function login_phpbb(string $password, array $phpbb_auth_result): array
 	{
 		$user_row = $phpbb_auth_result['user_row'];
 		if ($user_row['user_id'] == ANONYMOUS)
@@ -300,20 +298,17 @@ class controller
 	}
 
 	/**
-	 * @param $attributes
+	 * @param array|null $attributes
 	 *
 	 * @return array
 	 *
 	 * @since 1.0
 	 */
-	protected function user_attributes_to_array($attributes)
+	protected function user_attributes_to_array(?array $attributes): array
 	{
-		if (empty($attributes)){
-			$result = array();
-		}
-		else
+		$result = array();
+		if (!empty($attributes))
 		{
-			$result = array();
 			foreach ($attributes as $key_pair)
 			{
 				$result[$key_pair['Name']] = $key_pair['Value'];

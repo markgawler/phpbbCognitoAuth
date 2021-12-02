@@ -7,6 +7,13 @@
 
 namespace mrfg\cogauth\controller;
 
+use mrfg\cogauth\cognito\controller;
+use phpbb\config\config;
+use phpbb\controller\helper;
+use phpbb\language\language;
+use phpbb\request\request_interface;
+use Symfony\Component\HttpFoundation\Response;
+
 class main
 {
 	/** @var \phpbb\config\config */
@@ -38,12 +45,7 @@ class main
 
 	 */
 	public function __construct(
-		\phpbb\config\config $config,
-		\phpbb\request\request_interface $request,
-		\phpbb\language\language $language,
-		\phpbb\controller\helper $helper,
-		\mrfg\cogauth\cognito\controller $controller
-		)
+		config $config, request_interface $request, language $language, helper $helper, controller $controller)
 	{
 		$this->config   = $config;
 		$this->request = $request;
@@ -57,10 +59,10 @@ class main
 	 * Demo controller for route /demo/{name}
 	 *
 	 * @param string $command
-	 * @throws \phpbb\exception\http_exception | \Exception
 	 * @return \Symfony\Component\HttpFoundation\Response A Symfony Response object
+	 *@throws \phpbb\exception\http_exception | \Exception
 	 */
-	public function handle($command)
+	public function handle(string $command): Response
 	{
 		$this->language->add_lang(array('ucp'));
 
@@ -128,7 +130,7 @@ class main
 		}
 	}
 
-	protected function format_response($response)
+	protected function format_response($response): array
 	{
 		return array('IdToken' => $response['id_token'],
 			  'AccessToken' => $response['access_token'],

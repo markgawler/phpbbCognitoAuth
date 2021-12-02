@@ -374,10 +374,10 @@ class cognito
 
 	/**
 	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
-	 * @param int                                                                     $user_id              phpBB user ID
-	 * @param string                                                                  $action               Action Message inserted in to error log for debugging
-	 * @param boolean                                                                 $ignore_use_not_found Don't log UserNotFoundException
-	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
+	 * @param int            $user_id              phpBB user ID
+	 * @param string         $action               Action Message inserted in to error log for debugging
+	 * @param boolean        $ignore_use_not_found Don't log UserNotFoundException
+	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise, false.
 	 */
 	protected function handle_cognito_identity_provider_exception(
 		CognitoIdentityProviderException $e, int $user_id, string $action, bool $ignore_use_not_found = false): bool
@@ -514,8 +514,8 @@ class cognito
 					$response = $this->client->adminRespondToAuthChallenge($params);
 					if (isset($response['AuthenticationResult']))
 					{
-						// login success, store the result locally. The result will be stored in the database once the logged in
-						// session has started  (the SID changes so we cant store it in the DB yet).
+						// login success, store the result locally. The result will be stored in the database once
+						// the logged-in session has started  (the SID changes, so we can't store it in the DB yet).
 						$this->auth_response = $response['AuthenticationResult'];
 					}
 				}
@@ -622,7 +622,7 @@ class cognito
 		if ($user['status'] === COG_USER_FOUND)
 		{
 			$this->admin_delete_user_internal($user_id);
-			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutatable  attribute
+			$user_attributes = $this->clean_attributes($user['user_attributes']); // remove non mutatable attribute
 			$result = $this->admin_create_user($user_id,$new_password,$user_attributes);
 			if ($result['status'] == COG_MIGRATE_SUCCESS)
 			{
@@ -640,7 +640,7 @@ class cognito
 	}
 
 	/**
-	 * @param int $user_id phpBB user Id
+	 * @param int $user_id phpBB user ID
 	 * @return array
 	 *
 	 * user_status = UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
@@ -788,7 +788,7 @@ class cognito
 	}
 
 	/**
-	 * Administrator function to update a users username
+	 * Administrator function to update a users' username
 	 * 	this updates the preferred_username and nickname
 	 *
 	 * @param integer $user_id      phpBB User ID

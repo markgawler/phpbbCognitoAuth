@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 /**
  *
  * @package phpBB Extension - Cogauth phpBB Extension
@@ -11,7 +12,7 @@ namespace mrfg\cogauth\acp;
 
 class main_info
 {
-	function module()
+	function module(): array
 	{
 		return array(
 			'filename'	=> '\mrfg\cogauth\acp\main_module',

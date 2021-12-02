@@ -9,6 +9,8 @@
 
 namespace mrfg\cogauth\acp;
 
+use Aws\Result;
+
 class main_module
 {
 	/** @var string $page_title The page title */
@@ -30,7 +32,6 @@ class main_module
 	 */
 	function main(/** @noinspection PhpUnusedParameterInspection */ $id  , $mode)
 	{
-		/**@var	\Symfony\Component\DependencyInjection\ContainerInterface $phpbb_container */
 		global $phpbb_container;
 
 		/** @var \phpbb\config\config $config Config object */
@@ -107,7 +108,7 @@ class main_module
 				{
 					$cognito->update_user_pool_id($request->variable('cogauth_pool_id', ''));
 					$result = $cognito->describe_user_pool();
-					if ($result instanceof \Aws\Result)
+					if ($result instanceof Result)
 					{
 						//todo: Changes via AWS console should get reflected here on change (may be a Lambda trigger?)
 						if ($result['UserPool']['CustomDomain'])
@@ -141,7 +142,7 @@ class main_module
 				{
 					$new_name = $request->variable('cogauth_new_pool_name', '');
 					$result = $cognito->create_user_pool($new_name);
-					if ($result instanceof \Aws\Result)
+					if ($result instanceof Result)
 					{
 						//store the new user_pool id
 						$cognito->update_user_pool_id($result['UserPool']['Id']);
@@ -154,7 +155,7 @@ class main_module
 					$max_login = $request->variable('cogauth_refresh_token_expiration_days', 30);
 					$client_id = $request->variable('cogauth_app_client_id', '');
 					$result = $cognito->update_user_pool_client($max_login, $client_id);
-					if  ($result instanceof \Aws\Result)
+					if  ($result instanceof Result)
 					{
 						//todo:  collect other data password policies etc.
 						$pool_name = $result['UserPool']['Name'];
@@ -163,7 +164,7 @@ class main_module
 				}
 
 				$user_pool = $cognito->describe_user_pool();
-				if  ($user_pool instanceof \Aws\Result)
+				if  ($user_pool instanceof Result)
 				{
 					$pool_id = $user_pool['UserPool']['Id'];
 					$pool_name = $user_pool['UserPool']['Name'];
@@ -172,7 +173,7 @@ class main_module
 				$validity = $config['max_autologin_time'];
 
 				$app_client = $cognito->describe_user_pool_client();
-				if ($app_client instanceof \Aws\Result)
+				if ($app_client instanceof Result)
 				{
 					//todo:  collect other data password policies etc.
 					$client = $app_client['UserPoolClient'];
@@ -217,7 +218,7 @@ class main_module
 
 	protected function submit_result_handler($result)
 	{
-		if ($result instanceof \Aws\Result)
+		if ($result instanceof Result)
 		{
 			trigger_error($this->language->lang('ACP_COGAUTH_CORE_SETTING_SAVED') . adm_back_link($this->u_action));
 		} elseif (gettype($result) == 'string')

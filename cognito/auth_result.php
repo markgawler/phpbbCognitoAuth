@@ -456,7 +456,7 @@ class auth_result
 	private function get_unique_token(): string
 	{
 		$token = "";
-		$code_alphabet = "#ABCDEFGHILKMNOPQRSTUVWXYZ";
+		$code_alphabet = "ABCDEFGHILKMNOPQRSTUVWXYZ";
 		$code_alphabet .= "abcdefghijklmnopqrstuvwxyz";
 		$code_alphabet .= "0123456789";
 		$max = strlen($code_alphabet);

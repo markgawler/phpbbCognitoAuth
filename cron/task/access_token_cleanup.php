@@ -9,9 +9,13 @@
 
 namespace mrfg\cogauth\cron\task;
 
+use mrfg\cogauth\cognito\auth_result;
+use phpbb\config\config;
+use phpbb\cron\task\base;
+
 /** @noinspection PhpUnused */
 
-class access_token_cleanup extends \phpbb\cron\task\base
+class access_token_cleanup extends base
 {
 	/** @var \phpbb\config\config $config */
 	protected $config;
@@ -28,9 +32,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	 * @param \phpbb\config\config              $config              The config
 	 * @param \mrfg\cogauth\cognito\auth_result     $auth_result
  */
-	public function __construct(
-		\phpbb\config\config $config,
-		\mrfg\cogauth\cognito\auth_result $auth_result)
+	public function __construct( config $config, auth_result $auth_result)
 	{
 		$this->config = $config;
 		$this->auth_result = $auth_result;
@@ -52,7 +54,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	 *
 	 * @return bool
 	 */
-	public function is_runnable()
+	public function is_runnable(): bool
 	{
 		return true;
 	}
@@ -63,7 +65,7 @@ class access_token_cleanup extends \phpbb\cron\task\base
 	 *
 	 * @return bool
 	 */
-	public function should_run()
+	public function should_run(): bool
 	{
 		return ((time() - $this->config['cogauth_token_cleanup_last_gc']) >  $this->config['cogauth_token_cleanup_gc'] * 60);
 	}

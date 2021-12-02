@@ -24,7 +24,7 @@ class validation_result
 		$this->phpbb_user_id = $phpbb_user_id;
 	}
 
-	public function is_new_user()
+	public function is_new_user(): bool
 	{
 		return ($this->cogauth_token !== '' && $this->phpbb_user_id == 0);
 	}

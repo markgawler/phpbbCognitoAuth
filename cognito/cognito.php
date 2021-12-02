@@ -11,9 +11,17 @@
  */
 
 namespace mrfg\cogauth\cognito;
+use Aws\CognitoIdentityProvider\CognitoIdentityProviderClient;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+use Aws\Result;
+use Aws\Sdk;
+use Exception;
 use InvalidArgumentException;
 use mrfg\cogauth\jwt\exception\TokenVerificationException;
+use phpbb\config\config;
+use phpbb\language\language;
+use phpbb\log\log_interface;
+use phpbb\request\request_interface;
 
 define('COG_LOGIN_SUCCESS', 1);
 define('COG_LOGIN_NO_AUTH', 2);
@@ -99,15 +107,15 @@ class cognito
 	 * @param 	\Aws\Sdk							$aws_sdk
 	 */
 	public function __construct(
-		\phpbb\config\config $config,
+		config $config,
 		\phpbb\user $user,
-		\phpbb\language\language $language,
-		\phpbb\request\request_interface $request,
-		\phpbb\log\log_interface $log,
-		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-		\mrfg\cogauth\cognito\user $cognito_user,
-		\mrfg\cogauth\cognito\auth_result $authentication,
-		\Aws\Sdk $aws_sdk)
+		language $language,
+		request_interface $request,
+		log_interface $log,
+		web_token_phpbb $web_token,
+		user $cognito_user,
+		auth_result $authentication,
+		Sdk $aws_sdk)
 	{
 		$this->aws_sdk = $aws_sdk;
 		$this->config = $config;
@@ -126,7 +134,8 @@ class cognito
 
 		$this->auth_response = array();
 		$this->client = $this->create_identity_provider(
-		$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']);
+			$this->region, $config['cogauth_aws_key'], $config['cogauth_aws_secret']
+		);
 		$this->web_token = $web_token;
 		$this->log = $log;
     }
@@ -147,7 +156,7 @@ class cognito
 	 *
 	 * @return  \Aws\CognitoIdentityProvider\CognitoIdentityProviderClient
 	 */
-	private function create_identity_provider($region, $key, $secret)
+	private function create_identity_provider(string $region, string $key, string $secret): CognitoIdentityProviderClient
 	{
 		$args = array(
 			'version' => '2016-04-18'
@@ -158,10 +167,10 @@ class cognito
 		 * If environment variable not set, leave blank.
 		 * Will use the default region the API Call uses.
 		 */
-		if ( empty($this->region) ) {
-			$this->region = $_ENV["AWS_DEFAULT_REGION"];
-			if ( ! empty($this->region) ) {
-				$args['region'] = $this->region;
+		if ( empty($region) ) {
+			$region = $_ENV["AWS_DEFAULT_REGION"];
+			if ( ! empty($region) ) {
+				$args['region'] = $region;
 			}
 		}
 		/*
@@ -186,7 +195,7 @@ class cognito
 	 * @param string $client_id
 	 * @param string $client_secret
 	 */
-	public function update_client_credentials($client_id, $client_secret = '')
+	public function update_client_credentials(string $client_id, string $client_secret = '')
 	{
 		$this->client_id = $client_id;
 		$this->config->set('cogauth_client_id', $client_id);
@@ -196,9 +205,10 @@ class cognito
 
 	/**
 	 * Update client_id
+	 *
 	 * @param string $user_pool_id
 	 */
-	public function update_user_pool_id($user_pool_id)
+	public function update_user_pool_id(string $user_pool_id)
 	{
 		$this->user_pool_id = $user_pool_id;
 		$this->config->set('cogauth_pool_id', $user_pool_id);
@@ -210,9 +220,8 @@ class cognito
 
 
 	/**
-	 * @param int $user_id phpBB User ID
+	 * @param int    $user_id phpBB User ID
 	 * @param string $password
-	 * @throws \Exception
 	 * @return array
 	 *
 	 *  status:
@@ -224,8 +233,9 @@ class cognito
 	 *      COG_LOGIN_ERROR_ATTEMPTS
 	 *      COG_CONFIGURATION_ERROR
 	 *
+	 *@throws \Exception
 	 */
-	public function authenticate($user_id, $password)
+	public function authenticate(int $user_id, string $password): array
 	{
 		try {
 			$response = $this->authenticate_user($user_id, $password);
@@ -302,14 +312,14 @@ class cognito
 	}
 
 	/**
-	 * @param int $user_id phpBB user id
+	 * @param int    $user_id phpBB user id
 	 * @param String $password
 	 * @return \Aws\Result
 	 */
-	private function authenticate_user($user_id, $password)
+	private function authenticate_user(int $user_id, string $password): Result
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
-		$response = $this->client->AdminInitiateAuth(array(
+		return $this->client->AdminInitiateAuth(array(
 			'AuthFlow' => 'ADMIN_NO_SRP_AUTH',
 			'AuthParameters' => array(
 				'USERNAME' => $username,
@@ -319,13 +329,12 @@ class cognito
 			'ClientId' => $this->client_id,
 			'UserPoolId' => $this->user_pool_id,
 		));
-		return $response;
 	}
 
-	public function refresh_access_token($refresh_token, $user_id)
+	public function refresh_access_token($refresh_token, $user_id): Result
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
-		$response = $this->client->adminInitiateAuth(array(
+		return $this->client->adminInitiateAuth(array(
 			'AuthFlow'       => 'REFRESH_TOKEN_AUTH',
 			'AuthParameters' => array(
 				'REFRESH_TOKEN' => $refresh_token,
@@ -334,8 +343,6 @@ class cognito
 			'ClientId'       => $this->client_id,
 			'UserPoolId'     => $this->user_pool_id,
 		));
-
-		return $response;
 	}
 
 	/**
@@ -343,7 +350,7 @@ class cognito
 	 *
 	 * @return string
 	 */
-	protected function cognito_secret_hash($username)
+	protected function cognito_secret_hash(string $username): string
 	{
 		return $this->hash($username . $this->client_id);
 	}
@@ -353,7 +360,7 @@ class cognito
 	 *
 	 * @return string
 	 */
-	protected function hash($message)
+	protected function hash(string $message): string
 	{
         $hash = hash_hmac(
 			'sha256',
@@ -367,12 +374,13 @@ class cognito
 
 	/**
 	 * @param \Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException $e
-	 * @param int $user_id 			phpBB user ID
-	 * @param string $action		Action Message inserted in to error log for debugging
-	 * @param boolean $ignore_use_not_found	Don't log UserNotFoundException
+	 * @param int                                                                     $user_id              phpBB user ID
+	 * @param string                                                                  $action               Action Message inserted in to error log for debugging
+	 * @param boolean                                                                 $ignore_use_not_found Don't log UserNotFoundException
 	 * @return bool returns true if UserNotFoundException AND UserNotFound not ignored. Otherwise false.
 	 */
-	protected function handle_cognito_identity_provider_exception($e, $user_id, $action, $ignore_use_not_found = false)
+	protected function handle_cognito_identity_provider_exception(
+		CognitoIdentityProviderException $e, int $user_id, string $action, bool $ignore_use_not_found = false): bool
 	{
 		if ($e->getAwsErrorCode() == 'UserNotFoundException' and $ignore_use_not_found)
 		{
@@ -388,12 +396,12 @@ class cognito
 	/**
 	 * @param string $nickname - Non normalised username
 	 * @param string $password
-	 * @param int	 $user_id - phpBB numeric user ID
+	 * @param int    $user_id  - phpBB numeric user ID
 	 * @param string $email
 	 * @return array
 	 * @throws /Exception
 	 */
-	public function migrate_user($nickname, $password, $user_id, $email)
+	public function migrate_user(string $nickname, string $password, int $user_id, string $email): array
 	{
 		$user_attributes = $this->build_attributes_array(array(
 			'preferred_username' => utf8_clean_string($nickname),
@@ -424,7 +432,7 @@ class cognito
 	 * @param array $attributes
 	 * @return array
 	 */
-	private function build_attributes_array(array $attributes)
+	private function build_attributes_array(array $attributes): array
 	{
 		$userAttributes = array();
 		foreach ($attributes as $key => $value) {
@@ -437,12 +445,12 @@ class cognito
 	}
 
 	/**
-	 * @param int $user_id phpBB user id
+	 * @param int    $user_id phpBB user id
 	 * @param string $password
 	 * @param $user_attributes
 	 * @return array
 	 */
-	private function admin_create_user($user_id, $password, $user_attributes)
+	private function admin_create_user(int $user_id, string $password, $user_attributes): array
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 
@@ -465,7 +473,6 @@ class cognito
 						'status' => COG_MIGRATE_FAIL,
 						'error' => $e->getAwsErrorCode(),
 					);
-				break;
 
 				default:
 					$this->handle_cognito_identity_provider_exception($e, $user_id, 'admin_create_user');
@@ -484,11 +491,11 @@ class cognito
 
 	/**
 	 * @param \Aws\result $response
-	 * @param string $password
-	 * @param int $user_id phpBB user id
+	 * @param string      $password
+	 * @param int         $user_id phpBB user id
 	 * @return array
 	 */
-	private function admin_respond_to_auth_challenge($response, $password, $user_id)
+	private function admin_respond_to_auth_challenge(result $response, string $password, int $user_id): array
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		switch ($response['ChallengeName'])
@@ -527,8 +534,6 @@ class cognito
 				$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
 				$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_CHALLENGE', $this->time_now,
 					array('admin_respond_to_auth_challenge', $response['ChallengeName']));
-
-				$response = null;
 		}
 		return  array(
 			'status' => COG_MIGRATE_SUCCESS ,
@@ -537,17 +542,16 @@ class cognito
 	}
 
 	/**
-	 * @param int $user_id phpBB user_id
+	 * @param int    $user_id phpBB user_id
 	 * @param string $access_token
 	 * @param string $old_password
 	 * @param string $new_password
 	 * @return boolean True = Success, False = Fail
 	 */
-	public function change_password($user_id, $access_token, $old_password, $new_password)
+	public function change_password(int $user_id, string $access_token, string $old_password, string $new_password): bool
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
-			/** @var $access_token \Jose\Component\Signature\Serializer\string */
 			if ($username !=  $this->web_token->verify_access_token($access_token))
 			{
 				return false;
@@ -570,16 +574,15 @@ class cognito
 	}
 
 	/**
-	 * @param int $user_id phpBB user_id
+	 * @param int    $user_id phpBB user_id
 	 * @param string $email
 	 * @param string $access_token
 	 * @return bool (True success, False fail)
 	 */
-	public function update_user_email($user_id, $email, $access_token)
+	public function update_user_email(int $user_id, string $email, string $access_token): bool
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
-			/** @var $access_token \Jose\Component\Signature\Serializer\string */
 			if ($username != $this->web_token->verify_access_token($access_token))
 			{
 				return false;
@@ -607,12 +610,13 @@ class cognito
 
 	/**
 	 * Admin only Change user password function. This is a hack as the user is deleted and recreated
+	 *
 	 * @param integer $user_id phpBB User ID
 	 * @param $new_password
 	 *
 	 * todo: uae AdminSetUserPassword - new AIP which avoids the hack?
 	 */
-	public function admin_change_password($user_id, $new_password)
+	public function admin_change_password(int $user_id, $new_password)
 	{
 		$user = $this->get_user($user_id);
 		if ($user['status'] === COG_USER_FOUND)
@@ -642,7 +646,7 @@ class cognito
 	 * user_status = UNCONFIRMED | CONFIRMED | ARCHIVED | COMPROMISED | UNKNOWN | RESET_REQUIRED | FORCE_CHANGE_PASSWORD
 	 * status =  COG_USER_FOUND | COG_USER_NOT_FOUND | COG_ERROR
 	 */
-	public function get_user($user_id)
+	public function get_user(int $user_id): array
 	{
 		$attr = $this->cognito_user->get_cognito_usermap_attributes($user_id);
 		try
@@ -682,7 +686,7 @@ class cognito
 	 *
 	 * @param int $user_id phpBB user ID
 	 */
-	private function admin_delete_user_internal($user_id)
+	private function admin_delete_user_internal(int $user_id)
 	{
 		$user_id = $this->cognito_user->get_cognito_username($user_id);
 
@@ -698,10 +702,10 @@ class cognito
 	 * @param array() $attributes
 	 * @return array
 	 */
-	private function clean_attributes($attributes)
+	private function clean_attributes($attributes): array
 	{
 		$result = array();
-		foreach ($attributes as $key => $value) {
+		foreach ($attributes as $value) {
 			if ($value['Name'] != 'sub')
 			{
 				$result[] = $value;
@@ -712,10 +716,11 @@ class cognito
 
 	/**
 	 * Administrator function to update a users email.
+	 *
 	 * @param integer $user_id phpBB User ID
-	 * @param string $new_email
+	 * @param string  $new_email
 	 */
-	public function admin_update_email($user_id, $new_email)
+	public function admin_update_email(int $user_id, string $new_email)
 	{
 		$attributes = array('email' => $new_email,
 							'email_verified' => "True");
@@ -724,9 +729,9 @@ class cognito
 
 	/**
 	 * @param array $attributes
-	 * @param int $user_id phpBB user id
+	 * @param int   $user_id phpBB user id
 	 */
-	private function update_user_attributes($attributes, $user_id)
+	private function update_user_attributes(array $attributes, int $user_id)
 	{
 		$data = array(
 			'UserAttributes' => $this->build_attributes_array($attributes),
@@ -755,7 +760,7 @@ class cognito
 	 *
 	 * @since 1.0
 	 */
-	public function normalize_user($user_id)
+	public function normalize_user(int $user_id)
 	{
 		$attributes = $this->auth_result->get_user_attributes();
 		$user_name = $attributes['cognito:username'];
@@ -786,10 +791,10 @@ class cognito
 	 * Administrator function to update a users username
 	 * 	this updates the preferred_username and nickname
 	 *
-	 * @param integer $user_id phpBB User ID
-	 * @param string $new_username phpBB username (Nickname for Cognito)
+	 * @param integer $user_id      phpBB User ID
+	 * @param string  $new_username phpBB username (Nickname for Cognito)
 	 */
-	public function admin_update_username($user_id, $new_username)
+	public function admin_update_username(int $user_id, string $new_username)
 	{
 		$attributes = array('preferred_username' => utf8_clean_string($new_username),
 							'nickname' => $new_username);
@@ -799,7 +804,7 @@ class cognito
 	/**
 	 * @param integer $user_id phpBB user ID
 	 */
-	public function admin_delete_user($user_id)
+	public function admin_delete_user(int $user_id)
 	{
 		try {
 			$this->admin_delete_user_internal($user_id);
@@ -813,7 +818,7 @@ class cognito
 	/**
 	 * @param integer $user_id phpBB user ID
 	 */
-	public function admin_enable_user($user_id)
+	public function admin_enable_user(int $user_id)
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
@@ -831,7 +836,7 @@ class cognito
 	/**
 	 * @param integer $user_id phpBB user ID
 	 */
-	public function admin_disable_user($user_id)
+	public function admin_disable_user(int $user_id)
 	{
 		$username = $this->cognito_user->get_cognito_username($user_id);
 		try {
@@ -849,6 +854,7 @@ class cognito
 
 	/**
 	 * Create a new App Client for a User Pool
+	 *
 	 * @param string $name
 	 * @param string $user_pool_id
 	 *
@@ -856,7 +862,7 @@ class cognito
 	 *
 	 * @since 1.0
 	 */
-	protected function create_user_pool_client($name, $user_pool_id)
+	protected function create_user_pool_client(string $name, string $user_pool_id): Result
 	{
 		$params =  array_merge(
 			$this->get_user_pool_client_default_parameters(),
@@ -871,14 +877,14 @@ class cognito
 
 	/**
 	 * Set the Refresh Token Expiration for the App Client
- 	 * @param integer $days (0 = use current config value)
-	 * @param string $client_id (null is the client ID is not changing)
-
-	 * @return \Aws\Result | string  containing Aws/Result or String containing error message
+ 	 *
+ 	 * @param integer     $days      (0 = use current config value)
+	 * @param string|null $client_id (null is the client ID is not changing)
+ * @return \Aws\Result | string  containing Aws/Result or String containing error message
 	 *
 	 * @since 1.0
 	 */
-	public function update_user_pool_client($days = 0, $client_id = null)
+	public function update_user_pool_client(int $days = 0, string $client_id = null)
 	{
 		if ($client_id == null)
 		{
@@ -906,7 +912,7 @@ class cognito
 	/**
 	 * @return array UpdateUserPool parameters.
 	 */
-	protected function get_user_pool_client_default_parameters()
+	protected function get_user_pool_client_default_parameters(): array
 	{
 		$days = $this->config['max_autologin_time'];
 
@@ -939,18 +945,17 @@ class cognito
 	/**
 	 * @return string uri of hosted ui for User Pool App Client
 	 */
-	public function get_hosted_ui_uri()
+	public function get_hosted_ui_uri(): string
 	{
 		$callback =  $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'] . '/app.php/cogauth/auth/callback';
-		$uri = 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' .$callback;
-		return $uri;
+		return 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' .$callback;
 	}
 
 	/**
-	 * @param integer $days  validity time in days of autologin key (0 = use current config value)
+	 * @param integer $days validity time in days of autologin key (0 = use current config value)
 	 * @return integer
 	 */
-	protected function update_max_autologin_time($days)
+	protected function update_max_autologin_time(int $days): int
 	{
 		if ( $days > 0 )
 		{
@@ -970,10 +975,9 @@ class cognito
 		{
 			try
 			{
-				$result = $this->client->describeUserPoolClient(array(
+				return $this->client->describeUserPoolClient(array(
 					'ClientId'   => $this->client_id,
 					'UserPoolId' => $this->user_pool_id));
-				return $result;
 			}
 			catch (CognitoIdentityProviderException | InvalidArgumentException $e)
 			{
@@ -991,11 +995,9 @@ class cognito
 	public function describe_user_pool()
 	{
 		try{
-			$result = $this->client->describeUserPool(array(
+			return $this->client->describeUserPool(array(
 				'UserPoolId' => $this->user_pool_id
 			));
-
-			return $result;
 		}
 		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
 		{
@@ -1007,13 +1009,12 @@ class cognito
 	 * @param integer $max_results
 	 * @return \Aws\Result | string containing Aws/Result or String containing error message
 	 */
-	public function list_user_pools($max_results = 1)
+	public function list_user_pools(int $max_results = 1)
 	{
 		try{
-			$result = $this->client->listUserPools(array(
+			return $this->client->listUserPools(array(
 				'MaxResults' => $max_results
 			));
-			return $result;
 		}
 		catch (CognitoIdentityProviderException | InvalidArgumentException $e)
 		{
@@ -1027,7 +1028,7 @@ class cognito
 	 * @return \Aws\Result | string containing Aws/Result or String containing error message
 	 * @since 1.0
 	 */
-	public function create_user_pool($name)
+	public function create_user_pool(string $name)
 	{
 		$this->config->set('cogauth_hosted_ui',0);
 		try{
@@ -1077,11 +1078,10 @@ class cognito
 	public function add_custom_attribute()
 	{
 		try{
-			$result = $this->client->addCustomAttributes(array(
+			return $this->client->addCustomAttributes(array(
 				'CustomAttributes' => array($this->get_custom_attribute()),
 				'UserPoolId' => $this->user_pool_id,
 			));
-			return $result;
 		}
 		catch ( CognitoIdentityProviderException $e)
 		{
@@ -1089,7 +1089,7 @@ class cognito
 		}
 	}
 
-	protected function get_custom_attribute()
+	protected function get_custom_attribute(): array
 	{
 		return array(
 			'Name' => 'phpbb_user_id',
@@ -1107,7 +1107,7 @@ class cognito
 	 *
 	 * @since 1.0
 	 */
-	protected function handle_identity_provider_exception_for_acp($e)
+	protected function handle_identity_provider_exception_for_acp(Exception $e): string
 	{
 		if ($e instanceof CognitoIdentityProviderException)
 		{

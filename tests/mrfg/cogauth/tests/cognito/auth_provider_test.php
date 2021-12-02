@@ -14,19 +14,22 @@
 
 namespace mrfg\cogauth\tests\cognito;
 ///home/mrfg/git/phpbb/phpBB/includes/functions_acp.php
+use Aws\Result;
+use mrfg\cogauth\auth\provider\cogauth;
+use phpbb_test_case;
 
 /** @noinspection PhpIncludeInspection */
-include_once __DIR__ . '/../../vendor/autoload.php';
+include_once __DIR__ . '/../../../../../vendor/autoload.php';
 /** @noinspection PhpIncludeInspection */
 include_once  'phpBB/includes/functions_acp.php';
 
-class user_test extends \phpbb_test_case
+class user_test extends phpbb_test_case
 {
 	/** @var \phpbb\passwords\manager | \PHPUnit_Framework_MockObject_MockObject  $passwords_manager */
 	protected $passwords_manager;
 
-	/** @var \Symfony\Component\DependencyInjection\ContainerInterface */
-	protected $phpbb_container;
+	/** @var \phpbb\captcha\factory */
+	protected $captcha_factory;
 
 	/** @var \phpbb\config\config $config Config object */
 	protected $config;
@@ -63,7 +66,7 @@ class user_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->phpbb_container = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerInterface')
+		$this->captcha_factory = $this->getMockBuilder('\phpbb\captcha\factory')
 			->disableOriginalConstructor()
 			->getMock();
 
@@ -102,15 +105,15 @@ class user_test extends \phpbb_test_case
 	{
 		$this->cognito->expects($this->once())
 			->method('describe_user_pool_client')
-			->willReturn(new \Aws\Result());
+			->willReturn(new Result());
 
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
+		$cogauth = new cogauth(
+			$this->captcha_factory,
 			$this->config,
+			$this->db,
 			$this->passwords_manager,
 			$this->request,
 			$this->user,
-			$this->phpbb_container,
 			'',
 			'',
 			$this->cognito,
@@ -125,13 +128,13 @@ class user_test extends \phpbb_test_case
 		->method('describe_user_pool_client')
 		->willReturn('');
 
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
+		$cogauth = new cogauth(
+			$this->captcha_factory,
 			$this->config,
+			$this->db,
 			$this->passwords_manager,
 			$this->request,
 			$this->user,
-			$this->phpbb_container,
 			'',
 			'',
 			$this->cognito,
@@ -148,11 +151,11 @@ class user_test extends \phpbb_test_case
 		$pool_name = 'test59595';
 		$client_id = '2aaaaaaaaaaaaaaaaaaaaaaa79';
 		$client_name = 'test_aaaaaa_client';
-		$user_pool = new \Aws\Result(
+		$user_pool = new Result(
 			array('UserPool' => array(
 				'Id' => $pool_id,
 				'Name' => $pool_name)));
-		$app_client = new \Aws\Result(
+		$app_client = new Result(
 			array('UserPoolClient' => array(
 				'ClientName' => $client_name,
 				'ClientId' => $client_id)));
@@ -172,13 +175,13 @@ class user_test extends \phpbb_test_case
 			->method('describe_user_pool_client')
 			->willReturn($app_client);
 
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
+		$cogauth = new cogauth(
+			$this->captcha_factory,
 			$this->config,
+			$this->db,
 			$this->passwords_manager,
 			$this->request,
 			$this->user,
-			$this->phpbb_container,
 			'',
 			'',
 			$this->cognito,
@@ -209,13 +212,13 @@ class user_test extends \phpbb_test_case
 			->method('describe_user_pool_client')
 			->willReturn($app_client);
 
-		$cogauth = new \mrfg\cogauth\auth\provider\cogauth(
-			$this->db,
+		$cogauth = new cogauth(
+			$this->captcha_factory,
 			$this->config,
+			$this->db,
 			$this->passwords_manager,
 			$this->request,
 			$this->user,
-			$this->phpbb_container,
 			'',
 			'',
 			$this->cognito,

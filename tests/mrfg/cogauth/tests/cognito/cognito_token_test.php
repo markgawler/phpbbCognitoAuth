@@ -15,11 +15,9 @@ namespace mrfg\cogauth\tests\cognito;
 
 class cognito_token_test extends \phpbb_test_case
 {
-	/** @noinspection PhpUndefinedClassInspection */
 	/* @var $config \phpbb\config\config|\PHPUnit_Framework_MockObject_MockObject */
 	protected $config;
 
-	/** @noinspection PhpUndefinedClassInspection */
 	/* @var $cache \phpbb\cache\driver\driver_interface|\PHPUnit_Framework_MockObject_MockObject */
 	protected $cache;
 
@@ -96,7 +94,10 @@ class cognito_token_test extends \phpbb_test_case
 	public function test_decode_token_invalid_token_01()
 	{
 
-		$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+		//$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+		//todo: check this is correct replacement
+		$this->expectException('\mrfg\cogauth\jwt\exception\TokenVerificationException');
+		$this->expectExceptionMessage('Token deserialize failed.');
 
 		$token = null;
 		$this->cache->expects($this->never())
@@ -108,7 +109,10 @@ class cognito_token_test extends \phpbb_test_case
 
 	public function test_decode_token_invalid_token_02()
 	{
-		$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+		//$this->setExpectedException('\mrfg\cogauth\jwt\exception\TokenVerificationException','Token deserialize failed.');
+		//todo: check this is correct replacement
+		$this->expectException('\mrfg\cogauth\jwt\exception\TokenVerificationException');
+		$this->expectExceptionMessage('Token deserialize failed.');
 
 		/** @var $token \Jose\Component\Signature\Serializer\string */
 		$token = 'invalid string';

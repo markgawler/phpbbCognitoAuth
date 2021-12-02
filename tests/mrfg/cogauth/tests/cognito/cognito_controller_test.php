@@ -13,6 +13,7 @@
 
 namespace mrfg\cogauth\tests\cognito;
 
+use Aws\Result;
 use mrfg\cogauth\cognito\validation_result;
 
 class cognito_controller_test extends \phpbb_test_case
@@ -112,12 +113,12 @@ class cognito_controller_test extends \phpbb_test_case
 
 	public function test_get_access_token_with_refresh()
 	{
-		$sid = 987654321;
+		$sid = '987654321';
 		$user_id = 1234;
-		$response = array('AuthenticationResult' =>
+		$response = new Result(array('AuthenticationResult' =>
 							array('AccessToken' => 'access_token_string_9876',
 								  'RefreshToken' => 'refresh_token_string_5432',
-								  'IdToken' => 'id_token_string_1098'));
+								  'IdToken' => 'id_token_string_1098')));
 		$access_token = $response['AuthenticationResult']['AccessToken'];
 		$refresh_token = $response['AuthenticationResult']['RefreshToken'];
 

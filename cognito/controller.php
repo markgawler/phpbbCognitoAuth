@@ -13,6 +13,8 @@
 
 namespace mrfg\cogauth\cognito;
 
+use mrfg\cogauth\cognito\exception\cogauth_internal_exception;
+
 class controller
 {
 	/** @var \mrfg\cogauth\cognito\auth_result $auth_result */
@@ -70,7 +72,6 @@ class controller
 			switch ($result['mode']) {
 				case 'access_token':
 					return $token;
-				break;
 				case 'refresh':
 					# Refresh the Access_Token and store the result if valid
 					$response = $this->cognito->refresh_access_token($token, $result['user_id']);
@@ -82,8 +83,7 @@ class controller
 					}
 				break;
 				default:
-					throw new \mrfg\cogauth\cognito\exception\cogauth_internal_exception(
-						'Unexpected response, mode: ' . $result['mode']);
+					throw new cogauth_internal_exception('Unexpected response, mode: ' . $result['mode']);
 			}
 		}
 		return false;
@@ -96,41 +96,35 @@ class controller
 	 *
 	 * @since version
 	 */
-	public function login($jwt_tokens)
+	public function login($jwt_tokens): bool
 	{
 		$result = $this->auth_result->validate_and_store_auth_response($jwt_tokens);
 
 		if ($result instanceof validation_result)
 		{
-			if (!$result->is_new_user())
-			{
-				// Login
-				return $this->user->login($result);
-			}
-			else
+			if ($result->is_new_user())
 			{
 				// New user registered via Cognito UI, create phpBB user and Normalize (cognito) User
 				$id = $this->create_user();
 				$result->phpbb_user_id = (int) $id;
 				$this->cognito->normalize_user((int) $id);
-				return $this->user->login($result);
 
 			}
+			return $this->user->login($result);
 		}
 		return false;
 	}
 
 	/**
 	 *
-	 * @return int
+	 * @return int User Id
 	 *
 	 * @since 1.0
 	 */
-	public function create_user()
+	public function create_user(): int
 	{
 		$attr = $this->auth_result->get_user_attributes();
-		$id = $this->user->add_user($attr);
-		return $id;
+		return $this->user->add_user($attr);
 	}
 
 	/**
@@ -265,7 +259,6 @@ class controller
 								'error_msg' => 'LOGIN_ERROR_PASSWORD',
 								'user_row'  => $user_row,
 							);
-						break;
 						case COG_LOGIN_DISABLED:
 							return array(
 								'status'    => LOGIN_ERROR_ACTIVE,
@@ -278,7 +271,6 @@ class controller
 								'error_msg' => 'LOGIN_ERROR_ATTEMPTS',
 								'user_row'  => $user_row,
 							);
-						break;
 
 						default:
 							// COG_LOGIN_SUCCESS - can't happen here

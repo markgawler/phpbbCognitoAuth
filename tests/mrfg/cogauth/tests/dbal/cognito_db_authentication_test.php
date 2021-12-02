@@ -23,9 +23,12 @@ class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 }
 */
 
+use mrfg\cogauth\cognito\auth_result;
 use mrfg\cogauth\cognito\validation_result;
+use phpbb\db\tools\tools;
+use phpbb_database_test_case;
 
-class cognito_authentication_test extends \phpbb_database_test_case
+class cognito_db_authentication_test extends phpbb_database_test_case
 {
 	/* @var $db \phpbb\db\driver\driver_interface */
     protected $db;
@@ -45,7 +48,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 	/** @var $log \phpbb\log\log_interface |\PHPUnit_Framework_MockObject_MockObject */
 	protected $log;
 
-	static protected function setup_extensions()
+	static protected function setup_extensions(): array
 	{
 		return array('mrfg/cogauth');
 	}
@@ -56,7 +59,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 	}
 
 
-	public function setUp()
+	public function setUp() : void
     {
 		parent::setUp();
 
@@ -65,7 +68,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 		$this->table_prefix = $table_prefix;
 
 		$this->db = $this->new_dbal();
-		$this->db_tools = new \phpbb\db\tools\tools($this->db);
+		$this->db_tools = new tools($this->db);
 
 
 		$this->web_token = $this->getMockBuilder('\mrfg\cogauth\cognito\web_token_phpbb')
@@ -178,7 +181,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 	public function test_phpbb_session_killed_01()
 	{
-		$auth = new \mrfg\cogauth\cognito\auth_result(
+		$auth = new auth_result(
 			$this->web_token, $this->db,$this->log, $this->table_prefix . 'cogauth_authentication');
 
 		$session_id = 'a652e8fe432c7b6d6e42eb134ae9054a';
@@ -188,7 +191,7 @@ class cognito_authentication_test extends \phpbb_database_test_case
 
 	public function test_phpbb_session_killed_02()
 	{
-		$auth = new \mrfg\cogauth\cognito\auth_result(
+		$auth = new auth_result(
 			$this->web_token, $this->db, $this->log,$this->table_prefix . 'cogauth_authentication');
 
 		$session_id = '12';

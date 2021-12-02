@@ -3,12 +3,12 @@ services:
     auth.provider.cogauth:
         class: mrfg\cogauth\auth\provider\cogauth
         arguments:
-           - '@dbal.conn'
+           - '@captcha.factory'
            - '@config'
+           - '@dbal.conn'
            - '@passwords.manager'
            - '@request'
            - '@user'
-           - '@service_container'
            - '%core.root_path%'
            - '%core.php_ext%'
            - '@mrfg.cogauth.cognito'

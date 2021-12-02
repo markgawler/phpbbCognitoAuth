@@ -13,10 +13,11 @@
 
 namespace mrfg\cogauth\tests\cognito;
 use Aws\CognitoIdentityProvider\Exception\CognitoIdentityProviderException;
+use Aws\Result;
 use mrfg\cogauth\cognito\validation_result;
 
 /** @noinspection PhpIncludeInspection */
-include_once __DIR__ . '/../../vendor/autoload.php';
+include_once __DIR__ . '/../../../../../vendor/autoload.php';
 
 class cognito_test extends \phpbb_test_case
 {
@@ -191,12 +192,12 @@ class cognito_test extends \phpbb_test_case
         ));
 
         $this->provider->method('adminInitiateAuth')
-            ->willReturn(array(
+            ->willReturn(new Result (array(
                 'AuthenticationResult' => array('AccessToken' => 'token_string_1234'),
                 'ChallengeName' => 'NEW_PASSWORD_REQUIRED',
                 'ChallengeParameters' => array(),
                 'Session' => 'QWERTYUIOP'
-            ));
+            )));
 
         $this->provider->expects($this->once())
             ->method('adminInitiateAuth')

@@ -13,9 +13,10 @@
 
 namespace mrfg\cogauth\tests\cognito;
 
+use mrfg\cogauth\cognito\auth_result;
 use mrfg\cogauth\cognito\validation_result;
 
-class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
+class auth_result_test_functions extends auth_result
 {
 	public function set_time_now($time_now)
 	{
@@ -63,10 +64,9 @@ class auth_result_test extends \phpbb_test_case
 
     public function test_get_session_token()
 	{
-		$auth = new \mrfg\cogauth\cognito\auth_result(
-			$this->web_token, $this->db, $this->log,'cogauth_authentication');
+		$auth = new auth_result($this->web_token, $this->db, $this->log,'cogauth_authentication');
 
-		// Get the session token but dont create a token if one dose not exist.
+		// Get the session token but don't create a token if one does not exist.
 		$token = $auth->get_session_token(false);
 		$this->assertNull($token, 'Validating token not initialized ');
 
@@ -285,14 +285,17 @@ class auth_result_test extends \phpbb_test_case
 		$this->db->expects($this->never())
 			->method('sql_build_array');
 
-		$this->setExpectedException('\mrfg\cogauth\cognito\exception\cogauth_authentication_exception');
+		//$this->setExpectedException('\mrfg\cogauth\cognito\exception\cogauth_authentication_exception');
+		//todo: confirm this is the correct replacement
+		$this->expectException('\mrfg\cogauth\cognito\exception\cogauth_authentication_exception');
 
-		$auth = new \mrfg\cogauth\cognito\auth_result(
+
+		$auth = new auth_result(
 			$this->web_token, $this->db, $this->log,'cogauth_authentication');
 
 		$result = $auth->validate_and_store_auth_response($auth_response);
 		$this->assertInstanceOf(validation_result::class, $result, 'validating a response');
-		$this->assertEquals(strlen($result->cogauth_token),32,'Validating response');
+		$this->assertEquals(32, strlen($result->cogauth_token),'Validating response');
 
 		/** @noinspection PhpUnhandledExceptionInspection */
 		$auth->authenticated('1234', '');

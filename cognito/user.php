@@ -15,6 +15,11 @@
 namespace mrfg\cogauth\cognito;
 
 
+use phpbb\auth\auth;
+use phpbb\config\config;
+use phpbb\db\driver\driver_interface;
+use phpbb\passwords\manager;
+
 class user
 {
 	/** @var \phpbb\user $user */
@@ -51,24 +56,19 @@ class user
 	/**
 	 * user constructor.
 	 **
-	 * @param \phpbb\user $user
-	 * @param \phpbb\auth\auth $auth
+	 *
+	 * @param \phpbb\user                       $user
+	 * @param \phpbb\auth\auth                  $auth
 	 * @param \phpbb\db\driver\driver_interface $db
-	 * @param \phpbb\config\config $config
-	 * @param \phpbb\passwords\manager $passwords_manager
-	 * @param string $phpbb_root_path
-	 * @param string $php_ext
-	 * @param string $usermap
+	 * @param \phpbb\config\config              $config
+	 * @param \phpbb\passwords\manager          $passwords_manager
+	 * @param string                            $phpbb_root_path
+	 * @param string                            $php_ext
+	 * @param string                            $usermap
 	 */
 	public function __construct(
-		\phpbb\user $user,
-		\phpbb\auth\auth $auth,
-		\phpbb\db\driver\driver_interface $db,
-		\phpbb\config\config $config,
-		\phpbb\passwords\manager $passwords_manager,
-		$phpbb_root_path,
-		$php_ext,
-		$usermap)
+		\phpbb\user $user, auth $auth, driver_interface $db, config $config, manager $passwords_manager,
+		string $phpbb_root_path, string $php_ext, string $usermap)
 	{
 		$this->user = $user;
 		$this->auth = $auth;
@@ -88,7 +88,7 @@ class user
 	 *
 	 * @since version
 	 */
-	public function get_cognito_username($user_id)
+	public function get_cognito_username(int $user_id): string
 	{
 		return $this->get_cognito_usermap_attributes($user_id)['cognito_username'];
 	}
@@ -100,7 +100,7 @@ class user
 	 *
 	 * @since version
 	 */
-	public function get_cognito_usermap_attributes($user_id)
+	public function get_cognito_usermap_attributes(int $user_id): array
 	{
 		$sql = 'SELECT cognito_username,password_sync FROM ' . $this->usermap . '
 				WHERE phpbb_user_id = ' . $this->db->sql_escape($user_id);
@@ -133,10 +133,10 @@ class user
 	}
 
 	/**
-	 * @param int $user_id
+	 * @param int     $user_id
 	 * @param boolean $valid
 	 */
-	public function set_phpbb_password_status($user_id, $valid)
+	public function set_phpbb_password_status(int $user_id, bool $valid)
 	{
 		$sql = 'UPDATE ' . $this->usermap . '
 					SET password_sync = ' . $valid . '
@@ -152,7 +152,7 @@ class user
 	 * @return bool True is login success
 	 * @since 1.0
 	 */
-	public function login($validation)
+	public function login(validation_result $validation): bool
 	{
 		if ($validation instanceof validation_result && !$validation->is_new_user())
 		{
@@ -165,19 +165,22 @@ class user
 		return false;
 	}
 
-	public function get_phpbb_session_id()
+	public function get_phpbb_session_id(): string
 	{
 		return $this->user->session_id;
 	}
 
-	public function get_ip()
+	public function get_ip(): string
 	{
 		return $this->user->ip;
 	}
 
+	/**
+	 * @param $user_attributes
+	 * @return false|int # User ID
+	 */
 	public function add_user($user_attributes)
 	{
-		/** @noinspection PhpIncludeInspection */
 		include_once($this->phpbb_root_path . 'includes/functions_user.' . $this->php_ext);
 		// Which group by default?
 		$group_name = 'REGISTERED';
@@ -233,10 +236,10 @@ class user
 
 	/**
 	 * @param string $user_id
-	 * @param  string $password
+	 * @param string $password
 	 * @return string
 	 */
-	public function update_phpbb_password($user_id, $password)
+	public function update_phpbb_password(string $user_id, string $password): string
 	{
 		$hash = $this->passwords_manager->hash($password);
 
@@ -254,7 +257,7 @@ class user
 	 *
 	 * @since 1.0
 	 */
-	public function reset_phpbb_login_attempts($user_id)
+	public function reset_phpbb_login_attempts(int $user_id)
 	{
 		$sql = 'DELETE FROM ' . LOGIN_ATTEMPT_TABLE . ' WHERE user_id = ' . $user_id;
 		$this->db->sql_query($sql);

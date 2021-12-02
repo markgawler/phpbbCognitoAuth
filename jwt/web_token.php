@@ -146,7 +146,7 @@ abstract class web_token
 	 * @throws TokenVerificationException
 	 * @return string
 	 */
-	public function verify_access_token($access_token)
+	public function verify_access_token($access_token): string
 	{
 		$jwt_payload = $this->decode_token($access_token);
 

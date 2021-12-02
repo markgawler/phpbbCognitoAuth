@@ -10,11 +10,14 @@
 
 namespace mrfg\cogauth\tests\dbal;
 
-/** @noinspection PhpIncludeInspection */
-include_once __DIR__ . '/../../vendor/autoload.php';
+use mrfg\cogauth\cognito\auth_result;
+use phpbb\db\tools\tools;
+use phpbb_database_test_case;
+
+include_once __DIR__ . '/../../../../../vendor/autoload.php';
 
 
-class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
+class auth_result_test_functions extends auth_result
 {
 	public function set_time_now($time_now)
 	{
@@ -22,7 +25,7 @@ class auth_result_test_functions extends \mrfg\cogauth\cognito\auth_result
 	}
 }
 
-class cognito_session_token_deletion_test extends \phpbb_database_test_case
+class cognito_session_token_deletion_test extends phpbb_database_test_case
 {
 	/** @var $user \phpbb\user */
 	protected $user;
@@ -51,7 +54,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 	protected $initial_row_count;
 
 
-	static protected function setup_extensions()
+	static protected function setup_extensions(): array
 	{
 		return array('mrfg/cogauth');
 	}
@@ -61,7 +64,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 		return $this->createXMLDataSet(dirname(__FILE__) . '/fixtures/token_deletion_t01.xml');
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		parent::setUp();
 
@@ -69,7 +72,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 		$this->table_prefix = $table_prefix;
 		$this->db = $this->new_dbal();
-		$this->db_tools = new \phpbb\db\tools\tools($this->db);
+		$this->db_tools = new tools($this->db);
 
 		$this->user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
@@ -95,7 +98,7 @@ class cognito_session_token_deletion_test extends \phpbb_database_test_case
 
 	}
 
-	protected function count_rows($where_token_id_equals = false)
+	protected function count_rows($where_token_id_equals = false): int
 	{
 		if ($where_token_id_equals)
 		{

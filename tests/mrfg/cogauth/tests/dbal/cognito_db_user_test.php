@@ -10,11 +10,13 @@
 
 namespace mrfg\cogauth\tests\dbal;
 
-/** @noinspection PhpIncludeInspection */
-include_once __DIR__ . '/../../vendor/autoload.php';
+use mrfg\cogauth\cognito\user;
+use phpbb\db\tools\tools;
+use phpbb_database_test_case;
 
+include_once __DIR__ . '/../../../../../vendor/autoload.php';
 
-class cognito_db_user_test extends \phpbb_database_test_case
+class cognito_db_user_test extends phpbb_database_test_case
 {
 	/** @var $db \phpbb\db\driver\driver_interface */
 	protected $db;
@@ -40,7 +42,7 @@ class cognito_db_user_test extends \phpbb_database_test_case
 	/** @var \mrfg\cogauth\cognito\user $user */
 	protected $user;
 
-	static protected function setup_extensions()
+	static protected function setup_extensions(): array
 	{
 		return array('mrfg/cogauth');
 	}
@@ -50,7 +52,7 @@ class cognito_db_user_test extends \phpbb_database_test_case
 		return $this->createXMLDataSet(dirname(__FILE__) . '/fixtures/cogauth_usermap_data.xml');
 	}
 
-	public function setUp()
+	public function setUp() : void
 	{
 		parent::setUp();
 
@@ -58,7 +60,7 @@ class cognito_db_user_test extends \phpbb_database_test_case
 
 		$this->table_prefix = $table_prefix;
 		$this->db = $this->new_dbal();
-		$this->db_tools = new \phpbb\db\tools\tools($this->db);
+		$this->db_tools = new tools($this->db);
 
 		$this->phpbb_user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
@@ -76,13 +78,13 @@ class cognito_db_user_test extends \phpbb_database_test_case
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->user = new \mrfg\cogauth\cognito\user(
+		$this->user = new user(
 			$this->phpbb_user,
 			$this->auth,
 			$this->db,
 			$this->config,
 			$this->password_manager,
-			'phpBB/ext/mrfg/cogauth/tests/dbal/stubs/','php',$this->table_prefix.'cogauth_usermap');
+			'phpBB/ext/mrfg/cogauth/tests/mrfg/cogauth/tests/dbal/stubs/','php',$this->table_prefix.'cogauth_usermap');
 	}
 
 	public function test_get_cognito_user_01()

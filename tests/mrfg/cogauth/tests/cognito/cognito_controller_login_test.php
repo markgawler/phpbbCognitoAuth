@@ -61,7 +61,7 @@ class cognito_controller_login_test extends \phpbb_test_case
 	public function test_login_existing_user()
 	{
 		$user_id = 3211;
-		$token = 'Dummy Token';
+		$token = array('Dummy Token');
 		$validation_result = new validation_result('randomtoken01', $user_id);
 
 		$this->auth_result->expects($this->once())
@@ -90,7 +90,7 @@ class cognito_controller_login_test extends \phpbb_test_case
 	public function test_login_new_user()
 	{
 		$user_id = 998;
-		$token = 'Dummy Token';
+		$token = array('Dummy Token');
 		$validation_result = new validation_result('randomtoken02', 0);
 		$attributes = array(
 			'sub' => 'aaaaaaaa-xxxx-yyyy-zzzz-ssssssssssss',

@@ -10,8 +10,11 @@
  */
 
 namespace mrfg\cogauth\cognito;
+use Exception;
 use mrfg\cogauth\jwt\exception\TokenVerificationException;
 use mrfg\cogauth\cognito\exception\cogauth_authentication_exception;
+use phpbb\db\driver\driver_interface;
+use phpbb\log\log_interface;
 
 class auth_result
 {
@@ -75,15 +78,11 @@ class auth_result
 	 * Database Authentication Constructor
 	 *
 	 * @param \mrfg\cogauth\cognito\web_token_phpbb $web_token
-	 * @param \phpbb\db\driver\driver_interface $db *
-	 * @param \phpbb\log\log_interface          $log
-	 * @param	string      $cogauth_authentication - db table name
+	 * @param \phpbb\db\driver\driver_interface     $db                     *
+	 * @param \phpbb\log\log_interface              $log
+	 * @param string                                $cogauth_authentication - db table name
 	 */
-	public function __construct(
-		\mrfg\cogauth\cognito\web_token_phpbb $web_token,
-		\phpbb\db\driver\driver_interface $db,
-		\phpbb\log\log_interface $log,
-		$cogauth_authentication)
+	public function __construct( web_token_phpbb $web_token, driver_interface $db, log_interface $log, string $cogauth_authentication)
 	{
 		$this->web_token = $web_token;
 		$this->db = $db;
@@ -95,14 +94,15 @@ class auth_result
 
 	/**
 	 * Store or update the Authentication result
-	 * @param array $response - AWS Authentication Result
-	 * @param bool	$refreshed - true is the storing a refreshed Access token
+	 *
+	 * @param array $response  - AWS Authentication Result
+	 * @param bool  $refreshed - true is the storing a refreshed Access token
 	 *
 	 * @return boolean | validation_result False if validation fails otherwise a session_token.
 	 *
 	 * @since 1.0
 	 */
-	public function validate_and_store_auth_response($response, $refreshed = false)
+	public function validate_and_store_auth_response(array $response, bool $refreshed = false)
 	{
 		try
 		{
@@ -130,8 +130,7 @@ class auth_result
 		if ($this->session_token && $refreshed){
 			$this->update_auth_data();
 		}
-		$result = new validation_result($this->get_session_token(),$this->phpbb_user_id);
-		return $result;
+		return new validation_result($this->get_session_token(),$this->phpbb_user_id);
 	}
 
 
@@ -146,8 +145,8 @@ class auth_result
 		// Only store the interesting bits
 		$this->uuid = $token['sub'];
 		$this->cognito_username = $user_name;
-		$this->preferred_username = ($token['preferred_username']) ? $token['preferred_username'] : $user_name;
-		$this->nickname = ($token['nickname']) ? $token['nickname'] : $user_name;
+		$this->preferred_username = ($token['preferred_username']) ?: $user_name;
+		$this->nickname = ($token['nickname']) ?: $user_name;
 		$this->expires = $token['exp'];
 		$this->email = $token['email'];
 		$this->phpbb_user_id = ($token['custom:phpbb_user_id']) ? (int) $token['custom:phpbb_user_id'] : 0;
@@ -179,7 +178,7 @@ class auth_result
 	 *
 	 * @since version
 	 */
-	public function get_user_attributes()
+	public function get_user_attributes(): array
 	{
 		return array(
 			'sub' => $this->uuid,
@@ -196,7 +195,7 @@ class auth_result
 	 *
 	 * @since version
 	 */
-	public function set_user_attributes($attributes)
+	public function set_user_attributes(array $attributes)
 	{
 		$this->preferred_username = $attributes['preferred_username'];
 		$this->nickname = $attributes['nickname'];
@@ -239,7 +238,7 @@ class auth_result
 	 */
 	public function authenticated($phpbb_user_id, $sid){
 		if ($sid == ""){
-			throw new \mrfg\cogauth\cognito\exception\cogauth_authentication_exception(
+			throw new cogauth_authentication_exception(
 				'Attempt to set authenticated failed, Invalid SID');
 		}
 
@@ -269,7 +268,7 @@ class auth_result
 	 * @param int    $phpbb_user_id
 	 * @param string $sid
 	 */
-	protected function commit_auth_data($phpbb_user_id, $sid)
+	protected function commit_auth_data(int $phpbb_user_id, string $sid)
 	{
 		$fields = array(
 			'session_token' => $this->get_session_token(),
@@ -327,7 +326,7 @@ class auth_result
 	 *
 	 * @since 1.0
 	 */
-	private function load_auth_data($selector)
+	private function load_auth_data(string $selector): bool
 	{
 		$sql = 'SELECT * FROM ' .$this->cogauth_authentication . ' WHERE ' . $selector;
 		$result = $this->db->sql_query($sql);
@@ -351,7 +350,7 @@ class auth_result
 		{
 			// ensure all data is cleared.
 			$this->session_token = "";
-			$this->expires = null;;
+			$this->expires = null;
 			$this->uuid = null;
 			$this->cognito_username = null;
 			$this->preferred_username = null;
@@ -369,12 +368,13 @@ class auth_result
 	/**
 	 * Get the access token for the SID
 	 * If the access token has expired attempt to refresh it
-	 * @param  string $sid
+	 *
+	 * @param string $sid
 	 * @return    bool | array
 	 *        False if fails to get access token from store,
 	 *        Array [mode = access_token] [token = access token string]
 	 *              [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]	 */
-	public function get_access_token_from_sid($sid)
+	public function get_access_token_from_sid(string $sid)
 	{
 		if ($this->sid !== $sid || $this->access_token == null)
 		{
@@ -396,7 +396,7 @@ class auth_result
 	 *        Array [mode = access_token] [token = access token string]
 	 *              [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]
 	 */
-	public function get_access_token_from_session_token($session_token)
+	public function get_access_token_from_session_token(string $session_token)
 	{
 		if ($this->session_token !== $session_token || $this->access_token == null)
 		{
@@ -414,7 +414,7 @@ class auth_result
 	 *                [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]
 	 * @since version
 	 */
-	private function get_access_token()
+	private function get_access_token(): array
 	{
 		// refresh if the access_token expires in less than 300 seconds (5 min)
 		if ($this->time_now  > ($this->expires - 300))
@@ -437,12 +437,12 @@ class auth_result
 	/**
 	 * Returns the unique session token for this cognito session
 	 *
-	 * @param  bool $initialise if true create a session token when the token is null
+	 * @param bool $initialise if true create a session token when the token is null
 	 * @return string session_token
 	 *
 	 * @since 1,0
 	 */
-	public function get_session_token($initialise = true)
+	public function get_session_token(bool $initialise = true): ?string
 	{
 		if (! $this->session_token && $initialise){
 			$this->session_token = $this->get_unique_token();
@@ -451,25 +451,24 @@ class auth_result
 	}
 
 	/**
-	 * @param $length
 	 * @return string A unique Token
 	 */
-	private function get_unique_token($length = 32)
+	private function get_unique_token(): string
 	{
 		$token = "";
-		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$code_alphabet = "#ABCDEFGHILKMNOPQRSTUVWXYZ";
 		$code_alphabet .= "abcdefghijklmnopqrstuvwxyz";
 		$code_alphabet .= "0123456789";
 		$max = strlen($code_alphabet);
 
 		try
 		{
-			for ($i = 0; $i < $length; $i++)
+			for ($i = 0; $i < 32; $i++)
 			{
 				$token .= $code_alphabet[random_int(0, $max - 1)];
 			}
 		}
-		catch (\Exception $e)
+		catch (Exception $e)
 		{
 			return "";
 		}
@@ -484,7 +483,7 @@ class auth_result
 	 *
 	 * @since 1.0
 	 */
-	public function kill_session($session_id)
+	public function kill_session(string $session_id): int
 	{
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE sid = '" . $this->db->sql_escape($session_id) ."'";
 		$this->db->sql_query($sql);
@@ -497,7 +496,7 @@ class auth_result
 	 * @param integer $max_session_length the maximum session length in days.
 	 * @since 1.0
 	 */
-	public function cleanup_session_tokens($max_session_length)
+	public function cleanup_session_tokens(int $max_session_length)
 	{
 		// Expire non auto login sessions
 		// The rule for deleting rows for phpbb_cogauth_authentication is that for non auto login rows once the sid is
@@ -525,7 +524,7 @@ class auth_result
 	 *
 	 * @since 1.0
 	 */
-	public function set_autologin($autologin)
+	public function set_autologin(bool $autologin)
 	{
 		$this->autologin = $autologin;
 	}

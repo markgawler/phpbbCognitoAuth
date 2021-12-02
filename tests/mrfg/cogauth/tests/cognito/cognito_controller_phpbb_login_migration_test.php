@@ -83,7 +83,7 @@ class cognito_controller_phpbb_login_migration_test extends \phpbb_test_case
 	{
 		$this->cognito->expects($this->never())
 			->method('get_user');
-		$this->user->expects(($this->never()))
+		$this->cognito->expects(($this->never()))
 			->method('migrate_user');
 
 		$controller = new controller(

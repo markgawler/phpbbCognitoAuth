@@ -6,7 +6,7 @@
 	Only set this to "true" if you have dependencies in the composer.json,
 	otherwise use "false".
 	-->
-	<property name="has-dependencies" value="false" />
+	<property name="has-dependencies" value="true" />
 
 	<target name="clean-package">
 		<!--
@@ -69,6 +69,7 @@
 		<if>
 			<equals arg1="${has-dependencies}" arg2="1" />
 			<then>
+				<copy file="composer.phar" tofile="${build-directory}/package/${vendor-name}/${extension-name}/composer.phar" overwrite="true"/>
 				<exec dir="${package-directory}" command="php composer.phar install --no-dev"
 					  checkreturn="true" />
 			</then>

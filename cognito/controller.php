@@ -169,7 +169,6 @@ class controller
 				if ($auth_status['status'] == COG_LOGIN_SUCCESS)
 				{
 					$authenticated_cognito = true;
-					error_log('Aws Cognito authenticated');
 				}
 			}
 			else
@@ -212,9 +211,12 @@ class controller
 			if ($cognito_user['status'] == COG_USER_NOT_FOUND)
 			{
 				// Migrate the user
-				$this->cognito->migrate_user($user_row['username'], $password, $user_row['user_id'], $user_row['user_email']);
+				$result = $this->cognito->migrate_user($user_row['username'], $password, $user_row['user_id'], $user_row['user_email']);
 				$user_ip = (empty($this->user->get_ip())) ? '' : $this->user->get_ip();
-				$this->log->add('user' ,$user_row['user_id'] , $user_ip, 'COGAUTH_MIGRATE_USER', time(), array($user_row['username']));
+				if ($result['status'] === COG_MIGRATE_SUCCESS)
+				{
+					$this->log->add('user', $user_row['user_id'], $user_ip, 'COGAUTH_MIGRATE_USER', time(), array($user_row['username']));
+				}
 			}
 			elseif (!$authenticated_cognito && $cognito_user['status'] == COG_USER_FOUND &&
 				!$use_cognito_authentication &&
@@ -298,13 +300,13 @@ class controller
 	}
 
 	/**
-	 * @param array|null $attributes
+	 * @param array|string $attributes  # array or empty string
 	 *
 	 * @return array
 	 *
 	 * @since 1.0
 	 */
-	protected function user_attributes_to_array(?array $attributes): array
+	protected function user_attributes_to_array($attributes): array
 	{
 		$result = array();
 		if (!empty($attributes))

@@ -391,7 +391,14 @@ class cognito
 			return true;
 		}
 		$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
-		$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNEXPECTED_ERROR', $this->time_now,
+		$error_code = $e->getAwsErrorCode();
+		if ($error_code === 'InvalidPasswordException')
+		{
+			$log_operation = 'COGAUTH_USER_MIGRATION_FAIL';
+		} else {
+			$log_operation = 'COGAUTH_UNEXPECTED_ERROR';
+		}
+		$this->log->add('critical' ,$user_id , $user_ip, $log_operation, $this->time_now,
 			array($action, $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
 		return false;
 	}

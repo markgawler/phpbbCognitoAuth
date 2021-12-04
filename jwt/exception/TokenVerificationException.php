@@ -11,7 +11,9 @@
  */
 namespace mrfg\cogauth\jwt\exception;
 
-class TokenVerificationException extends \Exception
+use Exception;
+
+class TokenVerificationException extends Exception
 {
 
 }

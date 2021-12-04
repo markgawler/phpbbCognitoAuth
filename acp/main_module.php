@@ -121,7 +121,7 @@ class main_module
 								. $config['cogauth_aws_region'] . '.amazoncognito.com');
 						}
 
-						// Add the phpbb_user_id cutom attribute is it dose not exist.
+						// Add the phpbb_user_id custom attribute is it does not exist.
 						$attributes = $result['UserPool']['SchemaAttributes'];
 						$add_attr = true;
 						foreach ($attributes as $a)

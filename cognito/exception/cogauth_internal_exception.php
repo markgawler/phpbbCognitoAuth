@@ -11,7 +11,9 @@
  */
 namespace mrfg\cogauth\cognito\exception;
 
-class cogauth_internal_exception extends \Exception
+use Exception;
+
+class cogauth_internal_exception extends Exception
 {
 
 }

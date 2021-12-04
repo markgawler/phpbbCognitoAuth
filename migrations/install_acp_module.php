@@ -10,19 +10,21 @@
 
 namespace mrfg\cogauth\migrations;
 
-class install_acp_module extends \phpbb\db\migration\migration
+use phpbb\db\migration\migration;
+
+class install_acp_module extends migration
 {
-	public function effectively_installed()
+	public function effectively_installed(): bool
 	{
 		return isset($this->config['cogauth_pool_id']);
 	}
 
-	static public function depends_on()
+	static public function depends_on(): array
 	{
 		return array('\phpbb\db\migration\data\v31x\v314');
 	}
 
-	public function update_data()
+	public function update_data(): array
 	{
 		return array(
 			array('config.add', array('cogauth_pool_id', '')),

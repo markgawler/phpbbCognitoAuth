@@ -10,16 +10,18 @@
 
 namespace mrfg\cogauth\migrations;
 
+use phpbb\db\migration\migration;
+
 /** @noinspection PhpUnused */
 
-class install_db_table_usermap extends \phpbb\db\migration\migration
+class install_db_table_usermap extends migration
 {
-	static public function depends_on()
+	static public function depends_on(): array
 	{
 		return array('\mrfg\cogauth\migrations\install_db_table_authentication_class');
 	}
 
-	public function update_schema()
+	public function update_schema(): array
 	{
 		return array(
 			'add_tables'	=> array(
@@ -37,7 +39,7 @@ class install_db_table_usermap extends \phpbb\db\migration\migration
 			),
 		);
 	}
-	public function revert_schema()
+	public function revert_schema(): array
 	{
 		return array(
 			'drop_tables'	=> array(

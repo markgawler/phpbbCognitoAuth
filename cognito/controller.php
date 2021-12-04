@@ -191,7 +191,6 @@ class controller
 		{
 			// User has not been migrated yet so use phpBB authentication
 			$use_cognito_authentication = false;
-			$auth_status['session_token'] = null;
 		}
 
 

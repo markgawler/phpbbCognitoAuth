@@ -656,6 +656,7 @@ class cognito
 			));
 			return array(
 				'status' => COG_USER_FOUND,
+				'enabled' => $response['Enabled'],
 				'user_status' => $response['UserStatus'],
 				'user_attributes' => $response['UserAttributes'],
 				'phpbb_password_valid' => $attr['phpbb_password_valid']

@@ -207,7 +207,7 @@ class controller
 				$this->user->reset_phpbb_login_attempts($user_row['user_id']);
 			}
 
-			// Migrate user to AWS Cognito as phpBB login success
+			// If the user is not found, migrate user to AWS Cognito as phpBB login success
 			if ($cognito_user['status'] == COG_USER_NOT_FOUND)
 			{
 				// Migrate the user
@@ -220,21 +220,48 @@ class controller
 			}
 			elseif (!$authenticated_cognito && $cognito_user['status'] == COG_USER_FOUND &&
 				!$use_cognito_authentication &&
-				($auth_status['status'] == COG_LOGIN_ERROR_PASSWORD ||  $cognito_user['user_status'] == 'FORCE_CHANGE_PASSWORD'))
+				($auth_status['status'] == COG_LOGIN_ERROR_PASSWORD ||
+					$cognito_user['user_status'] == 'FORCE_CHANGE_PASSWORD' ||
+					$cognito_user['user_status'] == 'RESET_REQUIRED'
+				))
 			{
-				// Cognito user exists, but failed to authenticate password (other failures dont get this far).
-				// automatic password reset
+				// Cognito user exists, but failed to authenticate password or user disabled
+				// (other failures dont get this far (I hope)).
+				// Automatic password reset / enable account
 				// todo: this should be configurable.
-				// todo: log different error if FORCE_CHANGE_PASSWORD
-				$this->cognito->admin_change_password($user_row['user_id'],$password);
+
+				if ($cognito_user['enabled'] == false) {
+					$this->cognito->admin_enable_user($user_row['user_id']);
+					$log_operation = 'COGAUTH_AUTO_ENABLE_USER';
+				} else {
+					switch ($cognito_user['user_status'])
+					{
+						case 'FORCE_CHANGE_PASSWORD':
+							$log_operation = 'COGAUTH_AUTO_FORCE_CNG_PASSWD';
+						break;
+						case 'RESET_REQUIRED':
+							$log_operation = 'COGAUTH_AUTO_RESET_REQUIRED_PASSWD';
+						break;
+						default:
+							$log_operation = 'COGAUTH_AUTO_PASSWD_RESET';
+					}
+					$this->cognito->admin_change_password($user_row['user_id'], $password);
+				}
 				$user_ip = (empty($this->user->get_ip())) ? '' : $this->user->get_ip();
-				$this->log->add('user' ,$user_row['user_id'] , $user_ip, 'COGAUTH_AUTO_PASSWD_RESET', time(),array($user_row['username']));
+				$this->log->add('user', $user_row['user_id'], $user_ip, $log_operation, time(), array($user_row['username']));
+
 			}
 			elseif (!$cognito_user['phpbb_password_valid'])
 			{
 				// Update the phpBB password on users first phpBB login
 				$this->user->update_phpbb_password($user_row['user_id'],$password);
 				$this->user->set_phpbb_password_status($user_row['user_id'],true);
+			} else {
+				//todo: check that all UserStates are handled:
+				// 		https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_UserType.html
+				$user_ip = (empty($this->user->get_ip())) ? '' : $this->user->get_ip();
+				$this->log->add('critical', $user_row['user_id'], $user_ip,
+					'COGAUTH_UNHANDLED_USER_STATE', time(), array($cognito_user['user_status']));
 			}
 			// Successful login... set user_login_attempts to zero...
 			return array(

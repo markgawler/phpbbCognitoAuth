@@ -312,13 +312,13 @@ class controller
 							);
 					}
 				} else {
-					// user not confirmed (error), Is this possible
+					// user not confirmed (error), Is this possible (yes if disabled from Cognito)
 					$user_ip = (empty($this->user->get_ip())) ? '' : $this->user->get_ip();
 					$this->log->add('user' ,$user_row['user_id'] , $user_ip, 'COGAUTH_CONFIRMED_ERROR', time());
 
 					return array(
 						'status'    => LOGIN_ERROR_ACTIVE,
-						'error_msg' => 'ACCOUNT_NOT_ACTIVATED',
+						'error_msg'	=> 'ACTIVE_ERROR',
 						'user_row'  => $user_row);
 				}
 			}

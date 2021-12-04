@@ -63,7 +63,8 @@ $lang = array_merge($lang, array(
 	'COGAUTH_NO_ACCESS_TOKEN'		=> '<strong>AWS Cognito login error, phpBB login only.</strong><br>» Additional information may be included in the error log.',
 	'COGAUTH_USERMAP_ERROR'			=> '<strong>phpBB user id of Cognito user does not match:</strong><br>» Cognito users ID: "%1$s", cognito user disabled"',
 	'COGAUTH_CONFIRMED_ERROR'		=> '<strong>User created in Cognito but not confirmed:</strong>',
-	'COGAUTH_UNHANDLED_USER_STATE'	=> '<strong>CogAuth An unexpected User State was returned:</strong><br>» Unhandled state: "%1$s"',
+	'COGAUTH_UNHANDLED_USER_STATE'	=> '<strong>CogAuth, An unexpected User State was returned:</strong><br>» Unhandled state: "%1$s"',
+	'COGAUTH_UNKNOWN_LOGIN_FAILURE' => '<strong>CogAuth, An unhandled login failure occurred</strong><br>» Code: "%1$s", Message: "%2$s"',
 
 	'COGAUTH_HOSTED_UI_STATUS_FAIL' => 'An unexpected status code %1$s returned. User not logged in.',
 	'COGAUTH_HOSTED_UI_FAIL' => 'An unexpected internal error: "%1$s". User not logged in.',

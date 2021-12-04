@@ -281,13 +281,13 @@ class cognito
 					$status = COG_USER_NOT_FOUND;
 				break;
 				case 'NotAuthorizedException':
-					// Try to translate the Cognito error
+					// Try to translate the Cognito error, this code is fragile
 					switch ($e->getAwsErrorMessage())
 					{
-						case 'Password attempts exceeded':
+						case 'Password attempts exceeded.':
 							$status = COG_LOGIN_ERROR_ATTEMPTS;
 						break;
-						case 'User is disabled':
+						case 'User is disabled.':
 							$status = COG_LOGIN_DISABLED;
 						break;
 
@@ -297,8 +297,13 @@ class cognito
 							$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_CONFIGURATION_ERROR', $this->time_now,
 								array('Authenticate', $e->getAwsErrorCode(), $e->getAwsErrorMessage()));
 						break;
-
+						case 'Incorrect username or password.':
+							$status = COG_LOGIN_ERROR_PASSWORD;
+						break;
 						default:
+							$user_ip = (empty($this->user->ip)) ? '' : $this->user->ip;
+							$this->log->add('critical' ,$user_id , $user_ip, 'COGAUTH_UNKNOWN_LOGIN_FAILURE', $this->time_now,
+								array($e->getAwsErrorCode(), $e->getAwsErrorMessage()));
 							$status = COG_LOGIN_ERROR_PASSWORD;
 					}
 				break;

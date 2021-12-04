@@ -243,7 +243,7 @@ class cognito_controller_phpbb_login_cognito_user_test extends \phpbb_test_case
 	{
 		$result = array(
 			'status' => LOGIN_ERROR_ACTIVE,
-			'error_msg' => 'ACCOUNT_NOT_ACTIVATED',
+			'error_msg' => 'ACTIVE_ERROR',
 			'user_row' => $this->user_row);
 
 		$cog_user = array(

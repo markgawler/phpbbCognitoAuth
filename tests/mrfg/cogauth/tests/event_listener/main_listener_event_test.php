@@ -14,6 +14,8 @@
 namespace mrfg\cogauth\tests\event_listener;
 
 
+use phpbb\event\data;
+
 class main_listener_event_test extends \phpbb_test_case
 {
     /** @var $user \phpbb\user*/
@@ -102,9 +104,9 @@ class main_listener_event_test extends \phpbb_test_case
 		$token = '1f7aaaaaaaasessiontokenaaaa01de5';
 
 	   /** @var \phpbb\event\data $event */
-        $event = array('session_data' => array(
+        $event = new data(array('session_data' => array(
             'session_user_id' => 1234567,
-            'session_id' => $sid));
+            'session_id' => $sid)));
 
 		$this->dispatcher->expects(($this->once()))
 			->method('trigger_event')
@@ -123,9 +125,9 @@ class main_listener_event_test extends \phpbb_test_case
     public function test_session_create_after_guest()
     {
         /** @var \phpbb\event\data $event */
-        $event = array('session_data' => array(
+        $event = new data(array('session_data' => array(
             'session_user_id' => 1,
-            'session_id' => '1f7efc7a5abbdcc66001de5163338f30'));
+            'session_id' => '1f7efc7a5abbdcc66001de5163338f30')));
 
 		$this->auth_result->expects($this->never())
 			->method('authenticated');
@@ -143,10 +145,10 @@ class main_listener_event_test extends \phpbb_test_case
 		$sid = '3ba5603a695aaaaaaaaaaaaaaaaaaa68';
 
 		/** @var \phpbb\event\data $event */
-		$event = array(
+		$event = new data(array(
 			'user_id'     => 2,
 			'session_id'  => $sid,
-			'new_session' => true);
+			'new_session' => true));
 
 		$this->auth_result->expects($this->once())
 			->method('get_session_token')
@@ -175,10 +177,10 @@ class main_listener_event_test extends \phpbb_test_case
 		$sid = '3ba5603a695aaaaaaaaaaaaaaaaaaa68';
 
 		/** @var \phpbb\event\data $event */
-		$event = array(
+		$event = new data(array(
 			'user_id'     => 2,
 			'session_id'  => $sid,
-			'new_session' => true);
+			'new_session' => true));
 
 		$this->auth_result->expects($this->once())
 			->method('get_session_token')

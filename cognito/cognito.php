@@ -171,7 +171,11 @@ class cognito
 			$region = $_ENV["AWS_DEFAULT_REGION"];
 			if ( ! empty($region) ) {
 				$args['region'] = $region;
+			} else {
+				$args['region'] = '';
 			}
+		} else {
+			$args['region'] = $region;
 		}
 		/*
 		 * If access key and secret key are empty,
@@ -185,7 +189,6 @@ class cognito
 				'secret' => $secret,
 			);
 		}
-
 		//todo: is there a delete to call id client is not null?
 		return $this->aws_sdk->createCognitoIdentityProvider($args);
 	}
@@ -399,7 +402,7 @@ class cognito
 	 * @param int    $user_id  - phpBB numeric user ID
 	 * @param string $email
 	 * @return array
-	 * @throws /Exception
+	 * @throws Exception
 	 */
 	public function migrate_user(string $nickname, string $password, int $user_id, string $email): array
 	{
@@ -465,22 +468,11 @@ class cognito
 			));
 		}
 		catch (CognitoIdentityProviderException $e) {
-
-			switch ($e->getAwsErrorCode())
-			{
-				case 'InvalidPasswordException':
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-
-				default:
-					$this->handle_cognito_identity_provider_exception($e, $user_id, 'admin_create_user');
-					return  array(
-						'status' => COG_MIGRATE_FAIL,
-						'error' => $e->getAwsErrorCode(),
-					);
-			}
+			$this->handle_cognito_identity_provider_exception($e, $user_id, 'admin_create_user');
+			return  array(
+				'status' => COG_MIGRATE_FAIL,
+				'error' => $e->getAwsErrorCode(),
+			);
 		}
 		return array(
 			'status' => COG_MIGRATE_SUCCESS,

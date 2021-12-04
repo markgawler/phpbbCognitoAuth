@@ -244,10 +244,12 @@ class auth_result
 
 		if ($this->access_token == ""){
 			// This can happen when the cognito user exists but fails to authenticate after
-			// phpbb has successfully authenticated (due to a configuration error?). If the
-			// error is not trapped at the authentication stage an auto password change will
-			// be initiated which also fails and the user ends in the "FORCE_CHANGE_PASSWORD" state.
-			// This should not occur as known cases are now trapped.
+			// phpbb has successfully authenticated (due to a configuration error?). This will
+			// also happen when attempting to migrate a user whose password is weaker than the
+			// Cognito password strength rules.
+			// If the error is not trapped at the authentication stage an auto password change
+			// will be initiated which also fails and the user ends in the "FORCE_CHANGE_PASSWORD"
+			// state. This should not occur as known cases are now trapped.
 			$this->log->add('user', $phpbb_user_id, 0,
 				'COGAUTH_NO_ACCESS_TOKEN', $this->time_now);
 		}

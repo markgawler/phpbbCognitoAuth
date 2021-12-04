@@ -12,6 +12,15 @@
 
 namespace mrfg\cogauth\event;
 
+use mrfg\cogauth\cognito\auth_result;
+use mrfg\cogauth\cognito\cognito;
+use mrfg\cogauth\cognito\controller;
+use phpbb\config\config;
+use phpbb\event\data;
+use phpbb\event\dispatcher_interface;
+use phpbb\request\request;
+use phpbb\template\template;
+use phpbb\user;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -19,7 +28,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  */
 class main_listener implements EventSubscriberInterface
 {
-	static public function getSubscribedEvents()
+	static public function getSubscribedEvents(): array
 	{
 		return array(
 			'core.session_kill_after'		=> 'session_kill_after',
@@ -71,14 +80,8 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\template\template			$template
 	 */
 	public function __construct(
-		\phpbb\user $user,
-		\mrfg\cogauth\cognito\cognito $client,
-		\mrfg\cogauth\cognito\auth_result $auth_result,
-		\mrfg\cogauth\cognito\controller $controller,
-		\phpbb\event\dispatcher_interface $dispatcher,
-		\phpbb\request\request $request,
-		\phpbb\config\config $config,
-		\phpbb\template\template $template)
+		user $user, cognito $client, auth_result $auth_result, controller $controller,
+		dispatcher_interface $dispatcher, request $request, config $config, template $template)
 	{
 		$this->auth_result = $auth_result;
 		$this->user = $user;
@@ -95,10 +98,10 @@ class main_listener implements EventSubscriberInterface
 	/**
 	 * Load common language files during user setup
 	 *
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
 	 */
 
-	public function load_language_on_setup($event)
+	public function load_language_on_setup(data $event)
 	{
 		$lang_set_ext = $event['lang_set_ext'];
 		$lang_set_ext[] = array(
@@ -115,11 +118,11 @@ class main_listener implements EventSubscriberInterface
 
 
 	/**
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
 	 *
 	 * @since 1.0
 	 */
-	public function auth_login_session_create_before($event)
+	public function auth_login_session_create_before(data $event)
 	{
 		if ($event['admin'])
 		{
@@ -136,7 +139,7 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\event\data $event Event object
 	 * @throws \mrfg\cogauth\cognito\exception\cogauth_authentication_exception
 	 */
-	public function session_create_after($event)
+	public function session_create_after(data $event)
 	{
 		$data = $event['session_data'];
 		if ($data['session_user_id'] !== 1)  // user_id of 1 = Guest
@@ -151,7 +154,6 @@ class main_listener implements EventSubscriberInterface
 			 *
 			 * @event mrfg.cogauth.session_create_after
 			 * @var  string  session_token
-			 * @since 1.1
 			 */
 			$vars = array('session_token',);
 			extract($this->dispatcher->trigger_event('mrfg.cogauth.session_create_after', compact($vars)));
@@ -159,9 +161,9 @@ class main_listener implements EventSubscriberInterface
     }
 
 	/**
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
 	 */
-	public function session_kill_after($event)
+	public function session_kill_after(data $event)
 	{
 		/*
 		 * 'user_id' => int 2
@@ -192,7 +194,7 @@ class main_listener implements EventSubscriberInterface
 	 * @param \phpbb\event\data $event Event object
 	 * @throws \mrfg\cogauth\cognito\exception\cogauth_internal_exception
 	 */
-	public function ucp_profile_update($event)
+	public function ucp_profile_update(data $event)
 	{
 
 		if ($event['submit'] &&  !sizeof($event['error']))
@@ -230,9 +232,9 @@ class main_listener implements EventSubscriberInterface
 	}
 
 	/**
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
 	 */
-	public function acp_profile_update($event)
+	public function acp_profile_update(data $event)
 	{
 		$data = $event['data'];
 		$user_row = $event['user_row'];
@@ -256,9 +258,9 @@ class main_listener implements EventSubscriberInterface
 	}
 
 	/**
-	 * @param \phpbb\event\data	$event	Event object
+	 * @param \phpbb\event\data $event Event object
 	 */
-	public function delete_users($event)
+	public function delete_users(data $event)
 	{
 		foreach ($event['user_ids'] as $user_id)
 		{

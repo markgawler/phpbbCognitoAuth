@@ -94,7 +94,6 @@ class main_listener implements EventSubscriberInterface
 
 	}
 
-
 	/**
 	 * Load common language files during user setup
 	 *
@@ -116,11 +115,8 @@ class main_listener implements EventSubscriberInterface
 			));
 	}
 
-
 	/**
 	 * @param \phpbb\event\data $event Event object
-	 *
-	 * @since 1.0
 	 */
 	public function auth_login_session_create_before(data $event)
 	{
@@ -183,7 +179,6 @@ class main_listener implements EventSubscriberInterface
 			 *
 			 * @event mrfg.cogauth.session_kill_after
 			 * @var  string  session_token
-			 * @since 1.1
 			 */
 			$vars = array('session_token',);
 			extract($this->dispatcher->trigger_event('mrfg.cogauth.session_kill_after', compact($vars)));

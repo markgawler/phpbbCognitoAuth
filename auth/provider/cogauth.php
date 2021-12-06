@@ -85,7 +85,6 @@ class cogauth extends db
 	 * @return array
 	 *
 	 * @throws \Exception
-	 * @since 1.0
 	 */
 	public function login($username, $password): array
 	{
@@ -106,7 +105,6 @@ class cogauth extends db
 	/**
 	 * @return array
 	 * @param array $new_config
-	 * @since version
 	 */
 	public function get_acp_template($new_config): array
 	{

@@ -96,11 +96,9 @@ class auth_result
 	 * Store or update the Authentication result
 	 *
 	 * @param array $response  - AWS Authentication Result
-	 * @param bool  $refreshed - true is the storing a refreshed Access token
+	 * @param bool  $refreshed - true, if storing a refreshed Access token
 	 *
 	 * @return boolean | validation_result False if validation fails otherwise a session_token.
-	 *
-	 * @since 1.0
 	 */
 	public function validate_and_store_auth_response(array $response, bool $refreshed = false)
 	{
@@ -110,8 +108,6 @@ class auth_result
 			$this->web_token->decode_token($response['AccessToken']);
 		} catch  (TokenVerificationException $e)
 		{
-			//todo log error
-			//error_log($e->getMessage());
 			$this->log->add('critical', $this->phpbb_user_id, 0, $e->getMessage());
 			return false;
 		}
@@ -137,8 +133,6 @@ class auth_result
 	/**
 	 * Stores decoded and store ID token,
 	 * @param $token
-	 **
-	 * @since 1.0
 	 */
 	protected function store_id_token($token){
 		$user_name = $token['cognito:username'];
@@ -175,8 +169,6 @@ class auth_result
 	 * Return the interesting user attributes extracted from the id_token
 	 *
 	 * @return array
-	 *
-	 * @since version
 	 */
 	public function get_user_attributes(): array
 	{
@@ -192,8 +184,6 @@ class auth_result
 
 	/**
 	 * @param array $attributes
-	 *
-	 * @since version
 	 */
 	public function set_user_attributes(array $attributes)
 	{
@@ -206,9 +196,6 @@ class auth_result
 	/**
 	 * Decoded and store Access token,
 	 * @param $token
-	 *
-	 *
-	 * @since 1.0
 	 */
 	protected function store_access_token($token){
 		$this->access_token = $token;
@@ -217,8 +204,6 @@ class auth_result
 	/**
 	 * Stores a refresh token,
 	 * @param $token
-	 *
-	 * @since 1.0
 	 */
 	protected function store_refresh_token($token){
 		$this->refresh_token = $token;
@@ -233,8 +218,6 @@ class auth_result
 	 * @return string session_token
 	 *
 	 * @throws cogauth_authentication_exception;
-	 *
-	 * @since 1.0
 	 */
 	public function authenticated($phpbb_user_id, $sid){
 		if ($sid == ""){
@@ -244,12 +227,14 @@ class auth_result
 
 		if ($this->access_token == ""){
 			// This can happen when the cognito user exists but fails to authenticate after
-			// phpbb has successfully authenticated (due to a configuration error?). This will
-			// also happen when attempting to migrate a user whose password is weaker than the
-			// Cognito password strength rules.
-			// If the error is not trapped at the authentication stage an auto password change
-			// will be initiated which also fails and the user ends in the "FORCE_CHANGE_PASSWORD"
-			// state. This should not occur as known cases are now trapped.
+			// phpbb has successfully authenticated. This will happen when:
+			// 1) A User is being migrated,
+			// 2) An attempt to migrate a user whose password is weaker than the
+			//    Cognito password strength rules. If this error is not trapped at
+			// 	  the authentication stage an auto password change will be initiated
+			//    which also fails and the user ends in the "FORCE_CHANGE_PASSWORD"
+			//    state. This should not occur as known cases are now trapped.
+			// 3) The user has just been registered todo: create user on registration
 			$this->log->add('user', $phpbb_user_id, 0,
 				'COGAUTH_NO_ACCESS_TOKEN', $this->time_now);
 		}
@@ -289,7 +274,6 @@ class auth_result
 			'first_active'	=> $this->first_active);
 
 		$sql = 'INSERT INTO ' . $this->cogauth_authentication . ' ' . $this->db->sql_build_array('INSERT', $fields);
-
 		$this->db->sql_query($sql);
 		$this->phpbb_user_id = $phpbb_user_id;
 		$this->sid = $sid;
@@ -325,8 +309,6 @@ class auth_result
 	 * @param string $selector - SQL fragment to select auth data
 	 *
 	 * @return bool True if data loaded, False if no authentication data for selector
-	 *
-	 * @since 1.0
 	 */
 	private function load_auth_data(string $selector): bool
 	{
@@ -414,7 +396,6 @@ class auth_result
 	 *
 	 * @return  array [mode = access_token] [token = access token string]
 	 *                [mode = refresh] [token = refresh token] [user_id = phpbb_user_id]
-	 * @since version
 	 */
 	private function get_access_token(): array
 	{
@@ -435,14 +416,11 @@ class auth_result
 		}
 	}
 
-
 	/**
 	 * Returns the unique session token for this cognito session
 	 *
 	 * @param bool $initialise if true create a session token when the token is null
 	 * @return string session_token
-	 *
-	 * @since 1,0
 	 */
 	public function get_session_token(bool $initialise = true): ?string
 	{
@@ -458,7 +436,7 @@ class auth_result
 	private function get_unique_token(): string
 	{
 		$token = "";
-		$code_alphabet = "ABCDEFGHILKMNOPQRSTUVWXYZ";
+		$code_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		$code_alphabet .= "abcdefghijklmnopqrstuvwxyz";
 		$code_alphabet .= "0123456789";
 		$max = strlen($code_alphabet);
@@ -482,11 +460,10 @@ class auth_result
 	 *
 	 * @param string $session_id phpbb session_id
 	 * @return int number of rows deleted
-	 *
-	 * @since 1.0
 	 */
 	public function kill_session(string $session_id): int
 	{
+		/** @noinspection SqlResolve */
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE sid = '" . $this->db->sql_escape($session_id) ."'";
 		$this->db->sql_query($sql);
 		return $this->db->sql_affectedrows();
@@ -496,7 +473,6 @@ class auth_result
 	 * Clean up session tokens
 	 *
 	 * @param integer $max_session_length the maximum session length in days.
-	 * @since 1.0
 	 */
 	public function cleanup_session_tokens(int $max_session_length)
 	{
@@ -507,6 +483,7 @@ class auth_result
 		$cogauth_table = $this->cogauth_authentication;
 
 		//  todo: Getting this to works with both MySQL and SQLite was more problematic than expected, revisit to optimise / tidy
+		/** @noinspection SqlResolve */
 		$sql = "DELETE FROM " . $cogauth_table . " WHERE sid IN "
 		. "(SELECT S.sid FROM (SELECT sid FROM " . $cogauth_table. " WHERE autologin = 0) AS S LEFT JOIN "
 		. SESSIONS_TABLE. " ON S.sid = " .SESSIONS_TABLE . ".session_id WHERE "
@@ -516,6 +493,7 @@ class auth_result
 
 		//expire auto login
 		$expire_time = $this->time_now - ($max_session_length * 86400); // Max Session length in seconds (from days)
+		/** @noinspection SqlResolve */
 		$sql = 'DELETE FROM ' . $this->cogauth_authentication . " WHERE first_active < " . $expire_time;
 		$this->db->sql_query($sql);
 
@@ -523,8 +501,6 @@ class auth_result
 
 	/**
 	 * @param bool $autologin
-	 *
-	 * @since 1.0
 	 */
 	public function set_autologin(bool $autologin)
 	{

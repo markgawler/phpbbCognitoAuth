@@ -762,8 +762,6 @@ class cognito
 	 * - nickname Human Friendly Username (will be the same as  Cognito Username for Hosted UI created users)
 	 *
 	 * @param int $user_id
-	 *
-	 * @since 1.0
 	 */
 	public function normalize_user(int $user_id)
 	{
@@ -856,7 +854,6 @@ class cognito
 		}
 	}
 
-
 	/**
 	 * Create a new App Client for a User Pool
 	 *
@@ -864,8 +861,6 @@ class cognito
 	 * @param string $user_pool_id
 	 *
 	 * @return \Aws\Result
-	 *
-	 * @since 1.0
 	 */
 	protected function create_user_pool_client(string $name, string $user_pool_id): Result
 	{
@@ -885,9 +880,7 @@ class cognito
  	 *
  	 * @param integer     $days      (0 = use current config value)
 	 * @param string|null $client_id (null is the client ID is not changing)
- * @return \Aws\Result | string  containing Aws/Result or String containing error message
-	 *
-	 * @since 1.0
+	 * @return \Aws\Result | string  containing Aws/Result or String containing error message
 	 */
 	public function update_user_pool_client(int $days = 0, string $client_id = null)
 	{
@@ -1031,7 +1024,6 @@ class cognito
 	 * @param string $name The name of the user pool to create
 	 *
 	 * @return \Aws\Result | string containing Aws/Result or String containing error message
-	 * @since 1.0
 	 */
 	public function create_user_pool(string $name)
 	{
@@ -1078,7 +1070,6 @@ class cognito
 	/**
 	 *
 	 * @return \Aws\Result | string containing Aws/Result or String containing error message
-	 * @since 1.0
 	 */
 	public function add_custom_attribute()
 	{
@@ -1109,8 +1100,6 @@ class cognito
 	 * @param $e CognitoIdentityProviderException
 	 *
 	 * @return string Error message to display in ACP
-	 *
-	 * @since 1.0
 	 */
 	protected function handle_identity_provider_exception_for_acp(Exception $e): string
 	{
@@ -1123,7 +1112,6 @@ class cognito
 		} else {
 			$message = $e->getMessage();
 		}
-
 		return $message;
 	}
 }

@@ -40,7 +40,6 @@ class controller
 	 * @param \mrfg\cogauth\cognito\cognito $cognito
 	 * @param \phpbb\log\log_interface $log
 	 * @param \phpbb\config\config $config
-
 	 */
 	public function __construct(
 		user $user,	auth_result $auth_result, cognito $cognito, log_interface $log,	config $config)
@@ -58,7 +57,6 @@ class controller
 	 *                       Access token
 	 *
 	 * @throws \mrfg\cogauth\cognito\exception\cogauth_internal_exception
-	 * @since 1.0
 	 */
 	public function get_access_token()
 	{
@@ -91,8 +89,6 @@ class controller
 	 * @param $jwt_tokens
 	 *
 	 * @return bool
-	 *
-	 * @since version
 	 */
 	public function login($jwt_tokens): bool
 	{
@@ -116,8 +112,6 @@ class controller
 	/**
 	 *
 	 * @return int User Id
-	 *
-	 * @since 1.0
 	 */
 	public function create_user(): int
 	{
@@ -132,7 +126,6 @@ class controller
 	 * @return array
 	 *
 	 * @throws \Exception
-	 * @since 1.0
 	 */
 	public function login_phpbb(string $password, array $phpbb_auth_result): array
 	{
@@ -182,7 +175,6 @@ class controller
 
 		// At this point we have tested authentication with both phpBB and Cognito.
 
-
 		// Test for overriding the master authentication directory for newly created users / migrating users
 		if (!$cognito_user['phpbb_password_valid'] && $authenticated_cognito){
 			// Cognito created user, first login via phpBB (phpBB password is random so use Cognito)
@@ -192,7 +184,6 @@ class controller
 			// User has not been migrated yet so use phpBB authentication
 			$use_cognito_authentication = false;
 		}
-
 
 		// if phpBB authenticated or Cognito authenticated,
 		if (($authenticated_phpbb && !$use_cognito_authentication) ||
@@ -255,7 +246,9 @@ class controller
 				// Update the phpBB password on users first phpBB login
 				$this->user->update_phpbb_password($user_row['user_id'],$password);
 				$this->user->set_phpbb_password_status($user_row['user_id'],true);
-			} else {
+			}
+			elseif ( $cognito_user['user_status'] !== 'CONFIRMED')
+			{
 				//todo: check that all UserStates are handled:
 				// 		https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_UserType.html
 				$user_ip = (empty($this->user->get_ip())) ? '' : $this->user->get_ip();
@@ -329,8 +322,6 @@ class controller
 	 * @param array|string $attributes  # array or empty string
 	 *
 	 * @return array
-	 *
-	 * @since 1.0
 	 */
 	protected function user_attributes_to_array($attributes): array
 	{

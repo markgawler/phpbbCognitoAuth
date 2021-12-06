@@ -85,8 +85,6 @@ class user
 	 * @param int $user_id phpBB user id
 	 *
 	 * @return string cognito username
-	 *
-	 * @since version
 	 */
 	public function get_cognito_username(int $user_id): string
 	{
@@ -97,8 +95,6 @@ class user
 	 * @param int $user_id phpBB user id
 	 *
 	 * @return array cognito username
-	 *
-	 * @since version
 	 */
 	public function get_cognito_usermap_attributes(int $user_id): array
 	{
@@ -150,7 +146,6 @@ class user
 	 * @param validation_result $validation
 	 *
 	 * @return bool True is login success
-	 * @since 1.0
 	 */
 	public function login(validation_result $validation): bool
 	{
@@ -253,9 +248,6 @@ class user
 
 	/**
 	 * @param integer $user_id
-	 *
-	 *
-	 * @since 1.0
 	 */
 	public function reset_phpbb_login_attempts(int $user_id)
 	{

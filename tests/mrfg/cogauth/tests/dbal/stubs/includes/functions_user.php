@@ -21,8 +21,6 @@ if (!defined('IN_PHPBB'))
  * @param null $notifications_data
  *
  * @return int
- *
- * @since version
  */
 function user_add($user_row, $cp_data = false, $notifications_data = null)
 {

@@ -20,19 +20,16 @@ abstract class web_token
 
 	/**
 	 * @var \Jose\Component\Core\AlgorithmManager
-	 * @since 1.0
 	 */
 	protected $algorithmManager;
 
 	/**
 	 * @var \Jose\Component\Signature\JWSVerifier
-	 * @since 1.0
 	 */
 	protected $jwsVerifier;
 
 	/**
 	 * @var \Jose\Component\Signature\Serializer\JWSSerializerManager
-	 * @since version
 	 */
 	protected $serializerManager;
 
@@ -56,12 +53,9 @@ abstract class web_token
 	/**
 	 * @param $token \Jose\Component\Signature\Serializer\string
 	 * @return bool | \Jose\Component\Signature\JWS
-	 *
-	 * @since 1.0
 	 */
 	protected function deserialize($token)
 	{
-
 		try {
 			if (is_string($token))
 			{
@@ -81,7 +75,6 @@ abstract class web_token
 	 * @param $jwkSet \Jose\Component\Core\JWKSet
 	 *
 	 * @return bool
-	 * @since version
 	 */
 	protected function verify_signature($jws,$jwkSet)
 	{
@@ -95,8 +88,6 @@ abstract class web_token
 	/**
 	 *
 	 * @return bool|\Jose\Component\Core\JWKSet
-	 *
-	 * @since 1,0
 	 */
 	protected function load_JWKSet()
 	{
@@ -115,7 +106,6 @@ abstract class web_token
 	 * @return mixed
 	 *
 	 * @throws \mrfg\cogauth\jwt\exception\TokenVerificationException
-	 * @since 1.0
 	 */
 	public function decode_token($token)
 	{

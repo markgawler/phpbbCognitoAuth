@@ -115,10 +115,13 @@ class main_module
 						{
 							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['CustomDomain']);
 						}
-						else
+						else if ($result['UserPool']['Domain'])
 						{
 							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain'] . '.auth.'
 								. $config['cogauth_aws_region'] . '.amazoncognito.com');
+						}
+						else {
+							trigger_error($language->lang('COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET').$result['UserPool']["Id"].'. '.$language->lang('COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET_EXTRA'));
 						}
 
 						// Add the phpbb_user_id custom attribute is it does not exist.

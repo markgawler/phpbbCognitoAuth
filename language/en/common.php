@@ -38,6 +38,8 @@ $lang = array_merge($lang, array(
 	'COGAUTH_AWS_SECRET_EXPLAIN'	=> 'Leave blank to use IAM Role',
 	'COGAUTH_AWS_KEY_EXPLAIN'		=> 'Leave blank to use IAM Role',
 
+	'COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET' => "Neither Domain or CustomDomain set on UserPool ",
+	'COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET_EXTRA' => "Ensure your aws sdk for php is up to date. Version 3.33.4 did not return the Domain or CustomDomain fields correctly when using an IAM role",
 
 	'COGAUTH_CLIENT_ID_EXPLAIN'		=> 'AWS Cognito Client ID',
 	'COGAUTH_POOL_ID_EXPLAIN'		=> 'AWS Cognito User Pool ID',

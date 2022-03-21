@@ -115,10 +115,14 @@ class main_module
 						{
 							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['CustomDomain']);
 						}
-						else
+						else if ($result['UserPool']['Domain'])
 						{
 							$config->set('cogauth_hosted_ui_domain',$result['UserPool']['Domain'] . '.auth.'
 								. $config['cogauth_aws_region'] . '.amazoncognito.com');
+						}
+						else {
+							trigger_error("Neither Domain or CustomDomain set on UserPool ".$result['UserPool']["Id"].". Ensure your aws sdk for php is up to date. Version 3.33.4 did not return the Domain or CustomDomain fields correctly when using an IAM role.");
+							trigger_error($language->lang('COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET').$result['UserPool']["Id"].'. '.$language->lang('COGAUTH_DESCRIBE_USERPOOL_DOMAIN_NOT_SET_EXTRA'));
 						}
 
 						// Add the phpbb_user_id custom attribute is it does not exist.

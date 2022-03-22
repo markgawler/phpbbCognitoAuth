@@ -956,8 +956,6 @@ class cognito
                 // script path might be "/" or "", so remove the trailing slash.
                 preg_replace('/\/$/', '', $this->config['script_path']) . 
                 '/app.php/cogauth/auth/callback');
-    // urlencode the callback url as it includes slashes.
-    $callback = urlencode($callback);
 		return 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' . $callback;
 	}
 

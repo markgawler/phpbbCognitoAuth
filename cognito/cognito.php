@@ -138,7 +138,12 @@ class cognito
 		);
 		$this->web_token = $web_token;
 		$this->log = $log;
+
+		// cognito will only work with https, unless the url is 127.0.0.1
+    if (empty($this->config['server_protocol'])) {
+      $this->config['server_protocol'] = "https://";
     }
+  }
 
 	public function update_credentials($region, $key, $secret)
 	{
@@ -925,8 +930,9 @@ class cognito
 			$prefix = $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'];
 
 			return array_merge($result, array(
-				'CallbackURLs'      => array($prefix . '/app.php/cogauth/auth/callback'),
-				'LogoutURLs'        => array($prefix . '/app.php/cogauth/auth/signout'),
+				// script_path might be set to "/" instead of "", so removing any trailing slashes before merge.
+				'CallbackURLs'      => array(preg_replace('/\/$/', '', $prefix) . '/app.php/cogauth/auth/callback'),
+				'LogoutURLs'        => array(preg_replace('/\/$/', '', $prefix) . '/app.php/cogauth/auth/signout'),
 				'AllowedOAuthFlows' => array('code', 'implicit'),        // code | implicit | client_credentials
 				//'SupportedIdentityProviders' => array('COGNITO','Facebook'),//COGNITO, Facebook, Google and LoginWithAmazon.
 				'SupportedIdentityProviders' => array('COGNITO'),//COGNITO, Facebook, Google and LoginWithAmazon.
@@ -945,8 +951,12 @@ class cognito
 	 */
 	public function get_hosted_ui_uri(): string
 	{
-		$callback =  $this->config['server_protocol'] . $this->config['server_name'] . $this->config['script_path'] . '/app.php/cogauth/auth/callback';
-		return 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' .$callback;
+    $callback = $this->config['server_protocol'] .
+                $this->config['server_name'] .
+                // script path might be "/" or "", so remove the trailing slash.
+                preg_replace('/\/$/', '', $this->config['script_path']) . 
+                '/app.php/cogauth/auth/callback');
+		return 'https://' . $this->config['cogauth_hosted_ui_domain'] . '/login?response_type=code&client_id=' . $this->client_id . '&redirect_uri=' . $callback;
 	}
 
 	/**
